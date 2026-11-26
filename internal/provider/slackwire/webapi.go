@@ -86,13 +86,14 @@ type WebAPI struct {
 	http *http.Client
 	sign Signer
 	log  *slog.Logger
+	now  func() time.Time // the local clock; tests replace it
 }
 
 // NewWebAPI returns a Web API client that posts to base (which ends in
 // "/"; method names are appended to it) through client, signs every
 // request with sign, and logs the messages it drops to log.
 func NewWebAPI(base string, client *http.Client, sign Signer, log *slog.Logger) *WebAPI {
-	return &WebAPI{url: base, http: client, sign: sign, log: log}
+	return &WebAPI{url: base, http: client, sign: sign, log: log, now: time.Now}
 }
 
 // Call posts form to the Web API method and decodes the response into
