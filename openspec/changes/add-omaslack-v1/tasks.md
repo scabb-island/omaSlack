@@ -1,10 +1,10 @@
 # Tasks — add-omaslack-v1
 
 ## M0 — Esqueleto y CI
-- [ ] 0.1 `go mod init`, binario `omaslack` con subcomandos (`daemon`, `tui`, `ctl`, `auth`, `doctor`)
-- [ ] 0.2 golangci-lint, `go test ./...` y `qmllint` en CI. goreleaser en modo snapshot
-- [ ] 0.3 `THIRD_PARTY_NOTICES.md` con la atribución MIT de slk
-- [ ] 0.4 Directorio `plugin/` con un `manifest.json` mínimo que pase `omarchy plugin validate`
+- [x] 0.1 `go mod init`, binario `omaslack` con subcomandos (`daemon`, `tui`, `ctl`, `auth`, `doctor`)
+- [x] 0.2 golangci-lint, `go vet` y `go test` en CI (un solo job, sólo si cambia código Go). `qmllint`, `omarchy plugin validate` y OpenSpec en `make local`. goreleaser con snapshot local y release en tags
+- [x] 0.3 `THIRD_PARTY_NOTICES.md` con la atribución MIT de slk
+- [x] 0.4 Directorio `plugin/` con un `manifest.json` mínimo que pase `omarchy plugin validate`
 
 ## M1 — Conexión y sync
 - [ ] 1.1 Interfaz `Provider` + `Capabilities` + eventos de dominio normalizados
@@ -34,7 +34,7 @@
 - [ ] 3.7 Tests golden de las vistas
 
 ## M4 — UI QML MVP
-- [ ] 4.1 Spike: Quickshell `Socket` frente al puente `ctl --stream` (cierra la Open Question 1)
+- [x] 4.1 Spike: Quickshell `Socket` frente al puente `ctl --stream`. Ganó `Socket` directo (ver `docs/spikes/m4.1-quickshell-socket.md`)
 - [ ] 4.2 `Service.qml` como único cliente RPC y sus modelos
 - [ ] 4.3 `BarWidget.qml`: ícono, badges de DM y de menciones, estado de conexión y tooltip
 - [ ] 4.4 `Panel.qml`: lista de no leídos con respuesta rápida

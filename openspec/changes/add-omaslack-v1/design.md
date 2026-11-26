@@ -152,6 +152,6 @@ No aplica, porque es un proyecto nuevo. Para quien venga de slk: `omaslack auth 
 
 ## Open Questions
 
-1. ¿Quickshell `Socket` entrega lecturas por línea de forma confiable para un stream largo? Se resuelve con un spike en M4. Si no, se usa el puente `ctl --stream`.
+1. ~~¿Quickshell `Socket` entrega lecturas por línea de forma confiable para un stream largo?~~ **Resuelta (2026-11-26):** sí. `Socket` + `SplitParser` pasó 100.000 eventos y 16 MB sin pérdidas, con una pausa máxima de 33 ms en el event loop. No hace falta el puente `ctl --stream`. Los reintentos de conexión necesitan backoff para no llenar el log. Detalle en `docs/spikes/m4.1-quickshell-socket.md`.
 2. ¿El servicio de notificaciones del shell (`omarchy.notifications`) permite acciones con callback? Si no, se usa `notify-send --action` y el clic llega con `ui.focus`.
 3. ¿El repo del plugin va separado o como `manifestPath` dentro del monorepo? Depende de lo que acepte el marketplace para fuentes con binario externo (`installation.mode: manual`).
