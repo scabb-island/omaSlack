@@ -43,7 +43,7 @@ The documentation SHALL explain how to coexist with the official app (hide its t
 - **THEN** the README explains how to turn off its notifications to avoid receiving them twice
 
 ### Requirement: Distribution
-The binary SHALL be published with signed releases (goreleaser) and an AUR package `omaslack-bin`. The plugin SHALL be submitted to the Omarchy marketplace following `SUBMISSION.md`, declaring the binary's manual installation if the marketplace requires it.
+The binary SHALL be published with signed releases (goreleaser) and the AUR package `omaslack-bin`, as specified in the `aur-packaging` capability. The plugin SHALL be submitted to the Omarchy marketplace following `SUBMISSION.md`.
 
 #### Scenario: Clean install
 - **WHEN** a new user installs `omaslack-bin` and then the plugin

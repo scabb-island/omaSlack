@@ -124,18 +124,22 @@ Whatever a provider does not support is declared in `Capabilities`, and clients 
 | M3 | TUI MVP | 3 |
 | M4 | QML UI MVP (socket spike, Service, bar, panel, window) | 3–4 |
 | M5 | Notifications, presence and DND, theme and hook, `doctor` | 1.5 |
-| M6 | AUR, README, marketplace | 1 |
+| M6 | AUR package (published only on release), `omaslack setup`, README, marketplace | 1 |
 | **MVP total** | | **~13–15 weeks** |
 
 The critical path is M1 → M2, which both clients depend on. Once M2 is stable, M3 and M4 can proceed in parallel.
 
-## 8. Out of scope (v1)
+## 8. Distribution
+
+The binary ships as the AUR package `omaslack-bin` (spec `aur-packaging`), compliant with the Arch and AUR guidelines and published only by the pipeline of a release tag. The Omarchy plugin manifest cannot declare package dependencies, so the plugin checks for `omaslack-bin` at runtime and, when it is missing, offers to install it in a visible terminal with Omarchy's own `omarchy-pkg-aur-add`.
+
+## 8b. Out of scope (v1)
 
 Huddles and calls, Workflow Builder, Slack Connect management, app and custom emoji administration, Canvas editing, and platforms other than Omarchy.
 
 ## 9. Why OpenSpec rather than SpecKit
 
-The project splits into **independent capabilities** (connection, sync, API, messaging, notifications, TUI, UI, integration) that will evolve through incremental changes: a new provider, changes in the plugin API. OpenSpec's model fits directly:
+The project splits into **independent capabilities** (connection, sync, API, messaging, notifications, TUI, UI, integration, AUR packaging) that will evolve through incremental changes: a new provider, changes in the plugin API. OpenSpec's model fits directly:
 
 - `specs/` as the current truth;
 - `changes/` with ADDED, MODIFIED and REMOVED deltas;
@@ -143,7 +147,7 @@ The project splits into **independent capabilities** (connection, sync, API, mes
 
 SpecKit centers on a constitution and a linear per-feature flow, which is heavier for keeping a multi-part system maintained over time.
 
-Status: `openspec validate add-omaslack-v1 --strict` passes with **59 requirements across 8 capabilities** (OpenSpec 2.2.0).
+Status: `openspec validate add-omaslack-v1 --strict` passes with **71 requirements across 9 capabilities** (OpenSpec 2.2.0).
 
 ## 10. Next steps
 
