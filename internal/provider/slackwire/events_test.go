@@ -2,6 +2,8 @@ package slackwire
 
 import (
 	"encoding/json"
+	"errors"
+	"strings"
 	"testing"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
@@ -56,7 +58,10 @@ func TestEventsMapToDomainEvents(t *testing.T) {
 			domain.ReactionChanged{Team: team, Conversation: conv("D0001"), TS: ts("1700000600.000600"), User: user, Emoji: "tada", Added: true}},
 		"reaction_removed": {`{"type":"reaction_removed","user":"U0002","reaction":"tada","item":{"type":"message","channel":"D0001","ts":"1700000600.000600"}}`,
 			domain.ReactionChanged{Team: team, Conversation: conv("D0001"), TS: ts("1700000600.000600"), User: user, Emoji: "tada"}},
-		"reaction to a file": {`{"type":"reaction_added","user":"U0002","reaction":"tada","item":{"type":"file","file":"F0001"}}`, nil},
+		// The web client's socket sometimes leaves item.type out; slk
+		// takes those reactions as reactions on messages.
+		"reaction without an item type": {`{"type":"reaction_added","user":"U0002","reaction":"tada","item":{"channel":"D0001","ts":"1700000600.000600"}}`,
+			domain.ReactionChanged{Team: team, Conversation: conv("D0001"), TS: ts("1700000600.000600"), User: user, Emoji: "tada", Added: true}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			got, ok, err := mapJSON(t, team, tc.json)
@@ -67,6 +72,19 @@ func TestEventsMapToDomainEvents(t *testing.T) {
 				t.Fatalf("got\n%#v\nwant\n%#v", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestReactionsOnOtherItemsAreDroppedWithAReason(t *testing.T) {
+	for _, item := range []string{"file", "file_comment"} {
+		js := `{"type":"reaction_added","user":"U0002","reaction":"tada","item":{"type":"` + item + `","file":"F0001"}}`
+		got, _, err := mapJSON(t, must(t, domain.ParseTeamID, "T0001"), js)
+		if got != nil || !errors.Is(err, ErrUnsupportedReactionItem) {
+			t.Fatalf("%s: got %v, %v; want nil and ErrUnsupportedReactionItem", item, got, err)
+		}
+		if !strings.Contains(err.Error(), `"`+item+`"`) {
+			t.Errorf("%s: error %q does not name the item type", item, err)
+		}
 	}
 }
 
