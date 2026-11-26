@@ -31,6 +31,7 @@
 - [x] 1.22 desktop-session: when only `client.counts` fails (Enterprise Grid), return the conversation list without read state
 - [x] 1.23 desktop-session: remember the presence subscription and send it again on every socket that opens
 - [x] 1.24 Sync engine: log the conversation list failing and recovering when the state changes
+- [x] 1.25 `auth add`: check desktop app credentials with `auth.test` before storing them, explain a session Slack rejects (point to `internal-app`), and require an interactive terminal
 - Deferred: honoring a deliberate "mark unread" from another Slack client (needs an explicit signal on `ReadChanged`)
 
 ## M2 — Daemon API
