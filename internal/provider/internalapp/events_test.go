@@ -1,10 +1,12 @@
 package internalapp
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
+	"gitlab.com/scabb-island/omaslack/internal/provider/slackwire"
 )
 
 func TestRecordedEventsMapToDomainEvents(t *testing.T) {
@@ -56,8 +58,7 @@ func TestRecordedEventsMapToDomainEvents(t *testing.T) {
 			Emoji:        "thumbsup",
 		},
 		// Not a message the domain tracks: ignored without an error.
-		"message_channel_join.json":   nil,
-		"reaction_added_to_file.json": nil,
+		"message_channel_join.json": nil,
 	}
 	for name, want := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -69,6 +70,15 @@ func TestRecordedEventsMapToDomainEvents(t *testing.T) {
 				t.Fatalf("mapCallback() =\n%#v\nwant\n%#v", got, want)
 			}
 		})
+	}
+}
+
+// A reaction on a file is not malformed, but the domain has nowhere to
+// put it: the error tells the socket loop to log it and drop it.
+func TestRecordedReactionsOnFilesAreRefused(t *testing.T) {
+	got, err := mapCallback(mustTeam(t, "T0001"), readFixture(t, "events/reaction_added_to_file.json"))
+	if got != nil || !errors.Is(err, slackwire.ErrUnsupportedReactionItem) {
+		t.Fatalf("mapCallback() = %v, %v; want nil and ErrUnsupportedReactionItem", got, err)
 	}
 }
 

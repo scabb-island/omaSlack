@@ -20,7 +20,7 @@ import (
 //     users.getPresence.
 //
 // Ignored: every event slackwire has no mapper for, and event types this
-// package does not subscribe to.
+// package does not subscribe to. Reactions on files are logged and dropped.
 
 // callback is an Events API payload ("type": "event_callback"). The team
 // in it is not read: events carry the provider's own team.

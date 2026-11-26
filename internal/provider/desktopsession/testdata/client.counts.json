@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "threads": { "has_unreads": false, "mention_count": 0, "vip_count": 0, "mention_count_by_channel": {}, "unread_count_by_channel": {} },
+  "channels": [
+    { "id": "C0001", "last_read": "1700000100.000100", "latest": "1700000300.000300", "updated": "1700000300.000300", "history_invalid": "1700000000.000000", "mention_count": 2, "has_unreads": true },
+    { "id": "C0002", "last_read": "1700000400.000400", "latest": "1700000400.000400", "updated": "1700000400.000400", "history_invalid": "1700000000.000000", "mention_count": 0, "has_unreads": false },
+    { "id": "C0003", "last_read": "1700000100.000100", "latest": "sometime", "updated": "1700000100.000100", "history_invalid": "1700000000.000000", "mention_count": 0, "has_unreads": false },
+    { "id": "C0999", "last_read": "1700000100.000100", "latest": "1700000200.000200", "updated": "1700000200.000200", "history_invalid": "1700000000.000000", "mention_count": 0, "has_unreads": true }
+  ],
+  "mpims": [
+    { "id": "G0001", "last_read": "0000000000.000000", "latest": "1700000500.000500", "updated": "1700000500.000500", "history_invalid": "1700000000.000000", "mention_count": 1, "has_unreads": true }
+  ],
+  "ims": [
+    { "id": "D0001", "last_read": "1700000600.000600", "latest": "1700000700.000700", "updated": "1700000700.000700", "history_invalid": "1700000000.000000", "mention_count": 1, "has_unreads": true }
+  ],
+  "activity_v2": { "at_user": 2, "dm": 1 }
+}

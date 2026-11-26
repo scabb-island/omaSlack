@@ -18,7 +18,9 @@ import (
 //     same shape as Events API events): message (no subtype,
 //     thread_broadcast, file_share, me_message, bot_message) →
 //     MessageCreated; message_changed → MessageUpdated; message_deleted →
-//     MessageDeleted; reaction_added and reaction_removed → ReactionChanged.
+//     MessageDeleted; reaction_added and reaction_removed on a message (or
+//     on an item with no type) → ReactionChanged. Reactions on files are
+//     logged and dropped.
 //   - channel_marked, im_marked, group_marked, mpim_marked → ReadChanged:
 //     the user's read marker moved, in any client.
 //   - presence_change → one PresenceChanged per user. With
