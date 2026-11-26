@@ -54,17 +54,35 @@ func migrate(ctx context.Context, db *sql.DB) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	var version int
-	if err := tx.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); err != nil {
-		return fmt.Errorf("store/sqlite: read schema version: %w", err)
-	}
-	if version > len(migrations) {
-		return fmt.Errorf("%w: database is at version %d, this build knows up to %d",
-			ErrSchemaTooNew, version, len(migrations))
+	version, err := schemaVersion(ctx, tx)
+	if err != nil {
+		return err
 	}
 	if version == len(migrations) {
 		return nil
 	}
+	if err := applyFrom(ctx, tx, version); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// schemaVersion reads the version of the open database and refuses one
+// newer than this build.
+func schemaVersion(ctx context.Context, tx *sql.Tx) (int, error) {
+	var version int
+	if err := tx.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); err != nil {
+		return version, fmt.Errorf("store/sqlite: read schema version: %w", err)
+	}
+	if version > len(migrations) {
+		return 0, fmt.Errorf("%w: database is at version %d, this build knows up to %d",
+			ErrSchemaTooNew, version, len(migrations))
+	}
+	return version, nil
+}
+
+// applyFrom runs every migration after version and records the new one.
+func applyFrom(ctx context.Context, tx *sql.Tx, version int) error {
 	for _, m := range migrations[version:] {
 		if _, err := tx.ExecContext(ctx, m); err != nil {
 			return fmt.Errorf("store/sqlite: migrate from version %d: %w", version, err)
@@ -74,5 +92,5 @@ func migrate(ctx context.Context, db *sql.DB) error {
 	if _, err := tx.ExecContext(ctx, fmt.Sprintf("PRAGMA user_version = %d", len(migrations))); err != nil {
 		return fmt.Errorf("store/sqlite: record schema version: %w", err)
 	}
-	return tx.Commit()
+	return nil
 }
