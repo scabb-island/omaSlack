@@ -91,10 +91,8 @@ func byID(list []domain.Conversation) map[domain.ConversationID]domain.Conversat
 // state. An edit or a reaction changes neither.
 func entryChangedBy(ev domain.Event) (domain.ConversationID, bool) {
 	switch e := ev.(type) {
-	case domain.MessageCreated:
-		return e.Conversation, true
-	case domain.MessageDeleted:
-		return e.Conversation, true
+	case domain.MessageCreated, domain.MessageDeleted:
+		return activityIn(e)
 	case domain.ReadChanged:
 		return e.Conversation, true
 	default:

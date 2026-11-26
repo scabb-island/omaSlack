@@ -285,6 +285,7 @@ func newRigFrom(t *testing.T, wrap func(*providertest.Fake) provider.Provider, w
 		Store:     wrapStore(st),
 		Budget:    r.budget,
 		Publisher: r.pub,
+		Self:      me,
 		Clock:     r.clock,
 		Rand:      func() float64 { return 0.5 },
 		PageSize:  pageSize,
