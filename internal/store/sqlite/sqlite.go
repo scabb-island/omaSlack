@@ -97,22 +97,25 @@ func (s *Store) exec(ctx context.Context, what, query string, args ...any) error
 	return nil
 }
 
-// optTS stores an optional timestamp: the zero TS becomes "".
-func optTS(t domain.TS) string {
-	if t.IsZero() {
-		return ""
+// inTx runs fn in one write transaction and commits it only if fn
+// succeeds, so a failure or crash halfway leaves no partial write.
+func (s *Store) inTx(ctx context.Context, what string, fn func(*sql.Tx) error) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("store/sqlite: %s: %w", what, err)
 	}
-	return t.String()
+	defer func() { _ = tx.Rollback() }()
+	if err := fn(tx); err != nil {
+		return fmt.Errorf("store/sqlite: %s: %w", what, err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("store/sqlite: %s: %w", what, err)
+	}
+	return nil
 }
 
 // Not implemented yet.
 func (s *Store) Apply(context.Context, domain.Event) error { return errors.New("not implemented") }
-func (s *Store) PutHistory(context.Context, domain.ConversationID, []domain.Message) error {
-	return errors.New("not implemented")
-}
-func (s *Store) Messages(context.Context, domain.ConversationID, domain.TS, int) ([]domain.Message, error) {
-	return nil, errors.New("not implemented")
-}
 func (s *Store) Reactions(context.Context, domain.ConversationID, domain.TS) ([]store.Reaction, error) {
 	return nil, errors.New("not implemented")
 }

@@ -19,6 +19,15 @@ func conv(t *testing.T, s string) domain.ConversationID {
 	return id
 }
 
+func user(t *testing.T, s string) domain.UserID {
+	t.Helper()
+	id, err := domain.ParseUserID(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
 func mustSetDraft(t *testing.T, s store.Store, c string, thread domain.TS, text string) {
 	t.Helper()
 	if err := s.SetDraft(context.Background(), conv(t, c), thread, text); err != nil {
