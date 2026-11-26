@@ -153,9 +153,14 @@ func TestConnectStreamsDomainEventsAndAcknowledgesEveryEnvelope(t *testing.T) {
 		t.Errorf("apps.connections.open Authorization = %q, want the app token", c.Auth)
 	}
 
+	// After cancel the channel must close. An event already in flight (a
+	// reconnect's "connecting", say) may still arrive first; emit's own
+	// test pins that nothing new is produced once ctx has ended.
 	cancel()
-	if got := rest(t, events); len(got) != 0 {
-		t.Errorf("events after cancel = %v, want none", got)
+	for _, ev := range rest(t, events) {
+		if _, ok := ev.(domain.ConnectionChanged); !ok {
+			t.Errorf("a %T arrived after cancel; only an in-flight connection change may", ev)
+		}
 	}
 }
 
@@ -242,6 +247,21 @@ func TestOnlyRejectedCredentialsEndInAuthExpired(t *testing.T) {
 	for name, tc := range cases {
 		if got := finalState(tc.err); got != tc.want {
 			t.Errorf("%s: finalState() = %v, want %v", name, got, tc.want)
+		}
+	}
+}
+
+// Once ctx has ended, emit must not hand over another event, even when a
+// reader is ready: a plain select picks at random between the two.
+func TestEmitDropsEventsOnceCtxHasEnded(t *testing.T) {
+	p := &Provider{team: mustTeam(t, "T0001")}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	for range 200 {
+		out := make(chan domain.Event, 1) // a ready reader
+		p.emit(ctx, out, domain.ConnectionChanged{Team: p.team, State: domain.Connecting})
+		if len(out) != 0 {
+			t.Fatal("emit delivered an event after ctx ended")
 		}
 	}
 }
