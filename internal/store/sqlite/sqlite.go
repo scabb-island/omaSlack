@@ -62,17 +62,22 @@ func (s *Store) Close() error { return s.db.Close() }
 
 // Draft returns the unsent draft of conv or of one of its threads.
 func (s *Store) Draft(ctx context.Context, conv domain.ConversationID, thread domain.TS) (string, error) {
-	var text string
-	err := s.db.QueryRowContext(ctx,
+	return s.queryString(ctx, "draft",
 		`SELECT text FROM drafts WHERE conv_id = ? AND thread_ts = ?`,
-		conv.String(), optTS(thread)).Scan(&text)
+		conv.String(), optTS(thread))
+}
+
+// queryString reads one text value; no row reads as "".
+func (s *Store) queryString(ctx context.Context, what, query string, args ...any) (string, error) {
+	var v string
+	err := s.db.QueryRowContext(ctx, query, args...).Scan(&v)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", nil
 	}
 	if err != nil {
-		return "", fmt.Errorf("store/sqlite: read draft: %w", err)
+		return "", fmt.Errorf("store/sqlite: read %s: %w", what, err)
 	}
-	return text, nil
+	return v, nil
 }
 
 // SetDraft stores the draft of conv or of one of its threads; an empty
@@ -115,10 +120,6 @@ func (s *Store) inTx(ctx context.Context, what string, fn func(*sql.Tx) error) e
 }
 
 // Not implemented yet.
-func (s *Store) Apply(context.Context, domain.Event) error { return errors.New("not implemented") }
 func (s *Store) Reactions(context.Context, domain.ConversationID, domain.TS) ([]store.Reaction, error) {
 	return nil, errors.New("not implemented")
-}
-func (s *Store) LastRead(context.Context, domain.ConversationID) (domain.TS, error) {
-	return domain.TS{}, errors.New("not implemented")
 }
