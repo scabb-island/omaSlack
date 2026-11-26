@@ -53,10 +53,22 @@ func (e *Engine) conversations(ctx context.Context) ([]domain.Conversation, erro
 		list, err = e.cfg.Provider.Conversations(ctx)
 		return err
 	})
-	if err != nil && !stopping(err) && e.listFailed.CompareAndSwap(false, true) {
+	e.logListHealth(err)
+	return list, err
+}
+
+// logListHealth logs the conversation list's health when it changes: a
+// warning when listing starts failing, a note when it works again, and
+// nothing while it stays the same.
+func (e *Engine) logListHealth(err error) {
+	switch {
+	case err == nil:
+		if e.listFailed.CompareAndSwap(true, false) {
+			e.cfg.Log.Info("sync: listing conversations works again", "team", e.w.team)
+		}
+	case !stopping(err) && e.listFailed.CompareAndSwap(false, true):
 		e.cfg.Log.Warn("sync: could not list conversations; catching up only open and active ones", "team", e.w.team, "err", err)
 	}
-	return list, err
 }
 
 // pollReads keeps read markers current for a provider that does not

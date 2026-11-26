@@ -158,3 +158,48 @@ func TestRejectedCredentialsWhileListingStopTheEngine(t *testing.T) {
 		t.Fatalf("History calls = %v, want none once the list was rejected", got)
 	}
 }
+
+// The list's health is logged when it changes: a warning when it starts
+// failing, a note when it works again, nothing while it stays the same.
+func TestTheListHealthIsLoggedWhenItChanges(t *testing.T) {
+	r := newRig(t)
+	notYet := errors.New("users.conversations: not implemented yet")
+	r.fake.Fail(providertest.MethodConversations, notYet) // first connect: fails
+	live, _ := r.firstSession(t, created(convA, ts1))
+
+	live = r.reconnectKeepingLive(t, live) // works again
+	r.waitForLog(t, "listing conversations works again", 1)
+
+	r.fake.Fail(providertest.MethodConversations, notYet) // fails again
+	r.reconnectKeepingLive(t, live)
+	r.waitForLog(t, "not implemented yet", 2)
+}
+
+// reconnectKeepingLive is dropAndReconnect that returns the new session's
+// live feed, so a test can drop it again.
+func (r *rig) reconnectKeepingLive(t *testing.T, live chan domain.Event) chan domain.Event {
+	t.Helper()
+	next := make(chan domain.Event)
+	r.fake.Script(providertest.Session{Events: []domain.Event{state(domain.Connected)}, Live: next})
+	close(live)
+	r.pub.expect(t, state(domain.Disconnected))
+	r.clock.fire(t, time.Second)
+	r.pub.expect(t, state(domain.Connecting), state(domain.Connected))
+	return next
+}
+
+// waitForLog waits until the log holds want exactly n times, then checks
+// it does not grow past n.
+func (r *rig) waitForLog(t *testing.T, want string, n int) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for strings.Count(r.logs.String(), want) < n {
+		if time.Now().After(deadline) {
+			t.Fatalf("log holds %q fewer than %d times: %q", want, n, r.logs.String())
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if got := strings.Count(r.logs.String(), want); got != n {
+		t.Fatalf("log holds %q %d times, want %d: %q", want, got, n, r.logs.String())
+	}
+}

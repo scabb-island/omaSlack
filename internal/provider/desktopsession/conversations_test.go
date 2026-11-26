@@ -88,3 +88,46 @@ func TestConversationsFailWhenEitherCallFails(t *testing.T) {
 		})
 	}
 }
+
+// Enterprise Grid member workspaces refuse client.counts (team_is_restricted
+// and similar). The list is still useful without read state, so only
+// rejected credentials and rate limits keep failing it.
+func TestConversationsFallBackToTheListWhenOnlyClientCountsFails(t *testing.T) {
+	f := newFakeSlack(t, map[string]http.HandlerFunc{
+		"/api/users.conversations": jsonBody(http.StatusOK, string(fixture(t, "users.conversations.json"))),
+		"/api/client.counts":       jsonBody(http.StatusOK, `{"ok":false,"error":"team_is_restricted"}`),
+	})
+	p, logs := f.provider(t)
+
+	got, err := p.Conversations(context.Background())
+	if err != nil {
+		t.Fatalf("Conversations() err = %v, want the list without read state", err)
+	}
+	if len(got) == 0 {
+		t.Fatal("the list is empty")
+	}
+	for _, c := range got {
+		if !c.Latest.IsZero() || !c.LastRead.IsZero() || c.Mentions != 0 {
+			t.Errorf("%v has read state %+v, want it unknown", c.ID, c)
+		}
+	}
+	if !strings.Contains(logs.String(), "team_is_restricted") {
+		t.Errorf("logs = %q, want the client.counts failure named", logs)
+	}
+}
+
+func TestConversationsStillFailWhenClientCountsIsRateLimited(t *testing.T) {
+	f := newFakeSlack(t, map[string]http.HandlerFunc{
+		"/api/users.conversations": jsonBody(http.StatusOK, string(fixture(t, "users.conversations.json"))),
+		"/api/client.counts": func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Retry-After", "30")
+			w.WriteHeader(http.StatusTooManyRequests)
+		},
+	})
+	p, _ := f.provider(t)
+
+	var rl *provider.RateLimitedError
+	if _, err := p.Conversations(context.Background()); !errors.As(err, &rl) {
+		t.Fatalf("Conversations() err = %v, want a RateLimitedError", err)
+	}
+}
