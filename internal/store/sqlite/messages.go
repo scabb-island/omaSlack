@@ -51,16 +51,32 @@ func (s *Store) PutHistory(ctx context.Context, conv domain.ConversationID, msgs
 	})
 }
 
-// Messages returns up to limit messages of conv older than before (all of
-// them when before is zero), newest first. Deleted messages are skipped.
-// Thread replies are included: the contract has no separate replies query.
+// Messages returns up to limit top-level messages and thread roots of conv
+// older than before (all of them when before is zero), newest first.
+// Thread replies and deleted messages are left out.
 func (s *Store) Messages(ctx context.Context, conv domain.ConversationID, before domain.TS, limit int) ([]domain.Message, error) {
-	rows, err := s.db.QueryContext(ctx, `
+	return s.queryMessages(ctx, `
 		SELECT ts, thread_ts, author, text, edited_ts FROM messages
 		WHERE conv_id = ?1 AND deleted = 0 AND (?2 = '' OR ts < ?2)
+		  AND (thread_ts = '' OR thread_ts = ts)
 		ORDER BY ts DESC
 		LIMIT ?3`,
 		conv.String(), optTS(before), limit)
+}
+
+// Replies returns the replies of the thread rooted at thread in conv,
+// oldest first, without the root. Deleted replies are left out.
+func (s *Store) Replies(ctx context.Context, conv domain.ConversationID, thread domain.TS) ([]domain.Message, error) {
+	return s.queryMessages(ctx, `
+		SELECT ts, thread_ts, author, text, edited_ts FROM messages
+		WHERE conv_id = ?1 AND thread_ts = ?2 AND ts <> ?2 AND deleted = 0
+		ORDER BY ts ASC`,
+		conv.String(), thread.String())
+}
+
+// queryMessages runs a messages query and parses every row it returns.
+func (s *Store) queryMessages(ctx context.Context, query string, args ...any) ([]domain.Message, error) {
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("store/sqlite: read messages: %w", err)
 	}
