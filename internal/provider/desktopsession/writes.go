@@ -17,9 +17,10 @@ import (
 
 // Frames the provider writes to the web client's socket: presence_sub
 // (provider.PresenceSubscriber) and typing (provider.TypingSender). Both
-// go over the socket Connect opened, so they work only while a stream is
-// live; otherwise they fail with ErrNotConnected and send nothing. The
-// caller decides whether to retry after the next Connected.
+// go over the socket Connect opened. Typing works only while a stream is
+// live; otherwise it fails with ErrNotConnected and sends nothing. The
+// presence subscription is remembered instead: Slack forgets it whenever
+// the socket reconnects, so it is sent on every socket that opens.
 
 var (
 	_ provider.PresenceSubscriber = (*Provider)(nil)
@@ -40,14 +41,20 @@ const writeTimeout = 10 * time.Second
 // gorilla/websocket allows; the read loop only reads, and gorilla's
 // answers to pings use WriteControl, which is safe alongside a write.
 type liveSocket struct {
-	mu   sync.Mutex
-	conn *websocket.Conn
+	mu       sync.Mutex
+	conn     *websocket.Conn
+	presence *presenceSubFrame // the last subscription asked for; nil if none
 }
 
+// set makes conn the live socket and sends it the remembered presence
+// subscription, under the same lock as every other write.
 func (s *liveSocket) set(conn *websocket.Conn) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.conn = conn
+	if s.presence != nil {
+		_ = s.send(*s.presence) // a failed write ends the stream on its own
+	}
 }
 
 // clear forgets conn, unless a newer stream already replaced it.
@@ -70,6 +77,26 @@ func (s *liveSocket) write(ctx context.Context, v any) error {
 	if s.conn == nil {
 		return ErrNotConnected
 	}
+	return s.send(v)
+}
+
+// subscribe remembers frame as the presence subscription and sends it now
+// when a socket is live. Without one it is sent when the next one opens.
+func (s *liveSocket) subscribe(ctx context.Context, frame presenceSubFrame) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.presence = &frame
+	if s.conn == nil {
+		return nil
+	}
+	return s.send(frame)
+}
+
+// send writes v on the live socket; the caller holds s.mu.
+func (s *liveSocket) send(v any) error {
 	_ = s.conn.SetWriteDeadline(time.Now().Add(writeTimeout))
 	return s.conn.WriteJSON(v)
 }
@@ -81,13 +108,14 @@ type presenceSubFrame struct {
 
 // SubscribePresence asks Slack for presence_change frames about users,
 // and only them: each call replaces the previous subscription, so an
-// empty users clears it.
+// empty users clears it. The subscription is remembered and sent again on
+// every socket that opens, including one opened after this call.
 func (p *Provider) SubscribePresence(ctx context.Context, users []domain.UserID) error {
 	ids := make([]string, len(users))
 	for i, u := range users {
 		ids[i] = u.String()
 	}
-	if err := p.live.write(ctx, presenceSubFrame{Type: "presence_sub", IDs: ids}); err != nil {
+	if err := p.live.subscribe(ctx, presenceSubFrame{Type: "presence_sub", IDs: ids}); err != nil {
 		return fmt.Errorf("presence_sub: %w", err)
 	}
 	return nil

@@ -100,12 +100,11 @@ func TestSubscribePresenceSendsTheWholeSubscription(t *testing.T) {
 	}
 }
 
-func TestWritesWithoutALiveSocketFailWithErrNotConnected(t *testing.T) {
+func TestTypingWithoutALiveSocketFailsWithErrNotConnected(t *testing.T) {
 	conv := parse(t, domain.ParseConversationID, "C0001")
 	writes := func(p *Provider) map[string]error {
 		return map[string]error{
-			"typing":       p.SendTyping(context.Background(), conv),
-			"presence_sub": p.SubscribePresence(context.Background(), nil),
+			"typing": p.SendTyping(context.Background(), conv),
 		}
 	}
 
@@ -186,5 +185,64 @@ func TestConcurrentWritesAreSafe(t *testing.T) {
 		if frame := frameJSON(t, got); frame["type"] != "typing" {
 			t.Errorf("frame = %v", frame)
 		}
+	}
+}
+
+// Slack forgets the presence subscription whenever the socket reconnects,
+// so the provider remembers it: a subscription made while no socket is
+// open is sent when one opens, and the last one is sent again on every
+// reconnect.
+func TestPresenceSubscriptionIsSentWhenTheSocketOpens(t *testing.T) {
+	got := make(chan string, 1)
+	f := newFakeSlack(t, map[string]http.HandlerFunc{
+		"/api/auth.test": jsonBody(http.StatusOK, authOK),
+		"/ws/":           socketServer(t, []string{string(fixture(t, "frames/hello.json"))}, recordFrames(got)),
+	})
+	p, _ := f.provider(t)
+	users := []domain.UserID{parse(t, domain.ParseUserID, "U0001")}
+	if err := p.SubscribePresence(context.Background(), users); err != nil {
+		t.Fatalf("SubscribePresence before Connect = %v, want it remembered", err)
+	}
+
+	events := connect(t, p, t.Context())
+	next(t, events) // connecting
+	next(t, events) // connected
+
+	want := map[string]any{"type": "presence_sub", "ids": []any{"U0001"}}
+	if frame := frameJSON(t, got); !reflect.DeepEqual(frame, want) {
+		t.Errorf("frame = %v, want %v", frame, want)
+	}
+}
+
+func TestPresenceSubscriptionIsSentAgainAfterAReconnect(t *testing.T) {
+	got := make(chan string, 2)
+	p, cancelOld, oldEvents := liveProvider(t, got)
+	users := []domain.UserID{parse(t, domain.ParseUserID, "U0002")}
+	if err := p.SubscribePresence(context.Background(), users); err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]any{"type": "presence_sub", "ids": []any{"U0002"}}
+	if frame := frameJSON(t, got); !reflect.DeepEqual(frame, want) {
+		t.Fatalf("first frame = %v, want %v", frame, want)
+	}
+
+	cancelOld()
+	rest(t, oldEvents)
+	newer := connect(t, p, t.Context())
+	next(t, newer) // connecting
+	next(t, newer) // connected
+
+	if frame := frameJSON(t, got); !reflect.DeepEqual(frame, want) {
+		t.Errorf("after the reconnect frame = %v, want %v", frame, want)
+	}
+}
+
+func TestNoPresenceFrameWithoutASubscription(t *testing.T) {
+	got := make(chan string, 1)
+	liveProvider(t, got)
+	select {
+	case s := <-got:
+		t.Errorf("a socket with no subscription was sent %q", s)
+	case <-time.After(50 * time.Millisecond):
 	}
 }
