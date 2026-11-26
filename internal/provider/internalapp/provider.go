@@ -32,7 +32,11 @@ type Provider struct {
 }
 
 // defaultAPIURL is Slack's Web API base. Method names are appended to it.
-const defaultAPIURL = "https://slack.com/api/"
+// Unlike desktop-session, internal-app keeps calling slack.com even when
+// the credentials carry the workspace's own URL: slack.com is the host
+// Slack documents for xoxp tokens, and nothing so far shows a need for
+// another. The URL is stored so that can change without a new sign-in.
+const defaultAPIURL = slackwire.DefaultAPIURL
 
 // Option configures a Provider.
 type Option func(*Provider)
