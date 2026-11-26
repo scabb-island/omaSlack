@@ -103,21 +103,35 @@ func mapCallback(team domain.TeamID, payload []byte) (domain.Event, error) {
 	return ev, nil
 }
 
-func messageCreated(team domain.TeamID, e wireEvent) (domain.Event, error) {
-	conv, m, err := parseChannelMessage(e.Channel, e.wireMessage)
-	if err != nil {
-		return nil, err
+// messageEvent builds the mapper of an event that carries a whole message:
+// at says where the event keeps it and wrap builds the domain event.
+func messageEvent(at func(wireEvent) wireMessage, wrap func(domain.TeamID, domain.ConversationID, domain.Message) domain.Event) eventMapper {
+	return func(team domain.TeamID, e wireEvent) (domain.Event, error) {
+		conv, err := domain.ParseConversationID(e.Channel)
+		if err != nil {
+			return nil, err
+		}
+		m, err := at(e).parse()
+		if err != nil {
+			return nil, err
+		}
+		return wrap(team, conv, m), nil
 	}
-	return domain.MessageCreated{Team: team, Conversation: conv, Message: m}, nil
 }
 
-func messageUpdated(team domain.TeamID, e wireEvent) (domain.Event, error) {
-	conv, m, err := parseChannelMessage(e.Channel, e.Message)
-	if err != nil {
-		return nil, err
-	}
-	return domain.MessageUpdated{Team: team, Conversation: conv, Message: m}, nil
-}
+// A new message is the event itself; an edit nests the new version.
+var (
+	messageCreated = messageEvent(
+		func(e wireEvent) wireMessage { return e.wireMessage },
+		func(t domain.TeamID, c domain.ConversationID, m domain.Message) domain.Event {
+			return domain.MessageCreated{Team: t, Conversation: c, Message: m}
+		})
+	messageUpdated = messageEvent(
+		func(e wireEvent) wireMessage { return e.Message },
+		func(t domain.TeamID, c domain.ConversationID, m domain.Message) domain.Event {
+			return domain.MessageUpdated{Team: t, Conversation: c, Message: m}
+		})
+)
 
 func messageDeleted(team domain.TeamID, e wireEvent) (domain.Event, error) {
 	conv, ts, err := parseItem(e.Channel, e.DeletedTS)
@@ -148,15 +162,6 @@ func reactionChanged(added bool) eventMapper {
 		}
 		return domain.ReactionChanged{Team: team, Conversation: conv, TS: ts, User: user, Emoji: e.Reaction, Added: added}, nil
 	}
-}
-
-func parseChannelMessage(channel string, w wireMessage) (domain.ConversationID, domain.Message, error) {
-	conv, err := domain.ParseConversationID(channel)
-	if err != nil {
-		return domain.ConversationID{}, domain.Message{}, err
-	}
-	m, err := w.parse()
-	return conv, m, err
 }
 
 // parseItem parses the conversation and ts that point at one message.
