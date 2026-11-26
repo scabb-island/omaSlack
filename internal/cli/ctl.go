@@ -112,7 +112,7 @@ func ctlStream(env Env, topics []string) error {
 	if _, err := c.Call(ctx, "events.subscribe", map[string][]string{"topics": topics}); err != nil {
 		return err
 	}
-	out := &lineWriter{w: env.Stdout}
+	out := newLineWriter(env.Stdout)
 	if env.Stdin != nil {
 		go forwardRequests(ctx, c, env.Stdin, out)
 	}
@@ -172,17 +172,14 @@ func forward(ctx context.Context, c *rpcclient.Client, line []byte) (bridgeLine,
 
 // lineWriter prints one JSON value per line from any goroutine.
 type lineWriter struct {
-	mu sync.Mutex
-	w  io.Writer
+	mu  sync.Mutex
+	enc *json.Encoder
 }
 
+func newLineWriter(w io.Writer) *lineWriter { return &lineWriter{enc: json.NewEncoder(w)} }
+
 func (l *lineWriter) write(v bridgeLine) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	_, err = l.w.Write(append(b, '\n'))
-	return err
+	return l.enc.Encode(v) // one value and a newline in one Write
 }

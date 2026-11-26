@@ -221,8 +221,9 @@ func (c *Client) Call(ctx context.Context, method string, params any) (json.RawM
 	if err != nil {
 		return nil, err
 	}
-	answer := c.expect(id)
-	defer c.forget(id)
+	answer := make(chan response, 1)
+	c.track(id, answer)
+	defer c.track(id, nil)
 	if err := c.send(line); err != nil {
 		return nil, ErrClosed
 	}
@@ -254,18 +255,15 @@ func (r response) result() (json.RawMessage, error) {
 	return r.Result, nil
 }
 
-func (c *Client) expect(id int64) chan response {
-	ch := make(chan response, 1)
+// track makes ch the place where id's response goes; nil forgets id.
+func (c *Client) track(id int64, ch chan response) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if ch == nil {
+		delete(c.pending, id)
+		return
+	}
 	c.pending[id] = ch
-	return ch
-}
-
-func (c *Client) forget(id int64) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	delete(c.pending, id)
 }
 
 func (c *Client) send(line []byte) error {
