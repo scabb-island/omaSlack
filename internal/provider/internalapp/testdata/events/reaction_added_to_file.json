@@ -1,0 +1,15 @@
+{
+  "team_id": "T0001",
+  "api_app_id": "A0001",
+  "event": {
+    "type": "reaction_added",
+    "user": "U0002",
+    "reaction": "eyes",
+    "item_user": "U0001",
+    "item": { "type": "file", "file": "F0001" },
+    "event_ts": "1700000900.000900"
+  },
+  "type": "event_callback",
+  "event_id": "Ev0007",
+  "event_time": 1700000900
+}

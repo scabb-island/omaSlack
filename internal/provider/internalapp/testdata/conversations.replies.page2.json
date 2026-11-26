@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "messages": [
+    {
+      "type": "message",
+      "user": "U0001",
+      "text": "thread root",
+      "ts": "1700000100.000100",
+      "thread_ts": "1700000100.000100",
+      "reply_count": 2
+    },
+    {
+      "type": "message",
+      "user": "U0002",
+      "text": "second reply",
+      "ts": "1700000300.000300",
+      "thread_ts": "1700000100.000100",
+      "parent_user_id": "U0001"
+    }
+  ],
+  "has_more": false,
+  "response_metadata": { "next_cursor": "" }
+}

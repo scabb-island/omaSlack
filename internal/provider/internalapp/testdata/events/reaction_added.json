@@ -1,0 +1,15 @@
+{
+  "team_id": "T0001",
+  "api_app_id": "A0001",
+  "event": {
+    "type": "reaction_added",
+    "user": "U0002",
+    "reaction": "thumbsup",
+    "item_user": "U0001",
+    "item": { "type": "message", "channel": "D0001", "ts": "1700000600.000600" },
+    "event_ts": "1700000800.000800"
+  },
+  "type": "event_callback",
+  "event_id": "Ev0005",
+  "event_time": 1700000800
+}
