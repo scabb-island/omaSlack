@@ -22,6 +22,11 @@ func TestRecordedFramesMapToDomainEvents(t *testing.T) {
 			Message: domain.Message{TS: ts("1700000610.000610"), Author: author("B0001"), Text: "deploy finished"}}},
 		"message_thread_reply.json": {domain.MessageCreated{Team: team, Conversation: conv("C0001"),
 			Message: domain.Message{TS: ts("1700000620.000620"), ThreadTS: ts("1700000100.000100"), Author: author("U0002"), Text: "a reply"}}},
+		"message_file_share.json": {domain.MessageCreated{Team: team, Conversation: conv("C0001"),
+			Message: domain.Message{TS: ts("1700000660.000660"), Author: author("U0002"), Text: "the screenshot", Files: []domain.File{{
+				ID: parse(t, domain.ParseFileID, "F0001"), Name: "screenshot.png", Title: "screenshot.png", MIMEType: "image/png", Size: 48213,
+				DownloadURL: "https://files.slack.com/files-pri/T0001-F0001/download/screenshot.png",
+			}}}}},
 		"message_changed.json": {domain.MessageUpdated{Team: team, Conversation: conv("C0001"),
 			Message: domain.Message{TS: ts("1700000600.000600"), Author: author("U0002"), Text: "hello, edited", Edited: ts("1700000700.000000")}}},
 		"message_deleted.json": {domain.MessageDeleted{Team: team, Conversation: conv("G0001"), TS: ts("1700000600.000600")}},

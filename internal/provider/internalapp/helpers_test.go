@@ -51,6 +51,16 @@ func mustConv(t *testing.T, s string) domain.ConversationID {
 	return id
 }
 
+// mustParse runs a domain parser and fails the test on an error.
+func mustParse[T any](t *testing.T, parse func(string) (T, error), s string) T {
+	t.Helper()
+	v, err := parse(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return v
+}
+
 func readFixture(t *testing.T, name string) []byte {
 	t.Helper()
 	b, err := os.ReadFile(filepath.Join("testdata", name))

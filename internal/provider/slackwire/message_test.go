@@ -45,6 +45,22 @@ func TestMessagesParseIntoDomainMessages(t *testing.T) {
 			domain.Message{TS: ts("1700000100.000100"), Author: author("U0002")}},
 		"edited reply": {`{"user":"U0002","ts":"1700000300.000300","thread_ts":"1700000100.000100","edited":{"ts":"1700000400.000000"}}`,
 			domain.Message{TS: ts("1700000300.000300"), ThreadTS: ts("1700000100.000100"), Author: author("U0002"), Edited: ts("1700000400.000000")}},
+		"with files": {`{"user":"U0002","ts":"1700000100.000100","files":[` +
+			`{"id":"F0001","name":"report.pdf","title":"Q3 report","mimetype":"application/pdf","size":2048,` +
+			`"url_private":"https://files.slack.com/files-pri/T0001-F0001/report.pdf",` +
+			`"url_private_download":"https://files.slack.com/files-pri/T0001-F0001/download/report.pdf","mode":"hosted"},` +
+			`{"id":"F0002","name":"doc","mimetype":"application/vnd.google-apps.document","mode":"external"}]}`,
+			domain.Message{TS: ts("1700000100.000100"), Author: author("U0002"), Files: []domain.File{
+				{ID: must(t, domain.ParseFileID, "F0001"), Name: "report.pdf", Title: "Q3 report", MIMEType: "application/pdf", Size: 2048,
+					DownloadURL: "https://files.slack.com/files-pri/T0001-F0001/download/report.pdf"},
+				{ID: must(t, domain.ParseFileID, "F0002"), Name: "doc", MIMEType: "application/vnd.google-apps.document"},
+			}}},
+		// Deleted files stay as tombstones and files past a free plan's
+		// limit are hidden: neither can be shown or fetched. A file with a
+		// bad ID is dropped rather than the whole message.
+		"files that cannot be shown": {`{"user":"U0002","ts":"1700000100.000100","files":[` +
+			`{"id":"F0003","mode":"tombstone"},{"id":"F0004","mode":"hidden_by_limit"},{"id":"../x","name":"x"}]}`,
+			domain.Message{TS: ts("1700000100.000100"), Author: author("U0002")}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			got, err := decode(t, tc.json).Parse()

@@ -1,0 +1,54 @@
+{
+  "token": "XXYYZZ",
+  "team_id": "T0001",
+  "context_team_id": "T0001",
+  "api_app_id": "A0001",
+  "event": {
+    "type": "message",
+    "subtype": "file_share",
+    "channel": "C0001",
+    "user": "U0002",
+    "text": "the screenshot",
+    "ts": "1700000660.000660",
+    "upload": false,
+    "display_as_bot": false,
+    "files": [
+      {
+        "id": "F0001",
+        "created": 1700000659,
+        "timestamp": 1700000659,
+        "name": "screenshot.png",
+        "title": "screenshot.png",
+        "mimetype": "image/png",
+        "filetype": "png",
+        "pretty_type": "PNG",
+        "user": "U0002",
+        "user_team": "T0001",
+        "editable": false,
+        "size": 48213,
+        "mode": "hosted",
+        "is_external": false,
+        "external_type": "",
+        "is_public": true,
+        "public_url_shared": false,
+        "display_as_bot": false,
+        "username": "",
+        "url_private": "https://files.slack.com/files-pri/T0001-F0001/screenshot.png",
+        "url_private_download": "https://files.slack.com/files-pri/T0001-F0001/download/screenshot.png",
+        "thumb_64": "https://files.slack.com/files-tmb/T0001-F0001-0a1b2c/screenshot_64.png",
+        "permalink": "https://acme.slack.com/files/U0002/F0001/screenshot.png",
+        "has_rich_preview": false
+      }
+    ],
+    "event_ts": "1700000660.000660",
+    "channel_type": "channel"
+  },
+  "type": "event_callback",
+  "event_id": "Ev0002",
+  "event_time": 1700000660,
+  "authorizations": [
+    { "enterprise_id": null, "team_id": "T0001", "user_id": "U0001", "is_bot": false, "is_enterprise_install": false }
+  ],
+  "is_ext_shared_channel": false,
+  "event_context": "4-eyJldCI6Im1lc3NhZ2UifQ"
+}
