@@ -10,7 +10,10 @@ import (
 // must never reveal a secret.
 func TestCredentialsNeverPrintSecrets(t *testing.T) {
 	creds := []Credentials{
-		DesktopSession{Token: "xoxc-secret-token", Cookie: "xoxd-secret-cookie"},
+		DesktopSession{
+			Token: "xoxc-secret-token", Cookie: "xoxd-secret-cookie",
+			Cookies: "d=xoxd-secret-cookie; x=secret-x; d-s=secret-ds",
+		},
 		InternalApp{UserToken: "xoxp-secret-user", AppToken: "xapp-secret-app"},
 	}
 	for _, c := range creds {
@@ -34,7 +37,7 @@ func TestCredentialsNameTheirProvider(t *testing.T) {
 
 func TestRedactedFormShowsWhatIsSet(t *testing.T) {
 	got := fmt.Sprint(DesktopSession{Token: "xoxc-1", Cookie: ""})
-	want := "desktop-session{token:set cookie:missing}"
+	want := "desktop-session{token:set cookie:missing cookies:missing}"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -42,5 +45,18 @@ func TestRedactedFormShowsWhatIsSet(t *testing.T) {
 	want = "internal-app{userToken:missing appToken:set}"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+// An entry stored before omaslack kept every session cookie sends the d
+// cookie alone, as it always did; a newer one sends the whole set.
+func TestCookieHeaderIsTheFullSetWhenKnown(t *testing.T) {
+	old := DesktopSession{Token: "xoxc-1", Cookie: "xoxd-1"}
+	if got := old.CookieHeader(); got != "d=xoxd-1" {
+		t.Errorf("old entry CookieHeader() = %q, want d=xoxd-1", got)
+	}
+	full := DesktopSession{Token: "xoxc-1", Cookie: "xoxd-1", Cookies: "b=1; d=xoxd-1; x=2"}
+	if got := full.CookieHeader(); got != "b=1; d=xoxd-1; x=2" {
+		t.Errorf("CookieHeader() = %q, want every cookie", got)
 	}
 }

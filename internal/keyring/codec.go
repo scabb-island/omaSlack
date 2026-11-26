@@ -13,12 +13,16 @@ var ErrMalformed = errors.New("malformed credentials")
 
 // record is the JSON document both backends store for one workspace. The
 // provider field says which Credentials kind the other fields belong to.
+// Fields are only ever added, and empty ones are left out, so documents
+// written by older versions still decode.
 type record struct {
-	Provider  string `json:"provider"`
-	Token     string `json:"token,omitempty"`
-	Cookie    string `json:"cookie,omitempty"`
-	UserToken string `json:"user_token,omitempty"`
-	AppToken  string `json:"app_token,omitempty"`
+	Provider     string `json:"provider"`
+	Token        string `json:"token,omitempty"`
+	Cookie       string `json:"cookie,omitempty"`
+	Cookies      string `json:"cookies,omitempty"`
+	UserToken    string `json:"user_token,omitempty"`
+	AppToken     string `json:"app_token,omitempty"`
+	WorkspaceURL string `json:"workspace_url,omitempty"`
 }
 
 func encode(creds Credentials) ([]byte, error) {
@@ -32,9 +36,15 @@ func encode(creds Credentials) ([]byte, error) {
 func toRecord(creds Credentials) (record, error) {
 	switch c := creds.(type) {
 	case DesktopSession:
-		return record{Provider: c.Provider(), Token: c.Token, Cookie: c.Cookie}, nil
+		return record{
+			Provider: c.Provider(), Token: c.Token, Cookie: c.Cookie, Cookies: c.Cookies,
+			WorkspaceURL: c.WorkspaceURL,
+		}, nil
 	case InternalApp:
-		return record{Provider: c.Provider(), UserToken: c.UserToken, AppToken: c.AppToken}, nil
+		return record{
+			Provider: c.Provider(), UserToken: c.UserToken, AppToken: c.AppToken,
+			WorkspaceURL: c.WorkspaceURL,
+		}, nil
 	default:
 		return record{}, fmt.Errorf("%w: unsupported kind %T", ErrMalformed, creds)
 	}
@@ -53,9 +63,9 @@ func decode(data []byte) (Credentials, error) {
 func (r record) credentials() (Credentials, error) {
 	switch r.Provider {
 	case DesktopSession{}.Provider():
-		return DesktopSession{Token: r.Token, Cookie: r.Cookie}, nil
+		return DesktopSession{Token: r.Token, Cookie: r.Cookie, Cookies: r.Cookies, WorkspaceURL: r.WorkspaceURL}, nil
 	case InternalApp{}.Provider():
-		return InternalApp{UserToken: r.UserToken, AppToken: r.AppToken}, nil
+		return InternalApp{UserToken: r.UserToken, AppToken: r.AppToken, WorkspaceURL: r.WorkspaceURL}, nil
 	default:
 		return nil, fmt.Errorf("%w: unknown provider %q", ErrMalformed, r.Provider)
 	}

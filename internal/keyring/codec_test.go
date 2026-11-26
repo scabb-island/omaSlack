@@ -11,7 +11,12 @@ import (
 func TestCodecRoundTripsEveryKind(t *testing.T) {
 	for _, want := range []Credentials{
 		DesktopSession{Token: "xoxc-1", Cookie: "xoxd-1"},
+		DesktopSession{
+			Token: "xoxc-1", Cookie: "xoxd-1", Cookies: "d=xoxd-1; x=1",
+			WorkspaceURL: "https://acme.slack.com/",
+		},
 		InternalApp{UserToken: "xoxp-1", AppToken: "xapp-1"},
+		InternalApp{UserToken: "xoxp-1", AppToken: "xapp-1", WorkspaceURL: "https://acme.slack.com/"},
 	} {
 		data, err := encode(want)
 		if err != nil {
@@ -67,5 +72,31 @@ func TestDecodeErrorDoesNotEchoSecrets(t *testing.T) {
 		if err == nil || strings.Contains(err.Error(), "secret") {
 			t.Errorf("decode error = %v", err)
 		}
+	}
+}
+
+// Entries written before the cookie set and the workspace URL were kept
+// still load, with both unknown.
+func TestDecodeReadsEntriesStoredBeforeCookiesAndURL(t *testing.T) {
+	got, err := decode([]byte(`{"provider":"desktop-session","token":"xoxc-1","cookie":"xoxd-1"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := (DesktopSession{Token: "xoxc-1", Cookie: "xoxd-1"}); got != want {
+		t.Errorf("decode = %#v, want %#v", got, want)
+	}
+}
+
+func TestEncodeKeepsTheCookieSetAndTheWorkspaceURL(t *testing.T) {
+	data, err := encode(DesktopSession{
+		Token: "xoxc-1", Cookie: "xoxd-1", Cookies: "d=xoxd-1; x=1", WorkspaceURL: "https://acme.slack.com/",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `{"provider":"desktop-session","token":"xoxc-1","cookie":"xoxd-1","cookies":"d=xoxd-1; x=1",` +
+		`"workspace_url":"https://acme.slack.com/"}`
+	if string(data) != want {
+		t.Errorf("encode = %s, want %s", data, want)
 	}
 }
