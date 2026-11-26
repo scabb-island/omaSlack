@@ -113,7 +113,58 @@ type Focuser interface {
 //	unread.summary{}                                   → wire.Summary
 //	ui.focus{team, conv, ts?}                          → {clients: n}
 //
+// Params:
+//   - team, conv: Slack IDs; ts, threadTS, before: Slack timestamps
+//     ("1700000000.000100"). Any other member is ignored, and a member set
+//     to null counts as absent, so older daemons accept newer clients.
+//   - limit: messages.history defaults to HistoryLimit (50) and is capped
+//     at HistoryMaxLimit (200); search.messages and users.search default
+//     to SearchLimit (20) and are capped at SearchMaxLimit (100). A larger
+//     limit is lowered to the cap; below 1 is -32602.
+//   - text: required; empty is -32602 except in drafts.set, where it
+//     clears the draft. query and q must not be empty. emoji is a name;
+//     colons around it (":tada:") are dropped. minutes is at least 1.
+//
+// Behavior:
+//   - messages.history reads the cache; when it holds fewer than limit
+//     messages before the cursor, it asks the engine for one older page
+//     (LoadOlder) and reads again. Every message carries its reactions.
+//   - conversations.open opens the conversation in the engine, then
+//     returns the newest HistoryLimit messages and the draft.
+//   - messages.replies opens the thread in the engine, then reads the
+//     cache.
+//   - search.messages needs domain.Search and presence.set needs
+//     domain.PresenceWrite; without it they answer -32002 and the engine
+//     is not called.
+//
 // files.upload and files.fetch arrive with task 2.9.
 func Methods(dir Directory, focus Focuser) rpc.Router {
-	return rpc.Router{} // task 2.3
+	methods := map[string]method{
+		"workspaces.list":        workspacesList(dir),
+		"conversations.list":     conversationsList,
+		"conversations.open":     conversationsOpen,
+		"conversations.close":    conversationsClose,
+		"conversations.markRead": conversationsMarkRead,
+		"messages.history":       messagesHistory,
+		"messages.replies":       messagesReplies,
+		"messages.send":          messagesSend,
+		"messages.edit":          messagesEdit,
+		"messages.delete":        messagesDelete,
+		"reactions.add":          react(true),
+		"reactions.remove":       react(false),
+		"drafts.get":             draftsGet,
+		"drafts.set":             draftsSet,
+		"search.messages":        searchMessages,
+		"users.search":           usersSearch,
+		"presence.set":           presenceSet,
+		"dnd.snooze":             dndSnooze,
+		"dnd.end":                dndEnd,
+		"unread.summary":         unreadSummary(dir),
+		"ui.focus":               uiFocus(focus),
+	}
+	r := make(rpc.Router, len(methods))
+	for name, m := range methods {
+		r[name] = handler(dir, m)
+	}
+	return r
 }

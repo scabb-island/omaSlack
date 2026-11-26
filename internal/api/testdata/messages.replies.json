@@ -1,0 +1,76 @@
+[
+  {
+    "name": "opens the thread and lists its replies oldest first",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "threadTS": "1700000200.000000"
+    },
+    "calls": [
+      "T0ACME OpenThread C0GENERAL 1700000200.000000"
+    ],
+    "result": [
+      {
+        "ts": "1700000210.000000",
+        "threadTS": "1700000200.000000",
+        "author": "U0ANA",
+        "text": "first reply",
+        "reactions": [
+          {
+            "emoji": "eyes",
+            "users": [
+              "U0BOB"
+            ]
+          }
+        ]
+      },
+      {
+        "ts": "1700000220.000000",
+        "threadTS": "1700000200.000000",
+        "author": "U0BOB",
+        "text": "second reply"
+      }
+    ]
+  },
+  {
+    "name": "missing threadTS",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL"
+    },
+    "error": {
+      "code": -32602,
+      "message": "threadTS: missing"
+    }
+  },
+  {
+    "name": "credentials expired",
+    "params": {
+      "team": "T0EXPIRED",
+      "conv": "C0GENERAL",
+      "threadTS": "1700000200.000000"
+    },
+    "calls": [
+      "T0EXPIRED OpenThread C0GENERAL 1700000200.000000"
+    ],
+    "error": {
+      "code": -32003,
+      "message": "auth_expired"
+    }
+  },
+  {
+    "name": "cache unreadable: internal error, text hidden",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0BROKEN",
+      "threadTS": "1700000200.000000"
+    },
+    "calls": [
+      "T0ACME OpenThread C0BROKEN 1700000200.000000"
+    ],
+    "error": {
+      "code": -32603,
+      "message": "internal error"
+    }
+  }
+]

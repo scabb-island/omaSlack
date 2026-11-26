@@ -1,0 +1,61 @@
+[
+  {
+    "name": "default limit",
+    "params": {
+      "team": "T0ACME",
+      "q": "ana"
+    },
+    "calls": [
+      "T0ACME SearchUsers \"ana\" limit=20"
+    ],
+    "result": [
+      {
+        "id": "U0ANA",
+        "name": "ana",
+        "realName": "Ana Pérez"
+      }
+    ]
+  },
+  {
+    "name": "explicit limit",
+    "params": {
+      "team": "T0ACME",
+      "q": "ana",
+      "limit": 5
+    },
+    "calls": [
+      "T0ACME SearchUsers \"ana\" limit=5"
+    ],
+    "result": [
+      {
+        "id": "U0ANA",
+        "name": "ana",
+        "realName": "Ana Pérez"
+      }
+    ]
+  },
+  {
+    "name": "missing q",
+    "params": {
+      "team": "T0ACME"
+    },
+    "error": {
+      "code": -32602,
+      "message": "q: missing"
+    }
+  },
+  {
+    "name": "credentials expired",
+    "params": {
+      "team": "T0EXPIRED",
+      "q": "ana"
+    },
+    "calls": [
+      "T0EXPIRED SearchUsers \"ana\" limit=20"
+    ],
+    "error": {
+      "code": -32003,
+      "message": "auth_expired"
+    }
+  }
+]

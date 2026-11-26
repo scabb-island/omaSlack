@@ -1,0 +1,233 @@
+[
+  {
+    "name": "every conversation by default",
+    "params": {
+      "team": "T0ACME"
+    },
+    "result": [
+      {
+        "id": "C0GENERAL",
+        "kind": "channel",
+        "name": "general",
+        "latest": "1700000300.000000",
+        "lastRead": "1700000100.000000",
+        "mentions": 1,
+        "unread": true
+      },
+      {
+        "id": "C0RANDOM",
+        "kind": "channel",
+        "name": "random",
+        "latest": "1700000050.000000",
+        "lastRead": "1700000050.000000",
+        "mentions": 0,
+        "unread": false
+      },
+      {
+        "id": "D0ANA",
+        "kind": "im",
+        "latest": "1700000400.000000",
+        "lastRead": "1700000390.000000",
+        "mentions": 0,
+        "unread": true
+      },
+      {
+        "id": "G0TEAM",
+        "kind": "mpim",
+        "latest": "1700000500.000000",
+        "lastRead": "1700000500.000000",
+        "mentions": 0,
+        "unread": false
+      }
+    ]
+  },
+  {
+    "name": "filter all",
+    "params": {
+      "team": "T0ACME",
+      "filter": "all"
+    },
+    "result": [
+      {
+        "id": "C0GENERAL",
+        "kind": "channel",
+        "name": "general",
+        "latest": "1700000300.000000",
+        "lastRead": "1700000100.000000",
+        "mentions": 1,
+        "unread": true
+      },
+      {
+        "id": "C0RANDOM",
+        "kind": "channel",
+        "name": "random",
+        "latest": "1700000050.000000",
+        "lastRead": "1700000050.000000",
+        "mentions": 0,
+        "unread": false
+      },
+      {
+        "id": "D0ANA",
+        "kind": "im",
+        "latest": "1700000400.000000",
+        "lastRead": "1700000390.000000",
+        "mentions": 0,
+        "unread": true
+      },
+      {
+        "id": "G0TEAM",
+        "kind": "mpim",
+        "latest": "1700000500.000000",
+        "lastRead": "1700000500.000000",
+        "mentions": 0,
+        "unread": false
+      }
+    ]
+  },
+  {
+    "name": "filter unread",
+    "params": {
+      "team": "T0ACME",
+      "filter": "unread"
+    },
+    "result": [
+      {
+        "id": "C0GENERAL",
+        "kind": "channel",
+        "name": "general",
+        "latest": "1700000300.000000",
+        "lastRead": "1700000100.000000",
+        "mentions": 1,
+        "unread": true
+      },
+      {
+        "id": "D0ANA",
+        "kind": "im",
+        "latest": "1700000400.000000",
+        "lastRead": "1700000390.000000",
+        "mentions": 0,
+        "unread": true
+      }
+    ]
+  },
+  {
+    "name": "another workspace",
+    "params": {
+      "team": "T0BETA",
+      "filter": "unread"
+    },
+    "result": [
+      {
+        "id": "C0ALERTS",
+        "kind": "private",
+        "name": "alerts",
+        "latest": "1700000600.000000",
+        "mentions": 3,
+        "unread": true
+      }
+    ]
+  },
+  {
+    "name": "unknown filter",
+    "params": {
+      "team": "T0ACME",
+      "filter": "starred"
+    },
+    "error": {
+      "code": -32602,
+      "message": "filter: must be one of all, unread"
+    }
+  },
+  {
+    "name": "filter that is not a string",
+    "params": {
+      "team": "T0ACME",
+      "filter": 1
+    },
+    "error": {
+      "code": -32602,
+      "message": "filter: must be a string"
+    }
+  },
+  {
+    "name": "null counts as absent",
+    "params": {
+      "team": "T0ACME",
+      "filter": null
+    },
+    "result": [
+      {
+        "id": "C0GENERAL",
+        "kind": "channel",
+        "name": "general",
+        "latest": "1700000300.000000",
+        "lastRead": "1700000100.000000",
+        "mentions": 1,
+        "unread": true
+      },
+      {
+        "id": "C0RANDOM",
+        "kind": "channel",
+        "name": "random",
+        "latest": "1700000050.000000",
+        "lastRead": "1700000050.000000",
+        "mentions": 0,
+        "unread": false
+      },
+      {
+        "id": "D0ANA",
+        "kind": "im",
+        "latest": "1700000400.000000",
+        "lastRead": "1700000390.000000",
+        "mentions": 0,
+        "unread": true
+      },
+      {
+        "id": "G0TEAM",
+        "kind": "mpim",
+        "latest": "1700000500.000000",
+        "lastRead": "1700000500.000000",
+        "mentions": 0,
+        "unread": false
+      }
+    ]
+  },
+  {
+    "name": "missing team",
+    "params": {},
+    "error": {
+      "code": -32602,
+      "message": "team: missing"
+    }
+  },
+  {
+    "name": "bad team ID",
+    "params": {
+      "team": "acme"
+    },
+    "error": {
+      "code": -32602,
+      "message": "team: invalid Slack ID: \"acme\" is not a team ID"
+    }
+  },
+  {
+    "name": "unknown workspace",
+    "params": {
+      "team": "T0NOPE"
+    },
+    "error": {
+      "code": -32602,
+      "message": "unknown workspace"
+    }
+  },
+  {
+    "name": "params that are not an object",
+    "params": [
+      1
+    ],
+    "error": {
+      "code": -32602,
+      "message": "params must be an object"
+    }
+  }
+]

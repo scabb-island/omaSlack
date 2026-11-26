@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "members": [
+    {"id": "U0001", "name": "ana", "deleted": false, "is_bot": false,
+     "profile": {"real_name": "Ana Lopez", "display_name": "anita"}},
+    {"id": "U0002", "name": "bob", "deleted": true,
+     "profile": {"real_name": "Bob Old", "display_name": ""}},
+    {"id": "U0003", "name": "juana", "deleted": false,
+     "profile": {"real_name": "Juana Diaz", "display_name": ""}}
+  ],
+  "response_metadata": {"next_cursor": ""}
+}

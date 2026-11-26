@@ -1,0 +1,52 @@
+[
+  {
+    "name": "moves the read marker",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "ts": "1700000300.000000"
+    },
+    "calls": [
+      "T0ACME MarkRead C0GENERAL 1700000300.000000"
+    ],
+    "result": null
+  },
+  {
+    "name": "missing ts",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL"
+    },
+    "error": {
+      "code": -32602,
+      "message": "ts: missing"
+    }
+  },
+  {
+    "name": "bad ts",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "ts": "1700000300"
+    },
+    "error": {
+      "code": -32602,
+      "message": "ts: invalid Slack timestamp: \"1700000300\""
+    }
+  },
+  {
+    "name": "credentials expired",
+    "params": {
+      "team": "T0EXPIRED",
+      "conv": "C0GENERAL",
+      "ts": "1700000300.000000"
+    },
+    "calls": [
+      "T0EXPIRED MarkRead C0GENERAL 1700000300.000000"
+    ],
+    "error": {
+      "code": -32003,
+      "message": "auth_expired"
+    }
+  }
+]

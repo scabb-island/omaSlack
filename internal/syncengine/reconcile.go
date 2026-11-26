@@ -21,8 +21,10 @@ const (
 )
 
 // reconcile runs, at Background priority, after every connection. It
-// stores the read markers the provider's conversation list reports, so
-// unread state is known before any client opens a conversation; after an
+// stores the provider's conversation list and the read markers it
+// reports, so unread state is known before any client opens a
+// conversation (a list that could not be fetched leaves the stored one
+// alone); after an
 // outage it also catches up every conversation open in a client, with
 // activity since startup, or that the list says is unread or mentions the
 // user (spec sync-engine, "Reconciliation after reconnecting"), with its
@@ -32,7 +34,12 @@ func (e *Engine) reconcile(ctx context.Context, outage bool) {
 	if stopping(err) {
 		return
 	}
-	if err := e.do(ctx, markersOp(list)); err != nil || !outage {
+	if err == nil {
+		if err := e.do(ctx, listOp(list)); err != nil {
+			return
+		}
+	}
+	if !outage {
 		return
 	}
 	e.eachInteresting(ctx, list, "catch up", func(conv domain.ConversationID) error {
@@ -133,20 +140,6 @@ func interestOp(list []domain.Conversation, out *[]domain.ConversationID) op {
 	}
 }
 
-// markersOp stores the read marker of every conversation in list, in
-// order. A marker never moves back, and one the Store cannot take is
-// logged and skipped.
-func markersOp(list []domain.Conversation) op {
-	return func(ctx context.Context, w *writer) error {
-		for _, c := range list {
-			if err := w.moveRead(ctx, c.ID, c.LastRead); err != nil {
-				w.log.Warn("sync: could not store a read marker", "team", w.team, "conversation", c.ID, "err", err)
-			}
-		}
-		return nil
-	}
-}
-
 func readOp(conv domain.ConversationID, at domain.TS) op {
-	return func(ctx context.Context, w *writer) error { return w.moveRead(ctx, conv, at) }
+	return refreshing(conv, func(ctx context.Context, w *writer) error { return w.moveRead(ctx, conv, at) })
 }

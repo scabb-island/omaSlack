@@ -1,0 +1,53 @@
+[
+  {
+    "name": "stores it through the engine",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "text": "still thinking"
+    },
+    "calls": [
+      "T0ACME SetDraft C0GENERAL thread=- \"still thinking\""
+    ],
+    "result": null
+  },
+  {
+    "name": "empty text clears it",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "threadTS": "1700000200.000000",
+      "text": ""
+    },
+    "calls": [
+      "T0ACME SetDraft C0GENERAL thread=1700000200.000000 \"\""
+    ],
+    "result": null
+  },
+  {
+    "name": "missing text",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL"
+    },
+    "error": {
+      "code": -32602,
+      "message": "text: missing"
+    }
+  },
+  {
+    "name": "credentials expired",
+    "params": {
+      "team": "T0EXPIRED",
+      "conv": "C0GENERAL",
+      "text": "x"
+    },
+    "calls": [
+      "T0EXPIRED SetDraft C0GENERAL thread=- \"x\""
+    ],
+    "error": {
+      "code": -32003,
+      "message": "auth_expired"
+    }
+  }
+]

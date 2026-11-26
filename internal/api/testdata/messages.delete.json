@@ -1,0 +1,40 @@
+[
+  {
+    "name": "deletes it in the engine",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "ts": "1700000100.000000"
+    },
+    "calls": [
+      "T0ACME Delete C0GENERAL 1700000100.000000"
+    ],
+    "result": null
+  },
+  {
+    "name": "missing ts",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL"
+    },
+    "error": {
+      "code": -32602,
+      "message": "ts: missing"
+    }
+  },
+  {
+    "name": "credentials expired",
+    "params": {
+      "team": "T0EXPIRED",
+      "conv": "C0GENERAL",
+      "ts": "1700000100.000000"
+    },
+    "calls": [
+      "T0EXPIRED Delete C0GENERAL 1700000100.000000"
+    ],
+    "error": {
+      "code": -32003,
+      "message": "auth_expired"
+    }
+  }
+]

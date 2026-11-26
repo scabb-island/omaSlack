@@ -110,12 +110,7 @@ func FromSearchHit(h domain.SearchHit) SearchHit {
 	return SearchHit{Conv: h.Conversation.String(), Message: FromMessage(h.Message, nil)}
 }
 
-func optTS(t domain.TS) string {
-	if t.IsZero() {
-		return ""
-	}
-	return t.String()
-}
+func optTS(t domain.TS) string { return t.OrEmpty() }
 
 func ids(users []domain.UserID) []string {
 	out := make([]string, len(users))

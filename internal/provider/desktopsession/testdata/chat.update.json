@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "channel": "C0001",
+  "ts": "1700000500.000500",
+  "text": "hi there, edited",
+  "message": {
+    "type": "message",
+    "user": "U0001",
+    "text": "hi there, edited",
+    "edited": {"user": "U0001", "ts": "1700000600.000000"},
+    "team": "T0001"
+  }
+}

@@ -1,0 +1,86 @@
+[
+  {
+    "name": "returns the edited message with its reactions",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "ts": "1700000300.000000",
+      "text": "latest, fixed"
+    },
+    "calls": [
+      "T0ACME Edit C0GENERAL 1700000300.000000 \"latest, fixed\""
+    ],
+    "result": {
+      "ts": "1700000300.000000",
+      "author": "U0ME",
+      "text": "latest, fixed",
+      "edited": "1700000950.000000",
+      "reactions": [
+        {
+          "emoji": "thumbsup",
+          "users": [
+            "U0ANA",
+            "U0BOB"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "name": "missing ts",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "text": "x"
+    },
+    "error": {
+      "code": -32602,
+      "message": "ts: missing"
+    }
+  },
+  {
+    "name": "empty text",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "ts": "1700000300.000000",
+      "text": ""
+    },
+    "error": {
+      "code": -32602,
+      "message": "text: must not be empty"
+    }
+  },
+  {
+    "name": "credentials expired",
+    "params": {
+      "team": "T0EXPIRED",
+      "conv": "C0GENERAL",
+      "ts": "1700000300.000000",
+      "text": "x"
+    },
+    "calls": [
+      "T0EXPIRED Edit C0GENERAL 1700000300.000000 \"x\""
+    ],
+    "error": {
+      "code": -32003,
+      "message": "auth_expired"
+    }
+  },
+  {
+    "name": "cache unreadable: internal error, text hidden",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0BROKEN",
+      "ts": "1700000300.000000",
+      "text": "x"
+    },
+    "calls": [
+      "T0ACME Edit C0BROKEN 1700000300.000000 \"x\""
+    ],
+    "error": {
+      "code": -32603,
+      "message": "internal error"
+    }
+  }
+]

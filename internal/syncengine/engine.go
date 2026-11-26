@@ -43,6 +43,11 @@ type Config struct {
 	Budget    ratebudget.Budget
 	Publisher Publisher
 
+	// Self is the signed-in user. React needs it to store and publish the
+	// user's own reaction; when it is zero, React only reaches Slack and
+	// the change arrives through the stream.
+	Self domain.UserID
+
 	Clock    ratebudget.Clock // default: the wall clock
 	Rand     func() float64   // in [0, 1), for jitter; default: math/rand
 	PageSize int              // messages per History call; zero means 100
@@ -78,6 +83,7 @@ type Engine struct {
 	stopped    chan struct{} // closed when Run stops serving ops
 	expired    chan struct{} // closed when Slack rejected the credentials
 	expireOnce sync.Once
+	running    atomic.Bool    // Run is serving ops: client actions may start
 	listFailed atomic.Bool    // the conversation list is failing (logged when it changes)
 	wg         sync.WaitGroup // every goroutine Run started
 
@@ -113,7 +119,9 @@ func (e *Engine) Run(ctx context.Context) error {
 	if _, ok := e.cfg.Provider.(provider.ReadMarkerReader); ok {
 		e.wg.Go(func() { e.pollReads(ctx) })
 	}
+	e.running.Store(true)
 	e.w.serve(ctx, e.ops)
+	e.running.Store(false)
 	close(e.stopped)
 	e.wg.Wait()
 	return <-result
