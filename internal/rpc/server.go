@@ -35,8 +35,8 @@ type Server struct {
 	log     *slog.Logger
 	owner   uint32 // the only UID allowed to connect
 	maxLine int
-	maxCall int // calls running at once per connection
-	ctx    context.Context // ends on Close; every connection derives from it
+	maxCall int             // calls running at once per connection
+	ctx     context.Context // ends on Close; every connection derives from it
 	cancel  context.CancelFunc
 
 	mu       sync.Mutex
