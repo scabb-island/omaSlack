@@ -154,6 +154,7 @@ func (a adder) internalApp() ([]newWorkspace, error) {
 	if err != nil {
 		return nil, err
 	}
+	creds.WorkspaceURL = id.URL
 	return []newWorkspace{{team: id.Team, name: id.Name, creds: creds}}, nil
 }
 
@@ -243,14 +244,16 @@ func (a adder) fromDesktop(w auth.Workspace) (newWorkspace, error) {
 
 // checkDesktop asks Slack whether the desktop app's session for w works,
 // as pasteSession does for a browser one: the files on disk can hold a
-// session Slack no longer accepts. Slack's name for the workspace wins
-// over the one the app stored, when Slack gives one.
+// session Slack no longer accepts. Slack's name and address for the
+// workspace win over the ones the app stored, when Slack gives them.
 func (a adder) checkDesktop(w auth.Workspace) (newWorkspace, error) {
 	id, err := desktopsession.AuthTest(a.env.SlackAPIURL)(a.ctx, w.Credentials)
 	if err != nil {
 		return newWorkspace{}, explainRejected(fmt.Errorf("%s (%s): %w", w.Name, w.Team, err), desktopRejectedHelp)
 	}
-	return newWorkspace{team: w.Team, name: cmp.Or(id.Team, w.Name), creds: w.Credentials}, nil
+	creds := w.Credentials
+	creds.WorkspaceURL = cmp.Or(id.URL, creds.WorkspaceURL)
+	return newWorkspace{team: w.Team, name: cmp.Or(id.Team, w.Name), creds: creds}, nil
 }
 
 // explainRejected adds help to an error that says Slack rejected a

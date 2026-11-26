@@ -3,6 +3,7 @@
 package auth
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"net/url"
@@ -14,11 +15,13 @@ import (
 )
 
 // The browser login signs a workspace in without the desktop app. It needs
-// the same two values: the xoxc token and the d cookie. The d cookie is
-// HttpOnly, so no DevTools console snippet can read it, but "Copy as cURL"
-// of any request to a Slack /api/ endpoint carries both. The bash, cmd and
+// the same values: the xoxc token, the d cookie and, when the paste has
+// them, the session's other cookies, which some workspaces require. The d
+// cookie is HttpOnly, so no DevTools console snippet can read it, but
+// "Copy as cURL" of any request to a Slack /api/ endpoint carries all of
+// them, and the workspace's own domain in its URL. The bash, cmd and
 // PowerShell forms all work, as does a bare token followed by the cookie
-// on a line of its own.
+// on a line of its own (which gives d alone).
 var (
 	xoxcPattern = regexp.MustCompile(`xoxc-[A-Za-z0-9-]+`)
 	// The d cookie as "d=<value>" (bash and cmd forms, a Cookie header),
@@ -29,6 +32,18 @@ var (
 	psCookiePattern = regexp.MustCompile(`Cookie\(\s*"d"\s*,\s*"(xoxd-[^"]+)"`)
 	// A value on a line of its own, without the "d=" prefix.
 	bareCookiePattern = regexp.MustCompile(`(?m)^[ \t]*(xoxd-[^;\s"'\\]+);?[ \t]*\r?$`)
+
+	// The whole Cookie header: curl's -b or --cookie, a "cookie:" header
+	// (-H, any case), or PowerShell's "Cookie" = "..." header.
+	cookieHeaderPatterns = []*regexp.Regexp{
+		regexp.MustCompile(`(?:^|\s)(?:-b|--cookie)\s+['"]([^'"\r\n]*)['"]`),
+		regexp.MustCompile(`(?i)['"]cookie:\s*([^'"\r\n]*)['"]`),
+		regexp.MustCompile(`(?i)"cookie"\s*=\s*"([^"\r\n]*)"`),
+	}
+	// PowerShell's cookies, one per New-Object System.Net.Cookie(name, value, ...).
+	psCookiesPattern = regexp.MustCompile(`Cookie\(\s*"([^"]+)"\s*,\s*"([^"]*)"`)
+	// The request's URL on the workspace's own domain.
+	workspaceURLPattern = regexp.MustCompile(`https://((?:[a-z0-9-]+\.)+slack\.com)/api/`)
 )
 
 // ParseCurl extracts a browser session from a pasted "Copy as cURL"
@@ -49,7 +64,37 @@ func ParseCurl(paste string) (keyring.DesktopSession, error) {
 	if cookie == "" {
 		return keyring.DesktopSession{}, ErrNoCookie
 	}
-	return keyring.DesktopSession{Token: token, Cookie: encodeCookie(cookie)}, nil
+	d := encodeCookie(cookie)
+	return keyring.DesktopSession{
+		Token: token, Cookie: d, Cookies: cookieHeader(findCookies(paste), d), WorkspaceURL: findWorkspaceURL(paste),
+	}, nil
+}
+
+// findCookies returns every cookie the paste's Cookie header or
+// PowerShell cookies carry, or none when it has neither.
+func findCookies(paste string) []cookie {
+	for _, p := range cookieHeaderPatterns {
+		if m := p.FindStringSubmatch(paste); m != nil {
+			return parseCookieHeader(m[1])
+		}
+	}
+	var out []cookie
+	for _, m := range psCookiesPattern.FindAllStringSubmatch(paste, -1) {
+		if c := (cookie{m[1], m[2]}); c.valid() {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// findWorkspaceURL returns the address of the workspace the request went
+// to ("https://acme.slack.com/"), or "" when the paste names none. The
+// provider checks it again before it sends anything there.
+func findWorkspaceURL(paste string) string {
+	if m := workspaceURLPattern.FindStringSubmatch(paste); m != nil {
+		return "https://" + m[1] + "/"
+	}
+	return ""
 }
 
 func findCookie(paste string) string {
@@ -98,5 +143,7 @@ func FromCurl(ctx context.Context, paste string, authTest AuthTest) (Workspace, 
 	if err != nil {
 		return Workspace{}, fmt.Errorf("auth.test: %w", err)
 	}
+	// Slack's own answer is the workspace's address from now on.
+	creds.WorkspaceURL = cmp.Or(id.URL, creds.WorkspaceURL)
 	return Workspace{Team: team, Name: id.Team, URL: id.URL, Credentials: creds}, nil
 }
