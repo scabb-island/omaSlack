@@ -18,6 +18,20 @@ type ReadMarkerReader interface {
 	LastRead(ctx context.Context, conv domain.ConversationID) (domain.TS, error)
 }
 
+// ConversationStateReader is implemented by a provider whose conversation
+// list carries no read state (the internal-app provider: users.conversations
+// has no latest message, read marker or mention count, and no batch call
+// that has them accepts its token). The sync engine fills the list in with
+// it, one conversation at a time (spec sync-engine, "Provider list without
+// read state").
+type ConversationStateReader interface {
+	// ConversationState returns conv's entry with whatever read state one
+	// call reports: its read marker, its latest message (zero when the
+	// call does not say: the caller asks History), and its unread
+	// mentions when known.
+	ConversationState(ctx context.Context, conv domain.ConversationID) (domain.Conversation, error)
+}
+
 // PresenceSubscriber is implemented by a provider whose stream reports
 // presence only for users it subscribed to (the desktop-session web
 // protocol). Each call replaces the previous subscription.

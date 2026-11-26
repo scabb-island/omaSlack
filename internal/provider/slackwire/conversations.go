@@ -2,6 +2,8 @@ package slackwire
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -18,9 +20,10 @@ const conversationsPageSize = 200
 const conversationTypes = "public_channel,private_channel,mpim,im"
 
 // Conversation is a conversation object as users.conversations and
-// conversations.info send it. Of the read state, only conversations.info
-// carries last_read; neither carries the latest message's ts or the
-// user's unread mentions.
+// conversations.info send it. users.conversations carries no read state.
+// conversations.info carries last_read and, for some kinds (Slack
+// documents them for DMs and group DMs), the latest message and the
+// unread counts; for channels it may leave them out.
 type Conversation struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
@@ -28,21 +31,56 @@ type Conversation struct {
 	IsMPIM    bool   `json:"is_mpim"`
 	IsPrivate bool   `json:"is_private"`
 	LastRead  string `json:"last_read"`
+	// Latest is the latest message object, or only its ts in some
+	// legacy shapes; parsed by latestTS.
+	Latest json.RawMessage `json:"latest"`
+	// UnreadDisplay is unread_count_display: the unread messages that
+	// matter to the user (join and leave messages left out).
+	UnreadDisplay int `json:"unread_count_display"`
 }
 
+// errOddLatest reports a latest field that is neither a message, a ts
+// nor null.
+var errOddLatest = errors.New("latest is neither a message nor a ts")
+
 // Parse checks w and builds its domain.Conversation, with its ID, kind,
-// name and, when w carries one, read marker. Slack's never-read marker
-// ("0000000000.000000") is the zero timestamp.
+// name and, when w carries them, read marker and latest message. Slack's
+// never-read marker ("0000000000.000000") is the zero timestamp. In a DM
+// or group DM every unread message is for the user, as Slack's own badge
+// counts them, so unread_count_display there is the mention count; in a
+// channel it is not, and Mentions stays zero (unknown).
 func (w Conversation) Parse() (domain.Conversation, error) {
 	id, err := domain.ParseConversationID(w.ID)
 	if err != nil {
 		return domain.Conversation{}, fmt.Errorf("conversation id: %w", err)
 	}
-	lastRead, err := ParseOptionalTS(w.LastRead)
-	if err != nil {
-		return domain.Conversation{}, fmt.Errorf("conversation %s last_read: %w", w.ID, err)
+	lastRead, errRead := ParseOptionalTS(w.LastRead)
+	latest, errLatest := w.latestTS()
+	if err := errors.Join(errRead, errLatest); err != nil {
+		return domain.Conversation{}, fmt.Errorf("conversation %s read state: %w", w.ID, err)
 	}
-	return domain.Conversation{ID: id, Kind: w.kind(), Name: w.Name, LastRead: lastRead}, nil
+	c := domain.Conversation{ID: id, Kind: w.kind(), Name: w.Name, Latest: latest, LastRead: lastRead}
+	if c.Kind == domain.DirectMessage || c.Kind == domain.GroupMessage {
+		c.Mentions = w.UnreadDisplay
+	}
+	return c, nil
+}
+
+// latestTS reads the latest field: absent or null is zero (unknown or
+// empty), a message object gives its ts, and a string is the ts itself.
+func (w Conversation) latestTS() (domain.TS, error) {
+	var msg struct {
+		TS string `json:"ts"`
+	}
+	switch {
+	case len(w.Latest) == 0 || string(w.Latest) == "null":
+		return domain.TS{}, nil
+	case json.Unmarshal(w.Latest, &msg.TS) == nil:
+	case json.Unmarshal(w.Latest, &msg) == nil:
+	default:
+		return domain.TS{}, errOddLatest
+	}
+	return ParseOptionalTS(msg.TS)
 }
 
 // kind reads Slack's flags. A group DM is also private, so is_mpim is
