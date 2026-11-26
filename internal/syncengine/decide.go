@@ -83,7 +83,12 @@ func activityIn(ev domain.Event) (domain.ConversationID, bool) {
 
 // missed is the part of fetched (newest first, as History returns it) the
 // store does not know, oldest first, which is the order it happened in.
+// When the store knew nothing, this is a first backfill and nothing was
+// missed: clients learn of it when they read the conversation.
 func missed(fetched []domain.Message, known map[domain.TS]bool) []domain.Message {
+	if len(known) == 0 {
+		return nil
+	}
 	var out []domain.Message
 	for _, msg := range slices.Backward(fetched) {
 		if !known[msg.TS] {

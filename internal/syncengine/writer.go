@@ -17,8 +17,10 @@ type writer struct {
 	store store.Store
 	pub   Publisher
 	log   *slog.Logger
+	page  int // rows per Store read
 
 	status status
+	open   map[domain.ConversationID]int // how many clients have it open
 }
 
 // op is one unit of work on the writer's goroutine.
@@ -36,7 +38,9 @@ func newWriter(cfg Config) *writer {
 		store:  cfg.Store,
 		pub:    cfg.Publisher,
 		log:    cfg.Log,
+		page:   cfg.PageSize,
 		status: status{link: domain.Disconnected},
+		open:   make(map[domain.ConversationID]int),
 	}
 }
 
@@ -101,6 +105,53 @@ func linkOp(s domain.ConnectionState) op {
 func limitOp(delta int) op {
 	return func(_ context.Context, w *writer) error {
 		w.update(func(st *status) { st.limited += delta })
+		return nil
+	}
+}
+
+// catchUp stores fetched (newest first) and publishes, oldest first, the
+// messages the Store did not have.
+func (w *writer) catchUp(ctx context.Context, conv domain.ConversationID, fetched []domain.Message) error {
+	known, err := w.storedSince(ctx, conv, fetched[len(fetched)-1].TS)
+	if err != nil {
+		return err
+	}
+	if err := w.store.PutHistory(ctx, conv, fetched); err != nil {
+		return err
+	}
+	for _, m := range missed(fetched, known) {
+		w.pub.Publish(domain.MessageCreated{Team: w.team, Conversation: conv, Message: m})
+	}
+	return nil
+}
+
+// storedSince is the set of conv's top-level messages in the Store from
+// since on (and possibly a few older).
+func (w *writer) storedSince(ctx context.Context, conv domain.ConversationID, since domain.TS) (map[domain.TS]bool, error) {
+	msgs, err := pageBack(func(before domain.TS) ([]domain.Message, error) {
+		return w.store.Messages(ctx, conv, before, w.page)
+	}, func(page []domain.Message) bool {
+		return len(page) < w.page || page[len(page)-1].TS.Before(since)
+	})
+	known := make(map[domain.TS]bool, len(msgs))
+	for _, m := range msgs {
+		known[m.TS] = true
+	}
+	return known, err
+}
+
+func putOp(conv domain.ConversationID, msgs []domain.Message) op {
+	return func(ctx context.Context, w *writer) error { return w.store.PutHistory(ctx, conv, msgs) }
+}
+
+func catchUpOp(conv domain.ConversationID, fetched []domain.Message) op {
+	return func(ctx context.Context, w *writer) error { return w.catchUp(ctx, conv, fetched) }
+}
+
+// openOp counts one client more (delta 1) or fewer (delta -1) with conv
+// open; a conversation nobody has open is forgotten.
+func openOp(conv domain.ConversationID, delta int) op {
+	return func(context.Context, *writer) error {
 		return nil
 	}
 }

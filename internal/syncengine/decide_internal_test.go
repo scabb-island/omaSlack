@@ -113,6 +113,13 @@ func TestMissedAreTheFetchedMessagesNotStoredOldestFirst(t *testing.T) {
 	}
 }
 
+func TestNothingIsMissedWhenTheStoreKnewNothing(t *testing.T) {
+	// A first backfill fills the cache; it is not news for clients.
+	if got := missed([]domain.Message{m(t2), m(t1)}, nil); len(got) != 0 {
+		t.Fatalf("missed = %v, want none", got)
+	}
+}
+
 func TestBridgedWhenAPageReachesWhatTheStoreHasOrSlackHasNoMore(t *testing.T) {
 	var zero domain.TS
 	page := []domain.Message{m(t4), m(t3)}

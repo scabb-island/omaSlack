@@ -34,6 +34,8 @@ var (
 	convA  = must(domain.ParseConversationID("CAAA"))
 	ts1    = must(domain.ParseTS("1700000001.000000"))
 	ts2    = must(domain.ParseTS("1700000002.000000"))
+	ts3    = must(domain.ParseTS("1700000003.000000"))
+	ts4    = must(domain.ParseTS("1700000004.000000"))
 )
 
 func msg(at domain.TS) domain.Message { return domain.Message{TS: at, Text: "at " + at.String()} }
@@ -263,4 +265,22 @@ func (r *rig) stored(t *testing.T, c domain.ConversationID) []domain.TS {
 		out = append(out, m.TS)
 	}
 	return out
+}
+
+// connected scripts a session that comes up and then stays open, and
+// waits until the engine reports it.
+func (r *rig) connected(t *testing.T) (cancel context.CancelFunc, result func() error) {
+	t.Helper()
+	r.fake.Script(providertest.Session{Events: []domain.Event{state(domain.Connected)}, Live: make(chan domain.Event)})
+	cancel, result = r.start(t)
+	r.pub.expect(t, state(domain.Connecting), state(domain.Connected))
+	return cancel, result
+}
+
+// cache puts msgs in the store as a previous session would have left them.
+func (r *rig) cache(t *testing.T, c domain.ConversationID, msgs ...domain.Message) {
+	t.Helper()
+	if err := r.store.PutHistory(context.Background(), c, msgs); err != nil {
+		t.Fatal(err)
+	}
 }
