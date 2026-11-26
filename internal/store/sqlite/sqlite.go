@@ -118,8 +118,3 @@ func (s *Store) inTx(ctx context.Context, what string, fn func(*sql.Tx) error) e
 	}
 	return nil
 }
-
-// Not implemented yet.
-func (s *Store) Reactions(context.Context, domain.ConversationID, domain.TS) ([]store.Reaction, error) {
-	return nil, errors.New("not implemented")
-}

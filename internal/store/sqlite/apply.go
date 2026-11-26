@@ -2,7 +2,7 @@ package sqlite
 
 import (
 	"context"
-	"errors"
+	"database/sql"
 	"fmt"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
@@ -22,7 +22,7 @@ func (s *Store) Apply(ctx context.Context, ev domain.Event) error {
 	case domain.MessageDeleted:
 		return s.deleteMessage(ctx, e.Conversation, e.TS)
 	case domain.ReactionChanged:
-		return errors.New("not implemented")
+		return s.changeReaction(ctx, e)
 	case domain.ReadChanged:
 		return s.markRead(ctx, e.Conversation, e.LastRead)
 	default:
@@ -40,11 +40,20 @@ func (s *Store) writeMessage(ctx context.Context, conv domain.ConversationID, m 
 
 // deleteMessage turns the message into a tombstone, creating one if the
 // message was never cached, so a create that arrives late stays hidden.
+// Its reactions go in the same transaction.
 func (s *Store) deleteMessage(ctx context.Context, conv domain.ConversationID, ts domain.TS) error {
-	return s.exec(ctx, "delete message", `
-		INSERT INTO messages (conv_id, ts, deleted) VALUES (?, ?, 1)
-		ON CONFLICT (conv_id, ts) DO UPDATE SET deleted = 1`,
-		conv.String(), ts.String())
+	return s.inTx(ctx, "delete message", func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO messages (conv_id, ts, deleted) VALUES (?1, ?2, 1)
+			ON CONFLICT (conv_id, ts) DO UPDATE SET deleted = 1`,
+			conv.String(), ts.String()); err != nil {
+			return err
+		}
+		_, err := tx.ExecContext(ctx,
+			`DELETE FROM reactions WHERE conv_id = ?1 AND ts = ?2`,
+			conv.String(), ts.String())
+		return err
+	})
 }
 
 // markRead moves the read marker forward only. Events can arrive out of
