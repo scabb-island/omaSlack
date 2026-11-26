@@ -18,6 +18,9 @@ import (
 // longer accepted. Retrying them cannot succeed.
 var authErrorCodes = []string{"invalid_auth", "token_revoked", "account_inactive", "not_authed"}
 
+// isAuthError reports whether a Slack error code rejects the credentials.
+func isAuthError(code string) bool { return slices.Contains(authErrorCodes, code) }
+
 // defaultRetryAfter is how long to wait after a 429 that carries no usable
 // Retry-After header.
 const defaultRetryAfter = time.Minute
@@ -37,7 +40,7 @@ type response interface{ status() envelope }
 // apiError turns a Slack error code into an error naming method. Auth codes
 // wrap provider.ErrAuthExpired so the sync engine stops retrying.
 func apiError(method, code string) error {
-	if slices.Contains(authErrorCodes, code) {
+	if isAuthError(code) {
 		return fmt.Errorf("%s: %s: %w", method, code, provider.ErrAuthExpired)
 	}
 	return fmt.Errorf("%s: %s", method, code)

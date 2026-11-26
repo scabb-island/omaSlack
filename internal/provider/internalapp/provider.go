@@ -6,8 +6,6 @@
 package internalapp
 
 import (
-	"context"
-	"errors"
 	"log/slog"
 	"net/http"
 
@@ -66,7 +64,3 @@ var capabilities = domain.NewCapabilities(
 
 // Capabilities is what this provider supports.
 func (p *Provider) Capabilities() domain.Capabilities { return capabilities }
-
-var errTODO = errors.New("not implemented")
-
-func (p *Provider) Connect(ctx context.Context) (<-chan domain.Event, error) { return nil, errTODO }
