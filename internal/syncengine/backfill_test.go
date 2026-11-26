@@ -27,8 +27,9 @@ func (r *rig) lastGrant(t *testing.T) grant {
 	return g[len(g)-1]
 }
 
-// callsAfterConnect drops the Connect call every connected rig starts with.
-func (r *rig) callsAfterConnect() []providertest.Call { return r.fake.Calls()[1:] }
+// callsAfterConnect drops the Connect and Conversations calls every
+// connected rig starts with.
+func (r *rig) callsAfterConnect() []providertest.Call { return r.fake.Calls()[2:] }
 
 func TestOpeningAnUncachedConversationFetchesTheNewestPage(t *testing.T) {
 	r := newRig(t)
@@ -200,7 +201,7 @@ func TestARateLimitedBackfillShowsRateLimitedUntilItGetsThrough(t *testing.T) {
 	if got := r.budget.penalized(); !slices.Equal(got, want) {
 		t.Fatalf("penalties = %v", got)
 	}
-	if got := r.budget.grants(); len(got) != 4 { // connect + three tries
+	if got := r.budget.grants(); len(got) != 5 { // connect + list + three tries
 		t.Fatalf("budget waits = %v", got)
 	}
 }

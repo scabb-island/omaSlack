@@ -21,6 +21,7 @@ func (r *rig) firstSession(t *testing.T, events ...domain.Event) (live chan doma
 	_, result = r.start(t)
 	r.pub.expect(t, state(domain.Connecting), state(domain.Connected))
 	r.pub.expect(t, events...)
+	r.awaitListed(t, 1)
 	return live, result
 }
 

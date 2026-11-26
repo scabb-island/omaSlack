@@ -13,14 +13,29 @@ import (
 // the markers of the conversations that matter every
 // Config.ReadPollInterval and after every reconnect.
 
-// methodReadMarker is the budget key of provider.ReadMarkerReader.LastRead.
-const methodReadMarker = "conversations.info"
+// The budget keys of provider.ReadMarkerReader.LastRead and
+// Provider.Conversations.
+const (
+	methodReadMarker    = "conversations.info"
+	methodConversations = "users.conversations"
+)
 
-// reconcile catches up, at Background priority, every conversation open in
-// a client or with activity since startup (spec sync-engine,
-// "Reconciliation after reconnecting"), with its read marker.
-func (e *Engine) reconcile(ctx context.Context) {
-	e.eachInteresting(ctx, "catch up", func(conv domain.ConversationID) error {
+// reconcile runs, at Background priority, after every connection. It
+// stores the read markers the provider's conversation list reports, so
+// unread state is known before any client opens a conversation; after an
+// outage it also catches up every conversation open in a client, with
+// activity since startup, or that the list says is unread or mentions the
+// user (spec sync-engine, "Reconciliation after reconnecting"), with its
+// read marker. Without a list it catches up the rest.
+func (e *Engine) reconcile(ctx context.Context, outage bool) {
+	list, err := e.conversations(ctx)
+	if stopping(err) {
+		return
+	}
+	if err := e.do(ctx, markersOp(list)); err != nil || !outage {
+		return
+	}
+	e.eachInteresting(ctx, list, "catch up", func(conv domain.ConversationID) error {
 		if err := e.catchUp(ctx, conv, ratebudget.Background); err != nil {
 			return err
 		}
@@ -28,22 +43,38 @@ func (e *Engine) reconcile(ctx context.Context) {
 	})
 }
 
+// conversations asks the provider for its conversation list. A provider
+// that cannot list them (or not yet) is logged the first time only, since
+// it fails the same way after every reconnect.
+func (e *Engine) conversations(ctx context.Context) ([]domain.Conversation, error) {
+	var list []domain.Conversation
+	err := e.call(ctx, methodConversations, ratebudget.Background, func(ctx context.Context) error {
+		var err error
+		list, err = e.cfg.Provider.Conversations(ctx)
+		return err
+	})
+	if err != nil && !stopping(err) && e.listFailed.CompareAndSwap(false, true) {
+		e.cfg.Log.Warn("sync: could not list conversations; catching up only open and active ones", "team", e.w.team, "err", err)
+	}
+	return list, err
+}
+
 // pollReads keeps read markers current for a provider that does not
 // stream them, until ctx ends or the credentials are rejected.
 func (e *Engine) pollReads(ctx context.Context) {
 	for e.sleep(ctx, e.cfg.ReadPollInterval) == nil {
-		e.eachInteresting(ctx, "read the marker of", func(conv domain.ConversationID) error {
+		e.eachInteresting(ctx, nil, "read the marker of", func(conv domain.ConversationID) error {
 			return e.syncRead(ctx, conv)
 		})
 	}
 }
 
-// eachInteresting runs fn for every conversation open in a client or with
-// activity since startup. A conversation that fails is logged and
+// eachInteresting runs fn for every conversation reconcileSet picks from
+// list and what the engine knows. A conversation that fails is logged and
 // skipped; rejected credentials or an ended ctx stop the round.
-func (e *Engine) eachInteresting(ctx context.Context, what string, fn func(domain.ConversationID) error) {
+func (e *Engine) eachInteresting(ctx context.Context, list []domain.Conversation, what string, fn func(domain.ConversationID) error) {
 	var convs []domain.ConversationID
-	if err := e.do(ctx, interestOp(&convs)); err != nil {
+	if err := e.do(ctx, interestOp(list, &convs)); err != nil {
 		return
 	}
 	for _, conv := range convs {
@@ -83,9 +114,23 @@ func stopping(err error) bool {
 }
 
 // interestOp copies the conversations worth catching up into out.
-func interestOp(out *[]domain.ConversationID) op {
+func interestOp(list []domain.Conversation, out *[]domain.ConversationID) op {
 	return func(_ context.Context, w *writer) error {
-		*out = reconcileSet(w.open, w.active)
+		*out = reconcileSet(w.open, w.active, list)
+		return nil
+	}
+}
+
+// markersOp stores the read marker of every conversation in list, in
+// order. A marker never moves back, and one the Store cannot take is
+// logged and skipped.
+func markersOp(list []domain.Conversation) op {
+	return func(ctx context.Context, w *writer) error {
+		for _, c := range list {
+			if err := w.moveRead(ctx, c.ID, c.LastRead); err != nil {
+				w.log.Warn("sync: could not store a read marker", "team", w.team, "conversation", c.ID, "err", err)
+			}
+		}
 		return nil
 	}
 }

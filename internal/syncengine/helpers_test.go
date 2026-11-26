@@ -341,12 +341,14 @@ func (r *rig) stored(t *testing.T, c domain.ConversationID) []domain.TS {
 }
 
 // connected scripts a session that comes up and then stays open, and
-// waits until the engine reports it.
+// waits until the engine reports it and has asked for its conversation
+// list.
 func (r *rig) connected(t *testing.T) (cancel context.CancelFunc, result func() error) {
 	t.Helper()
 	r.fake.Script(providertest.Session{Events: []domain.Event{state(domain.Connected)}, Live: make(chan domain.Event)})
 	cancel, result = r.start(t)
 	r.pub.expect(t, state(domain.Connecting), state(domain.Connected))
+	r.awaitListed(t, 1)
 	return cancel, result
 }
 

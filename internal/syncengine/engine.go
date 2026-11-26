@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"math/rand/v2"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
@@ -77,6 +78,7 @@ type Engine struct {
 	stopped    chan struct{} // closed when Run stops serving ops
 	expired    chan struct{} // closed when Slack rejected the credentials
 	expireOnce sync.Once
+	listFailed atomic.Bool    // the conversation list failed and was logged
 	wg         sync.WaitGroup // every goroutine Run started
 
 	// Only the connect loop's goroutine touches these: whether a stream
@@ -236,12 +238,11 @@ func (e *Engine) react(ctx context.Context, ev domain.Event) error {
 	return nil
 }
 
-// connected resets the backoff and, after every connection but the first
-// (before that there was no outage to miss anything in), catches up.
+// connected resets the backoff and reconciles. Only after the first
+// connection is there no outage to catch up on.
 func (e *Engine) connected(ctx context.Context) {
-	if e.wasUp {
-		e.wg.Go(func() { e.reconcile(ctx) })
-	}
+	outage := e.wasUp
+	e.wg.Go(func() { e.reconcile(ctx, outage) })
 	e.wasUp, e.upNow = true, true
 }
 

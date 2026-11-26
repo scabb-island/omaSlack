@@ -131,10 +131,11 @@ func TestARateLimitedConnectWaitsOutItsPenaltyUnderTheBudget(t *testing.T) {
 	)
 	r.start(t)
 	r.pub.expect(t, state(domain.Connecting), state(domain.RateLimited), state(domain.Connecting), state(domain.Connected))
+	r.awaitListed(t, 1)
 	if got := r.budget.penalized(); !slices.Equal(got, []penalty{{"connect", 30 * time.Second}}) {
 		t.Fatalf("penalties = %v", got)
 	}
-	want := []grant{{"connect", ratebudget.Background}, {"connect", ratebudget.Background}}
+	want := []grant{{"connect", ratebudget.Background}, {"connect", ratebudget.Background}, {"users.conversations", ratebudget.Background}}
 	if got := r.budget.grants(); !slices.Equal(got, want) {
 		t.Fatalf("budget waits = %v", got)
 	}
