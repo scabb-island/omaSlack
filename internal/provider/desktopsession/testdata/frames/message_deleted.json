@@ -1,0 +1,15 @@
+{
+  "type": "message",
+  "subtype": "message_deleted",
+  "hidden": true,
+  "channel": "G0001",
+  "deleted_ts": "1700000600.000600",
+  "ts": "1700000710.000710",
+  "event_ts": "1700000710.000710",
+  "previous_message": {
+    "type": "message",
+    "user": "U0002",
+    "text": "gone",
+    "ts": "1700000600.000600"
+  }
+}

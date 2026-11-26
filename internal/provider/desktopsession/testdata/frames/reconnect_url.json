@@ -1,0 +1,4 @@
+{
+  "type": "reconnect_url",
+  "url": "wss://wss-primary.slack.com/websocket/test"
+}

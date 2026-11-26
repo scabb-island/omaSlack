@@ -2,19 +2,14 @@ package internalapp
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
+	"gitlab.com/scabb-island/omaslack/internal/provider/slackwire"
 )
 
-// Events API → domain events.
-//
-// Mapped: message (no subtype, thread_broadcast, file_share, me_message,
-// bot_message) →
-// MessageCreated; message_changed → MessageUpdated; message_deleted →
-// MessageDeleted; reaction_added and reaction_removed on messages →
-// ReactionChanged.
+// Events API → domain events. The mapping is slackwire's (messages and
+// reactions), shared with the desktop-session provider.
 //
 // Not available to an Events API app, so never emitted here:
 //   - ReadChanged: the user's read marker events (channel_marked, im_marked,
@@ -24,15 +19,8 @@ import (
 //   - PresenceChanged: presence_change is RTM-only; apps must poll
 //     users.getPresence.
 //
-// Ignored: every other message subtype (channel_join, channel_topic, …),
-// reactions on files, and event types this package does not subscribe to.
-
-// eventHead is what every event shares: enough to pick its mapper before
-// decoding the fields, whose shapes differ between event types.
-type eventHead struct {
-	Type    string `json:"type"`
-	Subtype string `json:"subtype"`
-}
+// Ignored: every event slackwire has no mapper for, and event types this
+// package does not subscribe to.
 
 // callback is an Events API payload ("type": "event_callback"). The team
 // in it is not read: events carry the provider's own team.
@@ -40,61 +28,20 @@ type callback[E any] struct {
 	Event E `json:"event"`
 }
 
-// wireEvent holds the fields of every event type mapped here. The embedded
-// wireMessage is the top-level message of a new-message event; its user
-// is also the reacting user of a reaction event.
-type wireEvent struct {
-	eventHead
-	wireMessage
-	Channel   string      `json:"channel"`
-	Message   wireMessage `json:"message"`
-	DeletedTS string      `json:"deleted_ts"`
-	Reaction  string      `json:"reaction"`
-	Item      struct {
-		Type    string `json:"type"`
-		Channel string `json:"channel"`
-		TS      string `json:"ts"`
-	} `json:"item"`
-}
-
-// eventMapper builds the domain event for one kind of wireEvent.
-type eventMapper func(domain.TeamID, wireEvent) (domain.Event, error)
-
-// eventMappers is keyed by wireEvent.kind.
-var eventMappers = map[string]eventMapper{
-	"message/":                 messageCreated,
-	"message/thread_broadcast": messageCreated,
-	"message/file_share":       messageCreated,
-	"message/me_message":       messageCreated,
-	"message/bot_message":      messageCreated,
-	"message/message_changed":  messageUpdated,
-	"message/message_deleted":  messageDeleted,
-	"reaction_added":           reactionChanged(true),
-	"reaction_removed":         reactionChanged(false),
-}
-
-// kind is the event type, plus the subtype for messages.
-func (e eventHead) kind() string {
-	if e.Type == "message" {
-		return "message/" + e.Subtype
-	}
-	return e.Type
-}
-
 // mapCallback maps one Events API payload to the domain event it means.
 // It returns nil and no error for events the domain does not track, and an
 // error for a malformed event, so no half-valid event is ever emitted.
 func mapCallback(team domain.TeamID, payload []byte) (domain.Event, error) {
-	var head callback[eventHead]
+	var head callback[slackwire.Head]
 	if err := json.Unmarshal(payload, &head); err != nil {
 		return nil, fmt.Errorf("decode events API payload: %w", err)
 	}
-	kind := head.Event.kind()
-	mapEvent, ok := eventMappers[kind]
+	kind := head.Event.Kind()
+	mapEvent, ok := slackwire.MapperFor(kind)
 	if !ok {
 		return nil, nil
 	}
-	var cb callback[wireEvent]
+	var cb callback[slackwire.Event]
 	if err := json.Unmarshal(payload, &cb); err != nil {
 		return nil, fmt.Errorf("decode %s event: %w", kind, err)
 	}
@@ -103,75 +50,4 @@ func mapCallback(team domain.TeamID, payload []byte) (domain.Event, error) {
 		return nil, fmt.Errorf("%s event: %w", kind, err)
 	}
 	return ev, nil
-}
-
-// messageEvent builds the mapper of an event that carries a whole message:
-// at says where the event keeps it and wrap builds the domain event.
-func messageEvent(at func(wireEvent) wireMessage, wrap func(domain.TeamID, domain.ConversationID, domain.Message) domain.Event) eventMapper {
-	return func(team domain.TeamID, e wireEvent) (domain.Event, error) {
-		conv, err := domain.ParseConversationID(e.Channel)
-		if err != nil {
-			return nil, err
-		}
-		m, err := at(e).parse()
-		if err != nil {
-			return nil, err
-		}
-		return wrap(team, conv, m), nil
-	}
-}
-
-// A new message is the event itself; an edit nests the new version.
-var (
-	messageCreated = messageEvent(
-		func(e wireEvent) wireMessage { return e.wireMessage },
-		func(t domain.TeamID, c domain.ConversationID, m domain.Message) domain.Event {
-			return domain.MessageCreated{Team: t, Conversation: c, Message: m}
-		})
-	messageUpdated = messageEvent(
-		func(e wireEvent) wireMessage { return e.Message },
-		func(t domain.TeamID, c domain.ConversationID, m domain.Message) domain.Event {
-			return domain.MessageUpdated{Team: t, Conversation: c, Message: m}
-		})
-)
-
-func messageDeleted(team domain.TeamID, e wireEvent) (domain.Event, error) {
-	conv, ts, err := parseItem(e.Channel, e.DeletedTS)
-	if err != nil {
-		return nil, err
-	}
-	return domain.MessageDeleted{Team: team, Conversation: conv, TS: ts}, nil
-}
-
-// errNoEmoji reports a reaction event without its emoji name.
-var errNoEmoji = errors.New("reaction without an emoji name")
-
-func reactionChanged(added bool) eventMapper {
-	return func(team domain.TeamID, e wireEvent) (domain.Event, error) {
-		if e.Item.Type != "message" {
-			return nil, nil
-		}
-		conv, ts, err := parseItem(e.Item.Channel, e.Item.TS)
-		if err != nil {
-			return nil, err
-		}
-		user, err := domain.ParseUserID(e.User)
-		if err != nil {
-			return nil, err
-		}
-		if e.Reaction == "" {
-			return nil, errNoEmoji
-		}
-		return domain.ReactionChanged{Team: team, Conversation: conv, TS: ts, User: user, Emoji: e.Reaction, Added: added}, nil
-	}
-}
-
-// parseItem parses the conversation and ts that point at one message.
-func parseItem(channel, ts string) (domain.ConversationID, domain.TS, error) {
-	conv, err := domain.ParseConversationID(channel)
-	if err != nil {
-		return domain.ConversationID{}, domain.TS{}, err
-	}
-	t, err := domain.ParseTS(ts)
-	return conv, t, err
 }

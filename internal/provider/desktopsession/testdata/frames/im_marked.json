@@ -1,0 +1,10 @@
+{
+  "type": "im_marked",
+  "channel": "D0001",
+  "ts": "1700000601.000601",
+  "dm_count": 0,
+  "unread_count_display": 0,
+  "num_mentions_display": 0,
+  "mention_count_display": 0,
+  "event_ts": "1700000901.000901"
+}

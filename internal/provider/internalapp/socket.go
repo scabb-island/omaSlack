@@ -9,6 +9,8 @@ import (
 	"github.com/slack-go/slack/socketmode"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
+	"gitlab.com/scabb-island/omaslack/internal/provider"
+	"gitlab.com/scabb-island/omaslack/internal/provider/slackwire"
 )
 
 // connectionStates maps the Socket Mode client's own events to connection
@@ -69,19 +71,9 @@ func (p *Provider) handle(ctx context.Context, client *socketmode.Client, evt so
 	}
 }
 
-// emit hands ev to the consumer unless ctx has ended. The check comes
-// first because a select with both cases ready picks one at random. An
-// event already waiting in the select when ctx ends can still go through:
-// the guarantee is that the channel closes, not that nothing in flight
-// arrives (see provider.Provider.Connect).
+// emit hands ev to the consumer unless ctx has ended (see provider.Emit).
 func (p *Provider) emit(ctx context.Context, out chan<- domain.Event, ev domain.Event) {
-	if ctx.Err() != nil {
-		return
-	}
-	select {
-	case out <- ev:
-	case <-ctx.Done():
-	}
+	provider.Emit(ctx, out, ev)
 }
 
 // needsAck reports whether evt carries a Socket Mode envelope, which Slack
@@ -110,7 +102,7 @@ func (p *Provider) domainEvent(evt socketmode.Event) domain.Event {
 // err: AuthExpired when Slack rejected the credentials.
 func finalState(err error) domain.ConnectionState {
 	var slackErr slack.SlackErrorResponse
-	if errors.As(err, &slackErr) && isAuthError(slackErr.Err) {
+	if errors.As(err, &slackErr) && slackwire.IsAuthError(slackErr.Err) {
 		return domain.AuthExpired
 	}
 	return domain.Disconnected

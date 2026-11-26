@@ -1,0 +1,6 @@
+{
+  "type": "hello",
+  "start": true,
+  "host_id": "wss-test-1",
+  "region": "us-east-1"
+}

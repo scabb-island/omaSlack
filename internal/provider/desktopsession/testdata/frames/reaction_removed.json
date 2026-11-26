@@ -1,0 +1,13 @@
+{
+  "type": "reaction_removed",
+  "user": "U0002",
+  "reaction": "thumbsup",
+  "item_user": "U0001",
+  "item": {
+    "type": "message",
+    "channel": "D0001",
+    "ts": "1700000600.000600"
+  },
+  "event_ts": "1700000810.000810",
+  "ts": "1700000810.000810"
+}
