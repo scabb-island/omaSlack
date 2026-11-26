@@ -11,9 +11,12 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"log/slog"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 	"gitlab.com/scabb-island/omaslack/internal/keyring"
@@ -55,17 +58,21 @@ func FindDesktopDir() (string, error) {
 
 // Desktop reads the session of the Slack desktop app whose config
 // directory is Dir. Passwords supplies the key its cookies are encrypted
-// with; SystemPasswords{} is the real one.
+// with; SystemPasswords{} is the real one. Log names the cookies that
+// cannot be decrypted; nil means slog.Default().
 type Desktop struct {
 	Dir       string
 	Passwords PasswordSource
+	Log       *slog.Logger
 }
 
 // Workspaces lists every workspace the desktop app is signed in to, sorted
-// by name. Those it holds a token for share the app's one "d" cookie; the
-// others come back without credentials (see NeedsSignIn). Slack's profile
-// is only read, through temporary copies, so it is safe to call while
-// Slack runs.
+// by name. Those it holds a token for share the app's "d" cookie and get
+// every other cookie a browser would send to their address (some
+// workspaces reject the d cookie alone), and their address as the
+// workspace URL; the others come back without credentials (see
+// NeedsSignIn). Slack's profile is only read, through temporary copies, so
+// it is safe to call while Slack runs.
 func (d Desktop) Workspaces(ctx context.Context) ([]Workspace, error) {
 	listed, err := readWorkspaceList(filepath.Join(d.Dir, "storage", "root-state.json"))
 	if err != nil {
@@ -78,16 +85,28 @@ func (d Desktop) Workspaces(ctx context.Context) ([]Workspace, error) {
 	if len(tokens) == 0 {
 		return listed, nil
 	}
-	cookie, err := readCookie(ctx, filepath.Join(d.Dir, "Cookies"), d.Passwords)
+	cookies, err := readCookies(ctx, filepath.Join(d.Dir, "Cookies"), d.Passwords, cmp.Or(d.Log, slog.Default()))
 	if err != nil {
 		return nil, err
 	}
 	for i, w := range listed {
 		if token := tokens[w.Team]; token != "" {
-			listed[i].Credentials = keyring.DesktopSession{Token: token, Cookie: cookie}
+			listed[i].Credentials = keyring.DesktopSession{
+				Token: token, Cookie: cookies.d, Cookies: cookies.header(hostOf(w.URL)), WorkspaceURL: w.URL,
+			}
 		}
 	}
 	return listed, nil
+}
+
+// hostOf is the host of a workspace URL, or "" when it has none; with no
+// host, a workspace still gets the .slack.com cookies.
+func hostOf(workspaceURL string) string {
+	u, err := url.Parse(workspaceURL)
+	if err != nil {
+		return ""
+	}
+	return strings.ToLower(u.Hostname())
 }
 
 // rootState is the part of storage/root-state.json that lists the
