@@ -22,6 +22,10 @@ type writer struct {
 	status status
 	open   map[domain.ConversationID]int      // how many clients have it open
 	active map[domain.ConversationID]struct{} // had message activity since startup
+
+	// views is each list entry as clients were last told of it, nil until
+	// read from the Store (see views.go).
+	views map[domain.ConversationID]domain.Conversation
 }
 
 // op is one unit of work on the writer's goroutine.
@@ -96,9 +100,18 @@ func (w *writer) update(change func(*status)) {
 	}
 }
 
-// applyOp and the other *Op helpers wrap writer methods as ops.
+// applyOp and the other *Op helpers wrap writer methods as ops. Every op
+// that can change a conversation's list entry ends by refreshing it.
 func applyOp(ev domain.Event) op {
-	return func(ctx context.Context, w *writer) error { return w.apply(ctx, ev) }
+	return func(ctx context.Context, w *writer) error {
+		if err := w.apply(ctx, ev); err != nil {
+			return err
+		}
+		if conv, ok := entryChangedBy(ev); ok {
+			w.refresh(ctx, conv)
+		}
+		return nil
+	}
 }
 
 func linkOp(s domain.ConnectionState) op {
@@ -157,11 +170,22 @@ func (w *writer) moveRead(ctx context.Context, conv domain.ConversationID, at do
 }
 
 func putOp(conv domain.ConversationID, msgs []domain.Message) op {
-	return func(ctx context.Context, w *writer) error { return w.store.PutHistory(ctx, conv, msgs) }
+	return refreshing(conv, func(ctx context.Context, w *writer) error { return w.store.PutHistory(ctx, conv, msgs) })
 }
 
 func catchUpOp(conv domain.ConversationID, fetched []domain.Message) op {
-	return func(ctx context.Context, w *writer) error { return w.catchUp(ctx, conv, fetched) }
+	return refreshing(conv, func(ctx context.Context, w *writer) error { return w.catchUp(ctx, conv, fetched) })
+}
+
+// refreshing runs o and, when it worked, refreshes conv's list entry.
+func refreshing(conv domain.ConversationID, o op) op {
+	return func(ctx context.Context, w *writer) error {
+		if err := o(ctx, w); err != nil {
+			return err
+		}
+		w.refresh(ctx, conv)
+		return nil
+	}
 }
 
 // openOp counts one client more (delta 1) or fewer (delta -1) with conv
