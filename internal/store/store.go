@@ -33,9 +33,14 @@ type Store interface {
 	// PutHistory stores a page of messages fetched from the provider.
 	PutHistory(ctx context.Context, conv domain.ConversationID, msgs []domain.Message) error
 
-	// Messages returns up to limit stored messages of conv older than
-	// before, newest first. A zero before means "from the newest".
+	// Messages returns up to limit top-level messages and thread roots of
+	// conv older than before, newest first. A zero before means "from the
+	// newest". Thread replies are not included: they come from Replies.
 	Messages(ctx context.Context, conv domain.ConversationID, before domain.TS, limit int) ([]domain.Message, error)
+
+	// Replies returns the replies of the thread rooted at thread, oldest
+	// first, without the root.
+	Replies(ctx context.Context, conv domain.ConversationID, thread domain.TS) ([]domain.Message, error)
 
 	// Reactions returns the reactions on one message.
 	Reactions(ctx context.Context, conv domain.ConversationID, ts domain.TS) ([]Reaction, error)

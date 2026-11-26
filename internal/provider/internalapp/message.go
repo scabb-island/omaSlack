@@ -9,6 +9,7 @@ import (
 // wireMessage is a Slack message as the Web API and the Events API send it.
 type wireMessage struct {
 	User     string `json:"user"`
+	BotID    string `json:"bot_id"`
 	Text     string `json:"text"`
 	TS       string `json:"ts"`
 	ThreadTS string `json:"thread_ts"`
@@ -17,15 +18,15 @@ type wireMessage struct {
 	} `json:"edited"`
 }
 
-// parse checks w and builds its domain.Message. A message with no user
-// (bot_message from a legacy integration, for example) is rejected: the
-// domain has no author for it.
+// parse checks w and builds its domain.Message. The author is the user
+// when there is one (apps posting as a person send both) and the bot
+// otherwise; a message with neither is rejected.
 func (w wireMessage) parse() (domain.Message, error) {
 	ts, err := domain.ParseTS(w.TS)
 	if err != nil {
 		return domain.Message{}, fmt.Errorf("message ts: %w", err)
 	}
-	author, err := domain.ParseUserID(w.User)
+	author, err := w.author()
 	if err != nil {
 		return domain.Message{}, fmt.Errorf("message %s author: %w", w.TS, err)
 	}
@@ -38,6 +39,15 @@ func (w wireMessage) parse() (domain.Message, error) {
 		return domain.Message{}, fmt.Errorf("message %s edited.ts: %w", w.TS, err)
 	}
 	return domain.Message{TS: ts, ThreadTS: thread, Author: author, Text: w.Text, Edited: edited}, nil
+}
+
+func (w wireMessage) author() (domain.Author, error) {
+	if w.User != "" {
+		user, err := domain.ParseUserID(w.User)
+		return domain.UserAuthor(user), err
+	}
+	bot, err := domain.ParseBotID(w.BotID)
+	return domain.BotAuthor(bot), err
 }
 
 // parseOptionalTS parses s, where an empty s means "no timestamp".

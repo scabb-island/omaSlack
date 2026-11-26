@@ -128,7 +128,7 @@ func TestConnectStreamsDomainEventsAndAcknowledgesEveryEnvelope(t *testing.T) {
 		domain.MessageCreated{
 			Team:         team,
 			Conversation: mustConv(t, "C0001"),
-			Message:      domain.Message{TS: mustTS(t, "1700000600.000600"), Author: mustUser(t, "U0002"), Text: "hello <@U0001>"},
+			Message:      domain.Message{TS: mustTS(t, "1700000600.000600"), Author: mustAuthor(t, "U0002"), Text: "hello <@U0001>"},
 		},
 	}
 	for i, w := range want {

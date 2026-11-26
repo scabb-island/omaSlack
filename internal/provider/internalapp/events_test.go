@@ -13,7 +13,7 @@ func TestRecordedEventsMapToDomainEvents(t *testing.T) {
 		"message.json": domain.MessageCreated{
 			Team:         team,
 			Conversation: mustConv(t, "C0001"),
-			Message:      domain.Message{TS: mustTS(t, "1700000600.000600"), Author: mustUser(t, "U0002"), Text: "hello <@U0001>"},
+			Message:      domain.Message{TS: mustTS(t, "1700000600.000600"), Author: mustAuthor(t, "U0002"), Text: "hello <@U0001>"},
 		},
 		"message_thread_broadcast.json": domain.MessageCreated{
 			Team:         team,
@@ -21,7 +21,7 @@ func TestRecordedEventsMapToDomainEvents(t *testing.T) {
 			Message: domain.Message{
 				TS:       mustTS(t, "1700000650.000650"),
 				ThreadTS: mustTS(t, "1700000100.000100"),
-				Author:   mustUser(t, "U0002"),
+				Author:   mustAuthor(t, "U0002"),
 				Text:     "also sent to the channel",
 			},
 		},
@@ -30,7 +30,7 @@ func TestRecordedEventsMapToDomainEvents(t *testing.T) {
 			Conversation: mustConv(t, "C0001"),
 			Message: domain.Message{
 				TS:     mustTS(t, "1700000600.000600"),
-				Author: mustUser(t, "U0002"),
+				Author: mustAuthor(t, "U0002"),
 				Text:   "hello, edited",
 				Edited: mustTS(t, "1700000700.000000"),
 			},
@@ -72,6 +72,22 @@ func TestRecordedEventsMapToDomainEvents(t *testing.T) {
 	}
 }
 
+func TestBotMessagesMapWithABotAuthor(t *testing.T) {
+	payload := `{"type":"event_callback","team_id":"T0001","event":{"type":"message","subtype":"bot_message","channel":"C0001","bot_id":"B0001","text":"deploy finished","ts":"1700000600.000600"}}`
+	got, err := mapCallback(mustTeam(t, "T0001"), []byte(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := domain.MessageCreated{
+		Team:         mustTeam(t, "T0001"),
+		Conversation: mustConv(t, "C0001"),
+		Message:      domain.Message{TS: mustTS(t, "1700000600.000600"), Author: mustAuthor(t, "B0001"), Text: "deploy finished"},
+	}
+	if got != want {
+		t.Errorf("mapCallback() = %#v, want %#v", got, want)
+	}
+}
+
 func TestEventsTheProviderDoesNotConsumeAreIgnored(t *testing.T) {
 	for name, payload := range map[string]string{
 		"other event type": `{"type":"event_callback","event":{"type":"channel_created","channel":{"id":"C0002"}}}`,
@@ -92,7 +108,7 @@ func TestMalformedEventsAreRejected(t *testing.T) {
 		"message channel as object":  `{"type":"message","channel":{"id":"C0001"},"user":"U0002","ts":"1700000600.000600"}`,
 		"message bad channel":        `{"type":"message","channel":"U0001","user":"U0002","text":"x","ts":"1700000600.000600"}`,
 		"message bad ts":             `{"type":"message","channel":"C0001","user":"U0002","text":"x","ts":"now"}`,
-		"message from a bot":         `{"type":"message","subtype":"file_share","channel":"C0001","bot_id":"B0001","ts":"1700000600.000600"}`,
+		"message without an author":  `{"type":"message","subtype":"file_share","channel":"C0001","ts":"1700000600.000600"}`,
 		"me_message bad thread":      `{"type":"message","subtype":"me_message","channel":"C0001","user":"U0002","ts":"1700000600.000600","thread_ts":"x"}`,
 		"changed bad channel":        `{"type":"message","subtype":"message_changed","channel":"","message":{"user":"U0002","ts":"1700000600.000600"}}`,
 		"changed bad inner message":  `{"type":"message","subtype":"message_changed","channel":"C0001","message":{"ts":"1700000600.000600"}}`,
