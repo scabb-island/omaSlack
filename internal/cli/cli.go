@@ -70,7 +70,7 @@ type command struct {
 
 func commands() map[string]command {
 	return map[string]command{
-		"daemon":  {summary: "run the local daemon that talks to Slack", milestone: "M1/M2"},
+		"daemon":  {summary: "run the local daemon that talks to Slack", run: runDaemon},
 		"tui":     {summary: "open the terminal client", milestone: "M3"},
 		"ctl":     {summary: "call a daemon RPC method or stream its events", run: runCtl},
 		"auth":    {summary: "add, list or remove Slack workspaces", run: runAuth},
