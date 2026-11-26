@@ -85,9 +85,11 @@ func (r *recorder) expectNothing(t *testing.T) {
 }
 
 // fakeClock hands every timer the engine creates to the test, which finds
-// it by its delay and fires it. Time never passes on its own. Timers with
-// other delays (a backoff next to a read poll) wait their turn.
+// it by its delay and fires it. Time passes only when the test advances
+// it. Timers with other delays (a backoff next to a read poll) wait their
+// turn.
 type fakeClock struct {
+	mu     sync.Mutex
 	now    time.Time
 	timers chan *fakeTimer
 	held   []*fakeTimer // received but not fired; only the test touches it
@@ -97,10 +99,21 @@ func newFakeClock() *fakeClock {
 	return &fakeClock{now: time.Date(2026, 11, 26, 12, 0, 0, 0, time.UTC), timers: make(chan *fakeTimer, 100)}
 }
 
-func (c *fakeClock) Now() time.Time { return c.now }
+func (c *fakeClock) Now() time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.now
+}
+
+// advance moves the clock forward by d without firing any timer.
+func (c *fakeClock) advance(d time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.now = c.now.Add(d)
+}
 
 func (c *fakeClock) NewTimer(at time.Time) ratebudget.Timer {
-	t := &fakeTimer{delay: at.Sub(c.now), c: make(chan time.Time, 1)}
+	t := &fakeTimer{delay: at.Sub(c.Now()), c: make(chan time.Time, 1)}
 	c.timers <- t
 	return t
 }
@@ -109,7 +122,7 @@ func (c *fakeClock) NewTimer(at time.Time) ratebudget.Timer {
 func (c *fakeClock) fire(t *testing.T, delay time.Duration) {
 	t.Helper()
 	tm := c.take(t, delay)
-	tm.c <- c.now.Add(delay)
+	tm.c <- c.Now().Add(delay)
 }
 
 // await waits until the engine has created a timer with this delay,
@@ -176,6 +189,8 @@ type budget struct {
 	penalties []penalty
 	hold      string
 	held      chan string
+	holding   int // calls of the held method waiting now
+	mostHeld  int // the most that ever waited at once
 }
 
 // holdOn makes every call of method wait until its ctx ends.
@@ -209,12 +224,26 @@ func (b *budget) Wait(ctx context.Context, method string, p ratebudget.Priority)
 	b.mu.Lock()
 	b.waits = append(b.waits, grant{method, p})
 	held := method == b.hold
+	if held {
+		b.holding++
+		b.mostHeld = max(b.mostHeld, b.holding)
+	}
 	b.mu.Unlock()
 	if held {
 		b.held <- method
 		<-ctx.Done()
+		b.mu.Lock()
+		b.holding--
+		b.mu.Unlock()
 	}
 	return ctx.Err()
+}
+
+// mostHeldAtOnce is how many calls of the held method ever waited at once.
+func (b *budget) mostHeldAtOnce() int {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.mostHeld
 }
 
 func (b *budget) Penalize(method string, retryAfter time.Duration) {

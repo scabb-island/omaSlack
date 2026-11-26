@@ -24,11 +24,12 @@ const (
 // stores the provider's conversation list and the read markers it
 // reports, so unread state is known before any client opens a
 // conversation (a list that could not be fetched leaves the stored one
-// alone); after an
-// outage it also catches up every conversation open in a client, with
-// activity since startup, or that the list says is unread or mentions the
-// user (spec sync-engine, "Reconciliation after reconnecting"), with its
-// read marker. Without a list it catches up the rest.
+// alone), and hands it to the read-state fill when the provider needs
+// one (readstate.go). After an outage it also catches up every
+// conversation open in a client, with activity since startup, or that
+// the list says is unread or mentions the user (spec sync-engine,
+// "Reconciliation after reconnecting"), with its read marker. Without a
+// list it catches up the rest.
 func (e *Engine) reconcile(ctx context.Context, outage bool) {
 	list, err := e.conversations(ctx)
 	if stopping(err) {
@@ -38,6 +39,7 @@ func (e *Engine) reconcile(ctx context.Context, outage bool) {
 		if err := e.do(ctx, listOp(list)); err != nil {
 			return
 		}
+		e.offerList(ctx, list)
 	}
 	if !outage {
 		return

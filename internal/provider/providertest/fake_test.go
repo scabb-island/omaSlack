@@ -266,6 +266,36 @@ func TestReadMarkersServeTheScriptedMarker(t *testing.T) {
 	var _ provider.Provider = r // still a full provider
 }
 
+func TestConversationStateServesTheScriptedEntry(t *testing.T) {
+	f := providertest.New(team, domain.Capabilities{})
+	s := f.WithConversationState()
+	other := must(domain.ParseConversationID("D0001"))
+	want := domain.Conversation{ID: conv, Kind: domain.Channel, Latest: ts2, LastRead: ts1, Mentions: 1}
+	f.SetState(want)
+	ctx := context.Background()
+
+	if got, err := s.ConversationState(ctx, conv); err != nil || got != want {
+		t.Fatalf("ConversationState = %+v, %v", got, err)
+	}
+	if got, err := s.ConversationState(ctx, other); err != nil || got != (domain.Conversation{ID: other}) {
+		t.Fatalf("ConversationState of an unscripted one = %+v, %v", got, err)
+	}
+	f.Fail(providertest.MethodReadMarker, errBoom)
+	if _, err := s.ConversationState(ctx, conv); !errors.Is(err, errBoom) {
+		t.Fatalf("ConversationState err = %v", err)
+	}
+	wantCalls := []providertest.Call{
+		{Method: providertest.MethodReadMarker, Conv: conv},
+		{Method: providertest.MethodReadMarker, Conv: other},
+		{Method: providertest.MethodReadMarker, Conv: conv},
+	}
+	if got := f.Calls(); !slices.Equal(got, wantCalls) {
+		t.Fatalf("Calls = %v", got)
+	}
+	var _ provider.ConversationStateReader = s
+	var _ provider.ReadMarkerReader = s
+}
+
 func TestConversationsReturnTheScriptedList(t *testing.T) {
 	f := providertest.New(team, domain.Capabilities{})
 	want := []domain.Conversation{

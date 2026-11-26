@@ -14,10 +14,14 @@ import (
 // listOp stores the provider's conversation list. Its read markers go
 // first, in order, each published as read.changed when it moves (one the
 // Store rejects is logged and skipped); then the list itself, and every
-// entry that changed is published.
+// entry that changed is published. When the engine fills in the read
+// state, entries without it keep what is known.
 func listOp(list []domain.Conversation) op {
 	return func(ctx context.Context, w *writer) error {
 		w.loadViews(ctx)
+		if w.keepsKnown {
+			list = keepKnown(list, w.views)
+		}
 		for _, c := range list {
 			if err := w.moveRead(ctx, c.ID, c.LastRead); err != nil {
 				w.log.Warn("sync: could not store a read marker", "team", w.team, "conversation", c.ID, "err", err)

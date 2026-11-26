@@ -100,6 +100,11 @@ type Engine struct {
 	listFailed atomic.Bool    // the conversation list is failing (logged when it changes)
 	wg         sync.WaitGroup // every goroutine Run started
 
+	// filler is the read-state fill (readstate.go), and lists hands it each
+	// stored list; both nil when the provider's list has read state.
+	filler *filler
+	lists  chan []domain.Conversation
+
 	// Only the connect loop's goroutine touches these: whether a stream
 	// ever reported connected, and whether the current one did.
 	wasUp, upNow bool
@@ -108,13 +113,18 @@ type Engine struct {
 // New builds an engine from cfg.
 func New(cfg Config) *Engine {
 	cfg = cfg.withDefaults()
-	return &Engine{
+	e := &Engine{
 		cfg:     cfg,
 		w:       newWriter(cfg),
 		ops:     make(chan request),
 		stopped: make(chan struct{}),
 		expired: make(chan struct{}),
 	}
+	if r, ok := cfg.Provider.(provider.ConversationStateReader); ok {
+		e.filler, e.lists = &filler{r: r}, make(chan []domain.Conversation)
+		e.w.keepsKnown = true
+	}
+	return e
 }
 
 // Run keeps the workspace connected until ctx ends or Slack rejects the
@@ -131,6 +141,9 @@ func (e *Engine) Run(ctx context.Context) error {
 	})
 	if _, ok := e.cfg.Provider.(provider.ReadMarkerReader); ok {
 		e.wg.Go(func() { e.pollReads(ctx) })
+	}
+	if e.filler != nil {
+		e.wg.Go(func() { e.fillLoop(ctx, e.filler) })
 	}
 	e.running.Store(true)
 	e.w.serve(ctx, e.ops)
