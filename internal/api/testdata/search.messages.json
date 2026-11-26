@@ -1,0 +1,78 @@
+[
+  {
+    "name": "default limit",
+    "params": {
+      "team": "T0ACME",
+      "query": "deploy"
+    },
+    "calls": [
+      "T0ACME SearchMessages \"deploy\" limit=20"
+    ],
+    "result": [
+      {
+        "conv": "C0GENERAL",
+        "message": {
+          "ts": "1700000100.000000",
+          "author": "U0ANA",
+          "text": "deploy is done"
+        }
+      }
+    ]
+  },
+  {
+    "name": "limit above the cap is capped",
+    "params": {
+      "team": "T0ACME",
+      "query": "deploy",
+      "limit": 500
+    },
+    "calls": [
+      "T0ACME SearchMessages \"deploy\" limit=100"
+    ],
+    "result": [
+      {
+        "conv": "C0GENERAL",
+        "message": {
+          "ts": "1700000100.000000",
+          "author": "U0ANA",
+          "text": "deploy is done"
+        }
+      }
+    ]
+  },
+  {
+    "name": "provider without search",
+    "params": {
+      "team": "T0BETA",
+      "query": "deploy"
+    },
+    "error": {
+      "code": -32002,
+      "message": "capability not supported by this provider: search"
+    }
+  },
+  {
+    "name": "missing query",
+    "params": {
+      "team": "T0ACME"
+    },
+    "error": {
+      "code": -32602,
+      "message": "query: missing"
+    }
+  },
+  {
+    "name": "credentials expired",
+    "params": {
+      "team": "T0EXPIRED",
+      "query": "deploy"
+    },
+    "calls": [
+      "T0EXPIRED SearchMessages \"deploy\" limit=20"
+    ],
+    "error": {
+      "code": -32003,
+      "message": "auth_expired"
+    }
+  }
+]

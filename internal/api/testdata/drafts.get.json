@@ -1,0 +1,56 @@
+[
+  {
+    "name": "the conversation's draft",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL"
+    },
+    "result": {
+      "text": "half a thought"
+    }
+  },
+  {
+    "name": "a thread's draft",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "threadTS": "1700000200.000000"
+    },
+    "result": {
+      "text": "a reply in progress"
+    }
+  },
+  {
+    "name": "no draft is empty text",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0RANDOM"
+    },
+    "result": {
+      "text": ""
+    }
+  },
+  {
+    "name": "bad threadTS",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "threadTS": "root"
+    },
+    "error": {
+      "code": -32602,
+      "message": "threadTS: invalid Slack timestamp: \"root\""
+    }
+  },
+  {
+    "name": "cache unreadable: internal error, text hidden",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0BROKEN"
+    },
+    "error": {
+      "code": -32603,
+      "message": "internal error"
+    }
+  }
+]

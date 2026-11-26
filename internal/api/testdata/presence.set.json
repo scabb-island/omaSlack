@@ -1,0 +1,70 @@
+[
+  {
+    "name": "away",
+    "params": {
+      "team": "T0ACME",
+      "presence": "away"
+    },
+    "calls": [
+      "T0ACME SetPresence away=true"
+    ],
+    "result": null
+  },
+  {
+    "name": "auto",
+    "params": {
+      "team": "T0ACME",
+      "presence": "auto"
+    },
+    "calls": [
+      "T0ACME SetPresence away=false"
+    ],
+    "result": null
+  },
+  {
+    "name": "unknown presence",
+    "params": {
+      "team": "T0ACME",
+      "presence": "busy"
+    },
+    "error": {
+      "code": -32602,
+      "message": "presence: must be one of auto, away"
+    }
+  },
+  {
+    "name": "missing presence",
+    "params": {
+      "team": "T0ACME"
+    },
+    "error": {
+      "code": -32602,
+      "message": "presence: missing"
+    }
+  },
+  {
+    "name": "provider without presenceWrite",
+    "params": {
+      "team": "T0BETA",
+      "presence": "away"
+    },
+    "error": {
+      "code": -32002,
+      "message": "capability not supported by this provider: presenceWrite"
+    }
+  },
+  {
+    "name": "credentials expired",
+    "params": {
+      "team": "T0EXPIRED",
+      "presence": "away"
+    },
+    "calls": [
+      "T0EXPIRED SetPresence away=true"
+    ],
+    "error": {
+      "code": -32003,
+      "message": "auth_expired"
+    }
+  }
+]

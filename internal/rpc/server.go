@@ -12,10 +12,19 @@ import (
 // gets a parse error and the connection is closed.
 const MaxLineSize = 4 << 20
 
+// DefaultMaxCalls is how many calls one connection may have running at
+// once (spec daemon-api, "Bounded concurrency per connection").
+const DefaultMaxCalls = 16
+
 // Options configures a Server. Every field is optional.
 type Options struct {
 	Hello  HelloFunc    // extra hello fields; none when nil
 	Logger *slog.Logger // discarded when nil
+
+	// MaxCalls caps the calls running at once on one connection; zero or
+	// less means DefaultMaxCalls. At the cap the server stops reading that
+	// connection until a call finishes: backpressure, not an error.
+	MaxCalls int
 }
 
 // Server answers JSON-RPC 2.0 over NDJSON on a Listener. Each connection is
@@ -26,6 +35,7 @@ type Server struct {
 	log     *slog.Logger
 	owner   uint32 // the only UID allowed to connect
 	maxLine int
+	maxCall int             // calls running at once per connection
 	ctx     context.Context // ends on Close; every connection derives from it
 	cancel  context.CancelFunc
 
@@ -45,6 +55,7 @@ func NewServer(h Handler, opts Options) *Server {
 		log:     opts.Logger,
 		owner:   uint32(os.Getuid()), //nolint:gosec // a UID always fits in uint32 on Linux
 		maxLine: MaxLineSize,
+		maxCall: opts.MaxCalls,
 		ctx:     ctx,
 		cancel:  cancel,
 		conns:   make(map[*Conn]struct{}),
@@ -54,6 +65,9 @@ func NewServer(h Handler, opts Options) *Server {
 	}
 	if s.log == nil {
 		s.log = slog.New(slog.DiscardHandler)
+	}
+	if s.maxCall <= 0 {
+		s.maxCall = DefaultMaxCalls
 	}
 	return s
 }

@@ -1,0 +1,33 @@
+[
+  {
+    "name": "every workspace and the total",
+    "result": {
+      "workspaces": {
+        "T0ACME": {
+          "dms": 1,
+          "mentions": 1,
+          "channels": 1,
+          "threads": 0
+        },
+        "T0BETA": {
+          "dms": 0,
+          "mentions": 3,
+          "channels": 1,
+          "threads": 0
+        },
+        "T0EXPIRED": {
+          "dms": 0,
+          "mentions": 0,
+          "channels": 0,
+          "threads": 0
+        }
+      },
+      "total": {
+        "dms": 1,
+        "mentions": 4,
+        "channels": 2,
+        "threads": 0
+      }
+    }
+  }
+]

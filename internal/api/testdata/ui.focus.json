@@ -1,0 +1,80 @@
+[
+  {
+    "name": "a message",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "ts": "1700000300.000000"
+    },
+    "result": {
+      "clients": 2
+    },
+    "focus": [
+      {
+        "team": "T0ACME",
+        "conv": "C0GENERAL",
+        "ts": "1700000300.000000"
+      }
+    ]
+  },
+  {
+    "name": "a conversation",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL"
+    },
+    "result": {
+      "clients": 2
+    },
+    "focus": [
+      {
+        "team": "T0ACME",
+        "conv": "C0GENERAL"
+      }
+    ]
+  },
+  {
+    "name": "unknown workspace",
+    "params": {
+      "team": "T0NOPE",
+      "conv": "C0GENERAL"
+    },
+    "error": {
+      "code": -32602,
+      "message": "unknown workspace"
+    }
+  },
+  {
+    "name": "bad ts",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "ts": "now"
+    },
+    "error": {
+      "code": -32602,
+      "message": "ts: invalid Slack timestamp: \"now\""
+    }
+  },
+  {
+    "name": "missing conv",
+    "params": {
+      "team": "T0ACME"
+    },
+    "error": {
+      "code": -32602,
+      "message": "conv: missing"
+    }
+  },
+  {
+    "name": "bad conv ID",
+    "params": {
+      "team": "T0ACME",
+      "conv": "general"
+    },
+    "error": {
+      "code": -32602,
+      "message": "conv: invalid Slack ID: \"general\" is not a conversation ID"
+    }
+  }
+]

@@ -1,0 +1,69 @@
+[
+  {
+    "name": "adds it",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "ts": "1700000300.000000",
+      "emoji": "tada"
+    },
+    "calls": [
+      "T0ACME React C0GENERAL 1700000300.000000 tada add=true"
+    ],
+    "result": null
+  },
+  {
+    "name": "colons around the name are dropped",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "ts": "1700000300.000000",
+      "emoji": ":tada:"
+    },
+    "calls": [
+      "T0ACME React C0GENERAL 1700000300.000000 tada add=true"
+    ],
+    "result": null
+  },
+  {
+    "name": "missing emoji",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "ts": "1700000300.000000"
+    },
+    "error": {
+      "code": -32602,
+      "message": "emoji: missing"
+    }
+  },
+  {
+    "name": "only colons",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "ts": "1700000300.000000",
+      "emoji": "::"
+    },
+    "error": {
+      "code": -32602,
+      "message": "emoji: must not be empty"
+    }
+  },
+  {
+    "name": "credentials expired",
+    "params": {
+      "team": "T0EXPIRED",
+      "conv": "C0GENERAL",
+      "ts": "1700000300.000000",
+      "emoji": "tada"
+    },
+    "calls": [
+      "T0EXPIRED React C0GENERAL 1700000300.000000 tada add=true"
+    ],
+    "error": {
+      "code": -32003,
+      "message": "auth_expired"
+    }
+  }
+]
