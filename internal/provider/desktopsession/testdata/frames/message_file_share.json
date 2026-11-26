@@ -1,0 +1,32 @@
+{
+  "type": "message",
+  "subtype": "file_share",
+  "channel": "C0001",
+  "user": "U0002",
+  "text": "the screenshot",
+  "ts": "1700000660.000660",
+  "upload": false,
+  "files": [
+    {
+      "id": "F0001",
+      "created": 1700000659,
+      "timestamp": 1700000659,
+      "name": "screenshot.png",
+      "title": "screenshot.png",
+      "mimetype": "image/png",
+      "filetype": "png",
+      "user": "U0002",
+      "size": 48213,
+      "mode": "hosted",
+      "is_external": false,
+      "url_private": "https://files.slack.com/files-pri/T0001-F0001/screenshot.png",
+      "url_private_download": "https://files.slack.com/files-pri/T0001-F0001/download/screenshot.png",
+      "permalink": "https://acme.slack.com/files/U0002/F0001/screenshot.png"
+    }
+  ],
+  "team": "T0001",
+  "source_team": "T0001",
+  "user_team": "T0001",
+  "suppress_notification": false,
+  "event_ts": "1700000660.000660"
+}

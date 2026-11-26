@@ -69,7 +69,7 @@ func TestAnUpdateWithoutThreadOrAuthorKeepsTheStoredOnes(t *testing.T) {
 	got := replies(t, s, "C01", root)
 	want := reply
 	want.Text, want.Edited = "fixed", ts(t, "1700000003.000000")
-	if len(got) != 1 || got[0] != want {
+	if len(got) != 1 || !reflect.DeepEqual(got[0], want) {
 		t.Errorf("Replies = %+v, want %+v", got, want)
 	}
 }

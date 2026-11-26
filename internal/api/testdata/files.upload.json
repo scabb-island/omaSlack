@@ -1,0 +1,255 @@
+[
+  {
+    "name": "one file with a caption",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "paths": [
+        "/home/someone/notes.txt"
+      ],
+      "caption": "see notes"
+    },
+    "calls": [
+      "T0ACME UploadFiles C0GENERAL thread=- [\"/home/someone/notes.txt\"] \"see notes\""
+    ],
+    "result": {
+      "files": [
+        {
+          "id": "F0UP1",
+          "name": "notes.txt",
+          "mimetype": "text/plain",
+          "size": 5
+        }
+      ]
+    }
+  },
+  {
+    "name": "several files into a thread",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "threadTS": "1700000200.000000",
+      "paths": [
+        "/home/someone/a.png",
+        "/home/someone/b.png"
+      ]
+    },
+    "calls": [
+      "T0ACME UploadFiles C0GENERAL thread=1700000200.000000 [\"/home/someone/a.png\" \"/home/someone/b.png\"] \"\""
+    ],
+    "result": {
+      "files": [
+        {
+          "id": "F0UP1",
+          "name": "a.png",
+          "mimetype": "text/plain",
+          "size": 5
+        },
+        {
+          "id": "F0UP2",
+          "name": "b.png",
+          "mimetype": "text/plain",
+          "size": 5
+        }
+      ]
+    }
+  },
+  {
+    "name": "non-ASCII names pass through",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "paths": [
+        "/home/someone/café 🚀.png"
+      ],
+      "caption": "¡listo!"
+    },
+    "calls": [
+      "T0ACME UploadFiles C0GENERAL thread=- [\"/home/someone/café 🚀.png\"] \"¡listo!\""
+    ],
+    "result": {
+      "files": [
+        {
+          "id": "F0UP1",
+          "name": "café 🚀.png",
+          "mimetype": "text/plain",
+          "size": 5
+        }
+      ]
+    }
+  },
+  {
+    "name": "a relative path",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "paths": [
+        "notes.txt"
+      ]
+    },
+    "error": {
+      "code": -32602,
+      "message": "paths: \"notes.txt\" is not an absolute path"
+    }
+  },
+  {
+    "name": "an empty path",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "paths": [
+        ""
+      ]
+    },
+    "error": {
+      "code": -32602,
+      "message": "paths: \"\" is not an absolute path"
+    }
+  },
+  {
+    "name": "no paths",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "paths": []
+    },
+    "error": {
+      "code": -32602,
+      "message": "paths: must not be empty"
+    }
+  },
+  {
+    "name": "missing paths",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL"
+    },
+    "error": {
+      "code": -32602,
+      "message": "paths: missing"
+    }
+  },
+  {
+    "name": "paths that are not strings",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "paths": "/home/someone/notes.txt"
+    },
+    "error": {
+      "code": -32602,
+      "message": "paths: must be an array of strings"
+    }
+  },
+  {
+    "name": "caption that is not a string",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "paths": [
+        "/home/someone/notes.txt"
+      ],
+      "caption": 3
+    },
+    "error": {
+      "code": -32602,
+      "message": "caption: must be a string"
+    }
+  },
+  {
+    "name": "a file that does not exist",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "paths": [
+        "/home/someone/missing.txt"
+      ]
+    },
+    "calls": [
+      "T0ACME UploadFiles C0GENERAL thread=- [\"/home/someone/missing.txt\"] \"\""
+    ],
+    "error": {
+      "code": -32602,
+      "message": "paths: no such file"
+    }
+  },
+  {
+    "name": "a directory",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "paths": [
+        "/home/someone/dir"
+      ]
+    },
+    "calls": [
+      "T0ACME UploadFiles C0GENERAL thread=- [\"/home/someone/dir\"] \"\""
+    ],
+    "error": {
+      "code": -32602,
+      "message": "paths: not a regular file"
+    }
+  },
+  {
+    "name": "a file over the limit",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "paths": [
+        "/home/someone/big.iso"
+      ]
+    },
+    "calls": [
+      "T0ACME UploadFiles C0GENERAL thread=- [\"/home/someone/big.iso\"] \"\""
+    ],
+    "error": {
+      "code": -32602,
+      "message": "paths: the file is over the size limit"
+    }
+  },
+  {
+    "name": "provider without files",
+    "params": {
+      "team": "T0BETA",
+      "conv": "C0ALERTS",
+      "paths": [
+        "/home/someone/notes.txt"
+      ]
+    },
+    "error": {
+      "code": -32002,
+      "message": "capability not supported by this provider: files"
+    }
+  },
+  {
+    "name": "credentials expired",
+    "params": {
+      "team": "T0EXPIRED",
+      "conv": "C0GENERAL",
+      "paths": [
+        "/home/someone/notes.txt"
+      ]
+    },
+    "calls": [
+      "T0EXPIRED UploadFiles C0GENERAL thread=- [\"/home/someone/notes.txt\"] \"\""
+    ],
+    "error": {
+      "code": -32003,
+      "message": "auth_expired"
+    }
+  },
+  {
+    "name": "unknown workspace",
+    "params": {
+      "team": "T0NOPE",
+      "conv": "C0GENERAL",
+      "paths": [
+        "/home/someone/notes.txt"
+      ]
+    },
+    "error": {
+      "code": -32602,
+      "message": "unknown workspace"
+    }
+  }
+]

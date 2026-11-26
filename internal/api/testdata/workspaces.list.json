@@ -22,8 +22,7 @@
         "name": "Beta",
         "provider": "internal-app",
         "capabilities": [
-          "realtime",
-          "files"
+          "realtime"
         ],
         "state": "connected"
       },
@@ -70,8 +69,7 @@
         "name": "Beta",
         "provider": "internal-app",
         "capabilities": [
-          "realtime",
-          "files"
+          "realtime"
         ],
         "state": "connected"
       },

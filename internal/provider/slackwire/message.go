@@ -2,6 +2,7 @@ package slackwire
 
 import (
 	"fmt"
+	"slices"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 )
@@ -17,6 +18,45 @@ type Message struct {
 	Edited   struct {
 		TS string `json:"ts"`
 	} `json:"edited"`
+	Files []File `json:"files"`
+}
+
+// File is a file object as messages carry it in their files[] and the
+// files.* methods return it.
+type File struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Title       string `json:"title"`
+	MIMEType    string `json:"mimetype"`
+	Size        int64  `json:"size"`
+	DownloadURL string `json:"url_private_download"`
+	Mode        string `json:"mode"`
+}
+
+// unshownModes are the file modes with nothing to show or fetch: a
+// deleted file's tombstone, and a file a free plan's history limit hides.
+var unshownModes = []string{"tombstone", "hidden_by_limit"}
+
+// Parse checks f and builds its domain.File. A file without a valid ID,
+// or in an unshown mode, is reported as not ok.
+func (f File) Parse() (domain.File, bool) {
+	id, err := domain.ParseFileID(f.ID)
+	if err != nil || slices.Contains(unshownModes, f.Mode) {
+		return domain.File{}, false
+	}
+	return domain.File{ID: id, Name: f.Name, Title: f.Title, MIMEType: f.MIMEType, Size: f.Size, DownloadURL: f.DownloadURL}, true
+}
+
+// parseFiles keeps the files of ws that can be shown, in order. A file
+// that cannot is dropped, never the message it came with.
+func parseFiles(ws []File) []domain.File {
+	var out []domain.File
+	for _, w := range ws {
+		if f, ok := w.Parse(); ok {
+			out = append(out, f)
+		}
+	}
+	return out
 }
 
 // Parse checks w and builds its domain.Message. The author is the user
@@ -39,7 +79,7 @@ func (w Message) Parse() (domain.Message, error) {
 	if err != nil {
 		return domain.Message{}, fmt.Errorf("message %s edited.ts: %w", w.TS, err)
 	}
-	return domain.Message{TS: ts, ThreadTS: thread, Author: author, Text: w.Text, Edited: edited}, nil
+	return domain.Message{TS: ts, ThreadTS: thread, Author: author, Text: w.Text, Edited: edited, Files: parseFiles(w.Files)}, nil
 }
 
 func (w Message) author() (domain.Author, error) {

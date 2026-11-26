@@ -3,6 +3,7 @@ package providertest_test
 import (
 	"context"
 	"errors"
+	"reflect"
 	"slices"
 	"testing"
 	"time"
@@ -73,7 +74,7 @@ func TestSessionsReplayInOrderAndCloseTheStream(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := drain(t, stream); !slices.Equal(got, []domain.Event{created(ts1), created(ts2)}) {
+	if got := drain(t, stream); !reflect.DeepEqual(got, []domain.Event{created(ts1), created(ts2)}) {
 		t.Fatalf("first session = %v", got)
 	}
 	if _, err := f.Connect(ctx); !errors.Is(err, provider.ErrAuthExpired) {
@@ -96,7 +97,7 @@ func TestLiveEventsFollowTheScriptedOnesUntilTheFeedCloses(t *testing.T) {
 	}
 	live <- created(ts2)
 	close(live)
-	if got := drain(t, stream); !slices.Equal(got, []domain.Event{created(ts1), created(ts2)}) {
+	if got := drain(t, stream); !reflect.DeepEqual(got, []domain.Event{created(ts1), created(ts2)}) {
 		t.Fatalf("stream = %v", got)
 	}
 }
@@ -153,11 +154,11 @@ func TestHistoryPagesNewestFirstBeforeACursor(t *testing.T) {
 	ctx := context.Background()
 
 	page, err := f.History(ctx, conv, zeroTS, 2)
-	if err != nil || !slices.Equal(page, []domain.Message{msg(ts3), msg(ts2)}) {
+	if err != nil || !reflect.DeepEqual(page, []domain.Message{msg(ts3), msg(ts2)}) {
 		t.Fatalf("newest page = %v, %v", page, err)
 	}
 	page, err = f.History(ctx, conv, ts2, 2)
-	if err != nil || !slices.Equal(page, []domain.Message{msg(ts1)}) {
+	if err != nil || !reflect.DeepEqual(page, []domain.Message{msg(ts1)}) {
 		t.Fatalf("older page = %v, %v", page, err)
 	}
 	want := []providertest.Call{
@@ -175,7 +176,7 @@ func TestRepliesReturnTheScriptedThread(t *testing.T) {
 	f.SetReplies(conv, ts1, reply)
 
 	got, err := f.Replies(context.Background(), conv, ts1)
-	if err != nil || !slices.Equal(got, []domain.Message{reply}) {
+	if err != nil || !reflect.DeepEqual(got, []domain.Message{reply}) {
 		t.Fatalf("Replies = %v, %v", got, err)
 	}
 	if calls := f.Calls(); !slices.Equal(calls, []providertest.Call{{Method: providertest.MethodReplies, Conv: conv, TS: ts1}}) {

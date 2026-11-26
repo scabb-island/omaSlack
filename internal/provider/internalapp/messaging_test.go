@@ -76,7 +76,7 @@ func TestPostReturnsTheMessageAsSlackStoredIt(t *testing.T) {
 	}
 
 	want := domain.Message{TS: mustTS(t, "1700000500.000500"), ThreadTS: thread, Author: mustAuthor(t, "U0001"), Text: "hi there"}
-	if got != want {
+	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("Post() = %+v, want %+v", got, want)
 	}
 	form := f.recorded()[0].Form

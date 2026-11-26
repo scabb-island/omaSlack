@@ -47,6 +47,17 @@ func TestShapes(t *testing.T) {
 	check(t, "reply with reactions", FromMessage(reply, []store.Reaction{{Emoji: "+1", Users: []domain.UserID{user}}}),
 		`{"ts":"1700000200.000200","threadTS":"1700000100.000100","author":"B0001","text":"ok","edited":"1700000300.000300","reactions":[{"emoji":"+1","users":["U0001"]}]}`)
 
+	// The download URL never reaches clients: they ask files.fetch.
+	withFiles := root
+	withFiles.Files = []domain.File{
+		{ID: must(t, domain.ParseFileID, "F0001"), Name: "a.png", Title: "A", MIMEType: "image/png", Size: 42, DownloadURL: "https://files.slack.com/secret"},
+		{ID: must(t, domain.ParseFileID, "F0002"), Name: "doc"},
+	}
+	check(t, "message with files", FromMessage(withFiles, nil),
+		`{"ts":"1700000100.000100","author":"U0001","text":"hi","files":[`+
+			`{"id":"F0001","name":"a.png","title":"A","mimetype":"image/png","size":42},`+
+			`{"id":"F0002","name":"doc","size":0}]}`)
+
 	check(t, "conversation", FromConversation(domain.Conversation{ID: conv, Kind: domain.Channel, Name: "general",
 		Latest: ts("1700000200.000200"), LastRead: ts("1700000100.000100"), Mentions: 1}),
 		`{"id":"C0001","kind":"channel","name":"general","latest":"1700000200.000200","lastRead":"1700000100.000100","mentions":1,"unread":true}`)

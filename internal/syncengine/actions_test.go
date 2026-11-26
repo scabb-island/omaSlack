@@ -84,7 +84,7 @@ func TestSendStoresPublishesAndClearsTheDraft(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := domain.Message{TS: ts4, Author: domain.UserAuthor(me), Text: "hello"}
-	if got != want {
+	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("Send = %+v, want %+v", got, want)
 	}
 	general.Latest = ts4
@@ -157,7 +157,7 @@ func TestEditKeepsTheThreadAndPublishesTheUpdate(t *testing.T) {
 	replies, err := r.store.Replies(bg, convA, ts1)
 	want := reply
 	want.Text, want.Edited = "fixed", ts4
-	if err != nil || len(replies) != 1 || replies[0] != want {
+	if err != nil || len(replies) != 1 || !reflect.DeepEqual(replies[0], want) {
 		t.Fatalf("thread = %+v, %v; want %+v", replies, err, want)
 	}
 	if c := w.recorded(); len(c) != 1 {

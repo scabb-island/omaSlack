@@ -24,7 +24,7 @@ func TestEditReturnsTheEditedMessage(t *testing.T) {
 	}
 
 	want := domain.Message{TS: ts, Author: mustAuthor(t, "U0001"), Text: "hi there, edited", Edited: mustTS(t, "1700000600.000000")}
-	if got != want {
+	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("Edit() = %+v, want %+v", got, want)
 	}
 	c := f.recorded()[0]

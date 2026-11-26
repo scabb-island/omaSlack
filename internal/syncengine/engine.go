@@ -56,6 +56,14 @@ type Config struct {
 	// ReadPollInterval is how often read markers are polled when the
 	// provider implements provider.ReadMarkerReader; zero means one minute.
 	ReadPollInterval time.Duration
+
+	// FileCache is where FetchFile caches downloads, under one directory
+	// per team; "" means $XDG_CACHE_HOME/omaslack/files (~/.cache when
+	// unset). MaxDownload and MaxUpload are the file size limits in
+	// bytes; zero means DefaultMaxDownload and DefaultMaxUpload.
+	FileCache   string
+	MaxDownload int64
+	MaxUpload   int64
 }
 
 func (c Config) withDefaults() Config {
@@ -70,6 +78,11 @@ func (c Config) withDefaults() Config {
 	}
 	c.PageSize = cmp.Or(c.PageSize, 100)
 	c.ReadPollInterval = cmp.Or(c.ReadPollInterval, time.Minute)
+	if c.FileCache == "" {
+		c.FileCache = defaultFileCache()
+	}
+	c.MaxDownload = cmp.Or(c.MaxDownload, DefaultMaxDownload)
+	c.MaxUpload = cmp.Or(c.MaxUpload, DefaultMaxUpload)
 	return c
 }
 

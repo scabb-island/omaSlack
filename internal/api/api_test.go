@@ -2,11 +2,13 @@ package api
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -118,6 +120,34 @@ func TestSearchWithoutTheCapabilityOverTheSocket(t *testing.T) {
 	c.wantError(c.call("search.messages", `{"team":"T0BETA","query":"deploy"}`), rpc.CodeUnsupportedCapability)
 	if calls := f.engines["T0BETA"].recorded(); len(calls) != 0 {
 		t.Fatalf("the engine was called: %v", calls)
+	}
+}
+
+func TestFilesWithoutTheCapabilityOverTheSocket(t *testing.T) {
+	f := newFixture()
+	c := serveMethods(t, f)
+	c.wantError(c.call("files.fetch", `{"team":"T0BETA","fileId":"F0REPORT"}`), rpc.CodeUnsupportedCapability)
+	c.wantError(c.call("files.upload", `{"team":"T0BETA","conv":"C0ALERTS","paths":["/tmp/a"]}`), rpc.CodeUnsupportedCapability)
+	if calls := f.engines["T0BETA"].recorded(); len(calls) != 0 {
+		t.Fatalf("the engine was called: %v", calls)
+	}
+}
+
+// Download URLs need Slack credentials: no answer may carry one. Every
+// fake file's URL contains "must-not-leak".
+func TestNoAnswerCarriesADownloadURL(t *testing.T) {
+	files, err := filepath.Glob(filepath.Join("testdata", "*.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range files {
+		b, err := os.ReadFile(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if bytes.Contains(b, []byte("must-not-leak")) {
+			t.Errorf("%s carries a download URL", name)
+		}
 	}
 }
 

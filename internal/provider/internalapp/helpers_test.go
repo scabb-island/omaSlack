@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 
@@ -51,6 +52,16 @@ func mustConv(t *testing.T, s string) domain.ConversationID {
 	return id
 }
 
+// mustParse runs a domain parser and fails the test on an error.
+func mustParse[T any](t *testing.T, parse func(string) (T, error), s string) T {
+	t.Helper()
+	v, err := parse(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return v
+}
+
 func readFixture(t *testing.T, name string) []byte {
 	t.Helper()
 	b, err := os.ReadFile(filepath.Join("testdata", name))
@@ -68,7 +79,8 @@ type call struct {
 }
 
 // fakeSlack is an httptest Web API: each method answers with its handler,
-// and every request is recorded.
+// and every request is recorded. A key that starts with "/" is a path
+// outside the Web API (an upload URL, a file), recorded under that path.
 type fakeSlack struct {
 	srv   *httptest.Server
 	mu    sync.Mutex
@@ -80,7 +92,11 @@ func newFakeSlack(t *testing.T, handlers map[string]http.HandlerFunc) *fakeSlack
 	f := &fakeSlack{}
 	mux := http.NewServeMux()
 	for method, h := range handlers {
-		mux.HandleFunc("/api/"+method, func(w http.ResponseWriter, r *http.Request) {
+		path := method
+		if !strings.HasPrefix(path, "/") {
+			path = "/api/" + method
+		}
+		mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 			if err := r.ParseForm(); err != nil {
 				t.Errorf("parse form: %v", err)
 			}

@@ -1,0 +1,103 @@
+[
+  {
+    "name": "a file of a cached message",
+    "params": {
+      "team": "T0ACME",
+      "fileId": "F0REPORT"
+    },
+    "calls": [
+      "T0ACME FetchFile F0REPORT"
+    ],
+    "result": {
+      "localPath": "/home/someone/.cache/omaslack/files/T0ACME/F0REPORT/report.pdf"
+    }
+  },
+  {
+    "name": "an unknown file",
+    "params": {
+      "team": "T0ACME",
+      "fileId": "F0NOPE"
+    },
+    "calls": [
+      "T0ACME FetchFile F0NOPE"
+    ],
+    "error": {
+      "code": -32602,
+      "message": "fileId: unknown file"
+    }
+  },
+  {
+    "name": "an external file",
+    "params": {
+      "team": "T0ACME",
+      "fileId": "F0EXTERNAL"
+    },
+    "calls": [
+      "T0ACME FetchFile F0EXTERNAL"
+    ],
+    "error": {
+      "code": -32602,
+      "message": "fileId: the file cannot be downloaded"
+    }
+  },
+  {
+    "name": "a file over the limit",
+    "params": {
+      "team": "T0ACME",
+      "fileId": "F0HUGE"
+    },
+    "calls": [
+      "T0ACME FetchFile F0HUGE"
+    ],
+    "error": {
+      "code": -32602,
+      "message": "fileId: the file is over the size limit"
+    }
+  },
+  {
+    "name": "a bad file ID",
+    "params": {
+      "team": "T0ACME",
+      "fileId": "../etc/passwd"
+    },
+    "error": {
+      "code": -32602,
+      "message": "fileId: invalid Slack ID: \"../etc/passwd\" is not a file ID"
+    }
+  },
+  {
+    "name": "missing file ID",
+    "params": {
+      "team": "T0ACME"
+    },
+    "error": {
+      "code": -32602,
+      "message": "fileId: missing"
+    }
+  },
+  {
+    "name": "provider without files",
+    "params": {
+      "team": "T0BETA",
+      "fileId": "F0REPORT"
+    },
+    "error": {
+      "code": -32002,
+      "message": "capability not supported by this provider: files"
+    }
+  },
+  {
+    "name": "credentials expired",
+    "params": {
+      "team": "T0EXPIRED",
+      "fileId": "F0REPORT"
+    },
+    "calls": [
+      "T0EXPIRED FetchFile F0REPORT"
+    ],
+    "error": {
+      "code": -32003,
+      "message": "auth_expired"
+    }
+  }
+]

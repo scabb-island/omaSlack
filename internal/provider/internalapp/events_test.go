@@ -27,6 +27,17 @@ func TestRecordedEventsMapToDomainEvents(t *testing.T) {
 				Text:     "also sent to the channel",
 			},
 		},
+		"message_file_share.json": domain.MessageCreated{
+			Team:         team,
+			Conversation: mustConv(t, "C0001"),
+			Message: domain.Message{
+				TS: mustTS(t, "1700000660.000660"), Author: mustAuthor(t, "U0002"), Text: "the screenshot",
+				Files: []domain.File{{
+					ID: mustParse(t, domain.ParseFileID, "F0001"), Name: "screenshot.png", Title: "screenshot.png", MIMEType: "image/png", Size: 48213,
+					DownloadURL: "https://files.slack.com/files-pri/T0001-F0001/download/screenshot.png",
+				}},
+			},
+		},
 		"message_changed.json": domain.MessageUpdated{
 			Team:         team,
 			Conversation: mustConv(t, "C0001"),
@@ -93,7 +104,7 @@ func TestBotMessagesMapWithABotAuthor(t *testing.T) {
 		Conversation: mustConv(t, "C0001"),
 		Message:      domain.Message{TS: mustTS(t, "1700000600.000600"), Author: mustAuthor(t, "B0001"), Text: "deploy finished"},
 	}
-	if got != want {
+	if !reflect.DeepEqual(got, want) {
 		t.Errorf("mapCallback() = %#v, want %#v", got, want)
 	}
 }

@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -11,6 +13,7 @@ import (
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 	"gitlab.com/scabb-island/omaslack/internal/provider"
 	"gitlab.com/scabb-island/omaslack/internal/store"
+	"gitlab.com/scabb-island/omaslack/internal/syncengine"
 	"gitlab.com/scabb-island/omaslack/internal/wire"
 )
 
@@ -209,6 +212,61 @@ func (e *fakeEngine) SnoozeDND(_ context.Context, minutes int) error {
 }
 
 func (e *fakeEngine) EndDND(context.Context) error { return e.record("EndDND") }
+
+// UploadFiles fails the way the engine does for paths named after a
+// failure ("missing", "dir", "big"), and otherwise returns one file per
+// path.
+func (e *fakeEngine) UploadFiles(_ context.Context, conv domain.ConversationID, thread domain.TS, paths []string, caption string) ([]domain.File, error) {
+	if err := e.record("UploadFiles %s thread=%s %q %q", conv, show(thread), paths, caption); err != nil {
+		return nil, err
+	}
+	var out []domain.File
+	for i, p := range paths {
+		if err := uploadFailure(p); err != nil {
+			return nil, fmt.Errorf("syncengine: upload %s: %w", p, err)
+		}
+		out = append(out, domain.File{ID: fileID(fmt.Sprintf("F0UP%d", i+1)), Name: filepath.Base(p), MIMEType: "text/plain", Size: 5,
+			DownloadURL: "https://files.slack.com/must-not-leak"})
+	}
+	return out, nil
+}
+
+func uploadFailure(path string) error {
+	switch filepath.Base(path) {
+	case "missing.txt":
+		return fs.ErrNotExist
+	case "dir":
+		return syncengine.ErrNotRegularFile
+	case "big.iso":
+		return provider.ErrFileTooLarge
+	}
+	return nil
+}
+
+// FetchFile knows F0REPORT; F0EXTERNAL cannot be downloaded, F0HUGE is
+// over the limit, and any other file is unknown.
+func (e *fakeEngine) FetchFile(_ context.Context, id domain.FileID) (string, error) {
+	if err := e.record("FetchFile %s", id); err != nil {
+		return "", err
+	}
+	switch id.String() {
+	case "F0REPORT":
+		return "/home/someone/.cache/omaslack/files/T0ACME/F0REPORT/report.pdf", nil
+	case "F0EXTERNAL":
+		return "", fmt.Errorf("files.download %s: %w", id, provider.ErrNotDownloadable)
+	case "F0HUGE":
+		return "", fmt.Errorf("syncengine: fetch %s: %w", id, provider.ErrFileTooLarge)
+	}
+	return "", fmt.Errorf("store: %w: %s", store.ErrUnknownFile, id)
+}
+
+func fileID(s string) domain.FileID {
+	id, err := domain.ParseFileID(s)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
 
 // fakeDirectory is a fixed list of workspaces.
 type fakeDirectory []Workspace

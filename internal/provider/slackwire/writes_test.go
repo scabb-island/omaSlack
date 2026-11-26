@@ -28,7 +28,7 @@ func TestEditReturnsTheMessageAsSlackStoredIt(t *testing.T) {
 		TS: ts, ThreadTS: must(t, domain.ParseTS, "1700000050.000050"), Author: must(t, domain.ParseAuthor, "U0001"),
 		Text: "fixed", Edited: must(t, domain.ParseTS, "1700000900.000000"),
 	}
-	if got != want {
+	if !reflect.DeepEqual(got, want) {
 		t.Errorf("Edit() = %+v, want %+v", got, want)
 	}
 	wantForm := url.Values{"channel": {"C0001"}, "ts": {"1700000100.000100"}, "text": {"fixed"}, "token": {"secret"}}
