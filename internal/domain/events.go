@@ -1,12 +1,16 @@
 package domain
 
 // Message is one Slack message as the daemon stores and serves it.
+//
+// Files makes Message (and the events that carry one) not comparable with
+// ==; compare with reflect.DeepEqual.
 type Message struct {
 	TS       TS
 	ThreadTS TS // zero when the message is not part of a thread
 	Author   Author
 	Text     string // Slack mrkdwn, as received
 	Edited   TS     // zero when never edited
+	Files    []File // attachments in Slack's order; nil for none
 }
 
 // IsReply reports whether m is a reply inside a thread (a thread root is

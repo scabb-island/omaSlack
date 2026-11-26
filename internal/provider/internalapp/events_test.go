@@ -93,7 +93,7 @@ func TestBotMessagesMapWithABotAuthor(t *testing.T) {
 		Conversation: mustConv(t, "C0001"),
 		Message:      domain.Message{TS: mustTS(t, "1700000600.000600"), Author: mustAuthor(t, "B0001"), Text: "deploy finished"},
 	}
-	if got != want {
+	if !reflect.DeepEqual(got, want) {
 		t.Errorf("mapCallback() = %#v, want %#v", got, want)
 	}
 }

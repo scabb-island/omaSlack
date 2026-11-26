@@ -3,6 +3,7 @@ package slackwire
 import (
 	"encoding/json"
 	"errors"
+	"reflect"
 	"testing"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
@@ -50,7 +51,7 @@ func TestMessagesParseIntoDomainMessages(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got != tc.want {
+			if !reflect.DeepEqual(got, tc.want) {
 				t.Fatalf("Parse() = %+v, want %+v", got, tc.want)
 			}
 		})

@@ -3,6 +3,7 @@ package syncengine_test
 import (
 	"context"
 	"errors"
+	"reflect"
 	"slices"
 	"testing"
 	"time"
@@ -157,7 +158,7 @@ func TestOpeningAThreadStoresItsReplies(t *testing.T) {
 		t.Fatal(err)
 	}
 	got, err := r.store.Replies(bg, convA, ts1)
-	if err != nil || !slices.Equal(got, replies) {
+	if err != nil || !reflect.DeepEqual(got, replies) {
 		t.Fatalf("stored replies = %v, %v", got, err)
 	}
 	if g := r.lastGrant(t); g != (grant{"conversations.replies", ratebudget.Interactive}) {

@@ -1,6 +1,7 @@
 package syncengine
 
 import (
+	"reflect"
 	"slices"
 	"testing"
 	"time"
@@ -128,7 +129,7 @@ func TestMissedAreTheFetchedMessagesNotStoredOldestFirst(t *testing.T) {
 	fetched := []domain.Message{m(t4), m(t3), m(t2), m(t1)} // newest first, as History returns
 	known := map[domain.TS]bool{t1: true, t3: true}
 	want := []domain.Message{m(t2), m(t4)}
-	if got := missed(fetched, known); !slices.Equal(got, want) {
+	if got := missed(fetched, known); !reflect.DeepEqual(got, want) {
 		t.Fatalf("missed = %v, want %v", got, want)
 	}
 }

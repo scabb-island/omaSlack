@@ -3,6 +3,7 @@ package slackwire
 import (
 	"encoding/json"
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -68,7 +69,7 @@ func TestEventsMapToDomainEvents(t *testing.T) {
 			if !ok || err != nil {
 				t.Fatalf("mapped = %v, err = %v", ok, err)
 			}
-			if got != tc.want {
+			if !reflect.DeepEqual(got, tc.want) {
 				t.Fatalf("got\n%#v\nwant\n%#v", got, tc.want)
 			}
 		})

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"sync"
 	"testing"
@@ -64,7 +65,7 @@ func (r *recorder) expect(t *testing.T, want ...domain.Event) {
 	for i, w := range want {
 		select {
 		case got := <-r.ch:
-			if got != w {
+			if !reflect.DeepEqual(got, w) {
 				t.Fatalf("published #%d = %#v, want %#v", i, got, w)
 			}
 		case <-time.After(patience):
