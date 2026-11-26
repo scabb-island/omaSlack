@@ -19,6 +19,9 @@ After=dbus.socket
 [Service]
 Type=simple
 ExecStart=/usr/bin/omaslack daemon
+# SIGHUP reads the keyring again, so `omaslack auth add|remove` takes
+# effect with `systemctl --user reload omaslack`.
+ExecReload=/usr/bin/kill -HUP $MAINPID
 Restart=on-failure
 RestartSec=2s
 

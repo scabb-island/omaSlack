@@ -43,6 +43,9 @@ type Config struct {
 	Log *slog.Logger
 	// ShutdownTimeout bounds the shutdown; default DefaultShutdownTimeout.
 	ShutdownTimeout time.Duration
+	// Reload delivers the requests to read the keyring again (SIGHUP);
+	// nil means never.
+	Reload <-chan struct{}
 }
 
 func (c Config) withDefaults() Config {
@@ -128,15 +131,47 @@ func (d *daemon) router() rpc.Router {
 	return r
 }
 
-// wait serves until ctx ends or the server fails.
+// wait serves, reloading on request, until ctx ends or the server fails.
 func (d *daemon) wait(ctx context.Context, served <-chan error) error {
-	select {
-	case <-ctx.Done():
-		d.log.Info("daemon: shutting down")
-		return nil
-	case err := <-served:
-		return fmt.Errorf("daemon: serve: %w", err)
+	for {
+		select {
+		case <-ctx.Done():
+			d.log.Info("daemon: shutting down")
+			return nil
+		case err := <-served:
+			return fmt.Errorf("daemon: serve: %w", err)
+		case <-d.cfg.Reload:
+			d.reload(ctx)
+		}
 	}
+}
+
+// reload brings the workspaces in line with the keyring: it stops the
+// ones removed, restarts the ones whose credentials changed or whose
+// engine stopped (so signing in again with auth add takes effect), and
+// starts the ones added. A restarted workspace stays listed meanwhile.
+// When the keyring cannot be read, nothing changes.
+func (d *daemon) reload(ctx context.Context) {
+	stored, err := d.stored(ctx)
+	if err != nil {
+		d.log.Error("daemon: reload failed; the workspaces stay as they were", "err", err)
+		return
+	}
+	for _, w := range d.dir.running() {
+		creds, ok := stored[w.Team]
+		if ok && creds == w.creds && !w.stopped() {
+			delete(stored, w.Team) // keep it running
+			continue
+		}
+		if !ok {
+			d.dir.remove(w.Team)
+		}
+		if err := w.stop(); err != nil {
+			d.log.Warn("daemon: could not close a workspace's store", "team", w.Team, "err", err)
+		}
+	}
+	d.apply(ctx, stored)
+	d.log.Info("daemon: reloaded", "workspaces", len(d.dir.running()))
 }
 
 // shutdown closes the server, then stops every workspace, within
@@ -193,24 +228,22 @@ func (d *daemon) stored(ctx context.Context) (map[domain.TeamID]keyring.Credenti
 	return out, nil
 }
 
-// apply starts every stored workspace that is not running, all at once,
-// since each asks Slack who is signed in.
+// apply starts the workspaces in stored, all at once, since each asks
+// Slack who is signed in.
 func (d *daemon) apply(ctx context.Context, stored map[domain.TeamID]keyring.Credentials) {
 	var wg sync.WaitGroup
 	for team, creds := range stored {
-		if _, ok := d.dir.get(team); ok {
-			continue
-		}
 		wg.Go(func() { d.start(ctx, team, creds) })
 	}
 	wg.Wait()
 }
 
-// start runs team's workspace and lists it; one that cannot start is
-// logged and skipped.
+// start runs team's workspace and lists it, in place of any stopped one
+// listed before; one that cannot start is logged and unlisted.
 func (d *daemon) start(ctx context.Context, team domain.TeamID, creds keyring.Credentials) {
 	w, err := d.open(ctx, team, creds)
 	if err != nil {
+		d.dir.remove(team)
 		d.log.Error("daemon: skipping a workspace that cannot start", "team", team, "err", err)
 		return
 	}

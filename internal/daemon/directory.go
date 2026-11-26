@@ -38,10 +38,20 @@ func (w *workspace) run(ctx context.Context, eng *syncengine.Engine, log *slog.L
 	switch {
 	case ctx.Err() != nil:
 	case errors.Is(err, provider.ErrAuthExpired):
-		log.Warn("daemon: Slack rejected the credentials; sign in again with omaslack auth add, then reload the daemon",
+		log.Warn("daemon: Slack rejected the credentials; sign in again with omaslack auth add, then systemctl --user reload omaslack",
 			"team", w.Team, "provider", w.Provider)
 	default:
-		log.Error("daemon: the sync engine stopped; the workspace serves its cache until the daemon reloads", "team", w.Team, "err", err)
+		log.Error("daemon: the sync engine stopped; the workspace serves its cache until systemctl --user reload omaslack", "team", w.Team, "err", err)
+	}
+}
+
+// stopped reports whether the engine stopped by itself.
+func (w *workspace) stopped() bool {
+	select {
+	case <-w.done:
+		return true
+	default:
+		return false
 	}
 }
 
@@ -84,17 +94,16 @@ func (d *directory) running() []*workspace {
 	})
 }
 
-func (d *directory) get(team domain.TeamID) (*workspace, bool) {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-	w, ok := d.ws[team]
-	return w, ok
-}
-
 func (d *directory) put(w *workspace) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	d.ws[w.Team] = w
+}
+
+func (d *directory) remove(team domain.TeamID) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	delete(d.ws, team)
 }
 
 // hello adds the workspaces and each one's capabilities to the hello
