@@ -29,11 +29,26 @@ The daemon SHALL run at most 16 calls at once per connection. While 16 are runni
 - **THEN** at most 16 of them run at the same time, all 100 are eventually answered, and another client's calls are answered meanwhile
 
 ### Requirement: Slow subscribers are disconnected
-Publishing an event SHALL NOT block the sync engine. Each subscriber SHALL have a bounded queue; a subscriber whose queue overflows SHALL be disconnected and the daemon SHALL log it, so that a client never shows a view with silently missing events.
+Publishing an event SHALL NOT block the sync engine. Each subscriber SHALL have its own queue, bounded by the events that are never coalesced (`message.*`, `reaction.changed`, `ui.focus`; 1024 by default). A subscriber with more of them queued SHALL be disconnected and the daemon SHALL log it, so that a client never shows a view with silently missing events. Coalesced state events SHALL NOT count against the bound.
 
 #### Scenario: A client stops reading
-- **WHEN** a subscribed client stops reading its socket and more than 1024 events are queued for it
+- **WHEN** a subscribed client stops reading its socket and more than 1024 message, reaction or focus events are queued for it
 - **THEN** the daemon closes that connection, logs it, and keeps delivering events to every other subscriber
+
+#### Scenario: Startup burst of state events
+- **WHEN** a workspace with 1500 conversations reconnects
+- **THEN** a subscriber that keeps reading receives the latest state of every conversation and is not disconnected
+
+### Requirement: Queued state events are coalesced
+While queued for a subscriber, a state event SHALL replace the queued event with the same key and move to the end of the queue. Keys: `conversation.updated` and `read.changed` by team and conversation, `presence.changed` by team and user, `connection.state` by team, `draft.changed` by team, conversation and thread, `typing` by team, conversation and user, and `unread.summary` by topic. `message.*`, `reaction.changed` and `ui.focus` MUST never be coalesced or dropped.
+
+#### Scenario: A newer state replaces the queued one
+- **WHEN** a user goes away and then active again while the subscriber has not read the first `presence.changed`
+- **THEN** the subscriber receives a single `presence.changed`, with the user active
+
+#### Scenario: State never overtakes an earlier message
+- **WHEN** `conversation.updated` for a conversation is queued, then `message.created` in it, then a newer `conversation.updated` for it
+- **THEN** the subscriber receives `message.created` and then only the newer `conversation.updated`
 
 ### Requirement: Handshake and protocol version
 Every client SHALL start with `hello{client, protocol}`. The daemon SHALL answer with its protocol version, daemon version, workspaces and capabilities. If the major protocol version does not match, it SHALL answer `-32001` and close the connection.
