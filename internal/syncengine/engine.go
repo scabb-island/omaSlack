@@ -51,7 +51,7 @@ type Config struct {
 	Clock    ratebudget.Clock // default: the wall clock
 	Rand     func() float64   // in [0, 1), for jitter; default: math/rand
 	PageSize int              // messages per History call; zero means 100
-	Log      *slog.Logger     // default: discard
+	Log      *slog.Logger     // default: discard; each line names the team itself
 
 	// ReadPollInterval is how often read markers are polled when the
 	// provider implements provider.ReadMarkerReader; zero means one minute.

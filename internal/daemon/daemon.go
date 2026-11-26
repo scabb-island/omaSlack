@@ -270,7 +270,7 @@ func (d *daemon) open(ctx context.Context, team domain.TeamID, creds keyring.Cre
 	id := identify(ctx, d.cfg.Identify, d.cache, team, p, d.log)
 	eng := syncengine.New(syncengine.Config{
 		Provider: p, Store: st, Budget: budget, Publisher: d.hub, Self: id.Self,
-		Log: d.log.With("team", team),
+		Log: d.log, // the engine names the workspace in each line
 	})
 	ectx, cancel := context.WithCancel(d.engines)
 	w := &workspace{
