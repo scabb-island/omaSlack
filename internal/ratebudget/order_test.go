@@ -271,3 +271,24 @@ func TestSystemClockTimerStops(t *testing.T) {
 	default:
 	}
 }
+
+// Task 1.13: a 429 means Slack wants us to slow down, so the burst that
+// accrued during the penalty is gone. When the penalty ends one call goes
+// out, and the next waits a full interval.
+func TestPenaltyDrainsTheBurst(t *testing.T) {
+	l, clock := newTestLimiter(t, map[string]Limit{method: {PerMinute: 6, Burst: 3}}, slowDefault)
+	l.Penalize(method, 30*time.Second)
+	clock.Advance(30 * time.Second)
+
+	if err := l.Wait(context.Background(), method, Interactive); err != nil {
+		t.Fatalf("first call after the penalty: %v", err)
+	}
+	done := waitAsync(l, context.Background(), method, Interactive)
+	waitForTimers(t, clock, 1)
+	clock.Advance(10*time.Second - time.Nanosecond)
+	assertBlocked(t, done, "a second call burst out right after the penalty")
+	clock.Advance(time.Nanosecond)
+	if err := <-done; err != nil {
+		t.Fatalf("second call: %v", err)
+	}
+}
