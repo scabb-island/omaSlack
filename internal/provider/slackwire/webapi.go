@@ -3,6 +3,7 @@ package slackwire
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"maps"
@@ -39,13 +40,30 @@ func (e Envelope) status() Envelope { return e }
 // Response is a decoded Web API response.
 type Response interface{ status() Envelope }
 
-// apiError turns a Slack error code into an error naming method. Auth codes
-// wrap provider.ErrAuthExpired so the sync engine stops retrying.
-func apiError(method, code string) error {
-	if IsAuthError(code) {
-		return fmt.Errorf("%s: %s: %w", method, code, provider.ErrAuthExpired)
+// APIError is the error code a Web API method answered with (ok:false).
+// Codes that reject the credentials also match provider.ErrAuthExpired,
+// so the sync engine stops retrying.
+type APIError struct {
+	Method string
+	Code   string
+}
+
+func (e *APIError) Error() string {
+	if IsAuthError(e.Code) {
+		return fmt.Sprintf("%s: %s: %v", e.Method, e.Code, provider.ErrAuthExpired)
 	}
-	return fmt.Errorf("%s: %s", method, code)
+	return e.Method + ": " + e.Code
+}
+
+// Is makes errors.Is(err, provider.ErrAuthExpired) true for auth codes.
+func (e *APIError) Is(target error) bool {
+	return target == provider.ErrAuthExpired && IsAuthError(e.Code)
+}
+
+// HasCode reports whether err is, or wraps, a Slack error with code.
+func HasCode(err error, code string) bool {
+	var apiErr *APIError
+	return errors.As(err, &apiErr) && apiErr.Code == code
 }
 
 // retryAfter reads a 429's Retry-After header, in seconds.
@@ -108,7 +126,7 @@ func (a *WebAPI) Call(ctx context.Context, method string, form url.Values, out R
 		return fmt.Errorf("%s: decode response: %w", method, err)
 	}
 	if env := out.status(); !env.OK {
-		return apiError(method, env.Error)
+		return &APIError{Method: method, Code: env.Error}
 	}
 	return nil
 }

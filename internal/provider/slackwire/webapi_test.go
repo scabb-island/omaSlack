@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -219,6 +220,20 @@ func TestSlackErrorsAreReported(t *testing.T) {
 	err := api.Call(context.Background(), "auth.test", url.Values{}, &Envelope{})
 	if errors.Is(err, provider.ErrAuthExpired) || err == nil || err.Error() != "auth.test: ratelimited" {
 		t.Fatalf("err = %v, want a plain auth.test: ratelimited", err)
+	}
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) || *apiErr != (APIError{Method: "auth.test", Code: "ratelimited"}) {
+		t.Fatalf("err = %#v, want an APIError with the method and the code", err)
+	}
+}
+
+func TestHasCodeMatchesOnlyThatSlackError(t *testing.T) {
+	err := fmt.Errorf("wrapped: %w", &APIError{Method: "chat.update", Code: "message_not_found"})
+	if !HasCode(err, "message_not_found") {
+		t.Error("HasCode(message_not_found) = false, want true")
+	}
+	if HasCode(err, "cant_update_message") || HasCode(errors.New("message_not_found"), "message_not_found") || HasCode(nil, "") {
+		t.Error("HasCode matched another code or a non-Slack error")
 	}
 }
 
