@@ -36,6 +36,9 @@ type Provider struct {
 	readTimeout time.Duration
 	http        *http.Client
 	log         *slog.Logger
+	// live is the socket of the current Connect stream, written to by
+	// SubscribePresence and SendTyping.
+	live liveSocket
 }
 
 const (
