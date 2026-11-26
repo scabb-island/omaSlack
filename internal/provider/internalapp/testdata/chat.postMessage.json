@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "channel": "C0001",
+  "ts": "1700000500.000500",
+  "message": {
+    "type": "message",
+    "user": "U0001",
+    "text": "hi there",
+    "ts": "1700000500.000500",
+    "thread_ts": "1700000100.000100",
+    "team": "T0001",
+    "parent_user_id": "U0001"
+  }
+}

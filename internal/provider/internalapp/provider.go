@@ -10,8 +10,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"net/url"
-	"strconv"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 	"gitlab.com/scabb-island/omaslack/internal/keyring"
@@ -72,33 +70,3 @@ func (p *Provider) Capabilities() domain.Capabilities { return capabilities }
 var errTODO = errors.New("not implemented")
 
 func (p *Provider) Connect(ctx context.Context) (<-chan domain.Event, error) { return nil, errTODO }
-
-type messagesResponse struct {
-	envelope
-	Messages []wireMessage `json:"messages"`
-}
-
-// History calls conversations.history.
-func (p *Provider) History(ctx context.Context, conv domain.ConversationID, before domain.TS, limit int) ([]domain.Message, error) {
-	form := url.Values{"channel": {conv.String()}, "limit": {strconv.Itoa(limit)}}
-	if !before.IsZero() {
-		form.Set("latest", before.String())
-	}
-	var resp messagesResponse
-	if err := p.call(ctx, "conversations.history", form, &resp); err != nil {
-		return nil, err
-	}
-	return p.parseMessages(resp.Messages), nil
-}
-
-func (p *Provider) Replies(ctx context.Context, conv domain.ConversationID, thread domain.TS) ([]domain.Message, error) {
-	return nil, errTODO
-}
-
-func (p *Provider) Post(ctx context.Context, conv domain.ConversationID, thread domain.TS, text string) (domain.Message, error) {
-	return domain.Message{}, errTODO
-}
-
-func (p *Provider) MarkRead(ctx context.Context, conv domain.ConversationID, upTo domain.TS) error {
-	return errTODO
-}
