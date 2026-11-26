@@ -1,32 +1,32 @@
-# Change: add-omaslack-v1 — cliente de Slack "Omarchy Way" con UI y TUI sobre un daemon común
+# Change: add-omaslack-v1 — an "Omarchy Way" Slack client with a UI and a TUI on one shared daemon
 
 ## Why
 
-El cliente oficial de Slack es una app Electron que ocupa entre 500 MB y 1,5 GB de RAM, no sigue el tema del sistema y no está pensada para el teclado, lo opuesto a lo que propone Omarchy. Hay alternativas, pero cada una cubre sólo una parte:
+The official Slack client is an Electron app that takes 500 MB to 1.5 GB of RAM, ignores the system theme and is not built for the keyboard: the opposite of what Omarchy stands for. Alternatives exist, but each covers only part of the problem:
 
-- **slk** (gammons/slk) es una TUI excelente, pero no tiene ninguna integración con el shell de Omarchy.
-- Los cinco plugins de Slack del marketplace de Omarchy (`janrenz.omarchy.slack`, `bottelet.slack`, `petrzpav.slack`, `leonavas.slack`, `io.github.thisisgm.slack`) se quedan en una de estas situaciones:
-  - Son sólo UI y están limitados por la API oficial: 1 consulta de historial por minuto y sin tiempo real.
-  - Son sólo un ícono de barra que maneja una TUI externa.
-  - Cubren una sola función, como presencia y DND.
+- **slk** (gammons/slk) is an excellent TUI, but it has no integration with the Omarchy shell.
+- The five Slack plugins in the Omarchy marketplace (`janrenz.omarchy.slack`, `bottelet.slack`, `petrzpav.slack`, `leonavas.slack`, `io.github.thisisgm.slack`) each fall into one of these:
+  - UI only, and constrained by the official API: 1 history call per minute and no real time.
+  - Just a bar icon that drives an external TUI.
+  - A single feature, such as presence and DND.
 
-Ninguno ofrece un **motor compartido** que alimente a la vez una UI nativa completa y una TUI con estado sincronizado. Esta propuesta cubre ese hueco.
+None offers a **shared engine** that feeds both a full native UI and a TUI with synchronized state. This proposal fills that gap.
 
 ## What Changes
 
-- **ADDED** `slack-connection`: interfaz `Provider` con dos implementaciones a elección del usuario. Una es `desktop-session` (sesión de la app de escritorio o del navegador: tiempo real completo y cero setup, pero no oficial). La otra es `internal-app` (user token de una app interna con Socket Mode: oficial, sin el límite de 1 llamada por minuto, pero requiere aprobación de un admin). Incluye multi-workspace y credenciales en el keyring.
-- **ADDED** `sync-engine`: tiempo real, reconexión con backoff, backfill, cache SQLite y presupuesto de rate limit.
-- **ADDED** `daemon-api`: JSON-RPC 2.0 sobre un unix socket privado, stream de eventos, versión de protocolo y unit de systemd de usuario.
-- **ADDED** `messaging`: leer, enviar, editar, borrar, hilos, reacciones, archivos, menciones, búsqueda, borradores y estado de lectura únicos para ambos clientes.
-- **ADDED** `notifications-presence`: notificaciones de escritorio, reglas, DND y presencia.
-- **ADDED** `tui-client`: cliente de terminal con modos tipo vim, tema de Omarchy y recarga en caliente.
-- **ADDED** `gui-client`: plugin QML con Service, BarWidget, Panel de vista rápida y ventana completa.
-- **ADDED** `omarchy-integration`: manifest, plantilla de tema con hook, atajos de teclado, entrada en el launcher, AUR y publicación en el marketplace.
+- **ADDED** `slack-connection`: a `Provider` interface with two implementations, chosen by the user. One is `desktop-session` (the desktop app or browser session: full real time and zero setup, but unofficial). The other is `internal-app` (an internal app's user token with Socket Mode: official, without the 1-call-per-minute limit, but it needs admin approval). Includes multi-workspace support and credentials in the keyring.
+- **ADDED** `sync-engine`: real time, reconnection with backoff, backfill, SQLite cache and a rate-limit budget.
+- **ADDED** `daemon-api`: JSON-RPC 2.0 over a private unix socket, an event stream, protocol versioning and a systemd user unit.
+- **ADDED** `messaging`: read, send, edit, delete, threads, reactions, files, mentions, search, and drafts and read state shared by both clients.
+- **ADDED** `notifications-presence`: desktop notifications, rules, DND and presence.
+- **ADDED** `tui-client`: a terminal client with vim-like modes, the Omarchy theme and live reload.
+- **ADDED** `gui-client`: a QML plugin with a Service, a BarWidget, a quick-view Panel and a full window.
+- **ADDED** `omarchy-integration`: manifest, theme template and hook, keyboard shortcuts, launcher entry, AUR and marketplace publication.
 
 ## Impact
 
-- **Specs afectadas:** las 8 capacidades anteriores. Todas son nuevas.
-- **Código:** proyecto nuevo. Repo `omaslack` (binario Go) y directorio `plugin/` (plugin de Omarchy), que se publica como repo separado o en un subdirectorio con `manifestPath`.
-- **Usuarios:** tienen que elegir proveedor al hacer `omaslack auth add`. El proveedor `desktop-session` muestra un aviso sobre los términos de uso que hay que aceptar.
-- **Riesgos principales:** que Slack cambie el protocolo no oficial, cambios en la API de plugins de Omarchy y la falta de sandbox de los plugins. El detalle está en `docs/factibilidad.md` y `design.md`.
-- **Atribución:** se porta código MIT de slk (auth de escritorio, cliente WebSocket, render de mrkdwn) con su aviso de copyright.
+- **Affected specs:** the 8 capabilities above. All are new.
+- **Code:** a new project. The `omaslack` repo (Go binary) and the `plugin/` directory (Omarchy plugin), published as a separate repo or as a subdirectory with `manifestPath`.
+- **Users:** they choose a provider when running `omaslack auth add`. The `desktop-session` provider shows a terms-of-service warning that must be accepted.
+- **Main risks:** Slack changing the unofficial protocol, changes in Omarchy's plugin API and the lack of plugin sandboxing. Details in `docs/feasibility.md` and `design.md`.
+- **Attribution:** MIT code from slk (desktop auth, WebSocket client, mrkdwn rendering) is ported with its copyright notice.

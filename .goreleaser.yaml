@@ -1,0 +1,52 @@
+version: 2
+
+project_name: omaslack
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: omaslack
+    main: ./cmd/omaslack
+    binary: omaslack
+    env:
+      - CGO_ENABLED=0
+    goos: [linux]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w
+      - -X gitlab.com/scabb-island/omaslack/internal/version.Version={{ .Version }}
+      - -X gitlab.com/scabb-island/omaslack/internal/version.Commit={{ .ShortCommit }}
+      - -X gitlab.com/scabb-island/omaslack/internal/version.Date={{ .Date }}
+
+archives:
+  - formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - THIRD_PARTY_NOTICES.md
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-snapshot+{{ .ShortCommit }}"
+
+changelog:
+  use: git
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+
+gitlab_urls:
+  use_package_registry: true
+
+release:
+  gitlab:
+    owner: scabb-island
+    name: omaslack

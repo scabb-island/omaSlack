@@ -1,50 +1,50 @@
 ## ADDED Requirements
 
-### Requirement: Manifest válido del plugin
-El plugin SHALL tener un `manifest.json` con `schemaVersion: 1`, `id` = `ar.scabb.omaslack` (DNS invertido del dominio `scabb.ar`; es permanente en el marketplace y nunca puede usar `omarchy.*`), `name`, `version`, `author`, `license`, `description`, `kinds: ["service","bar-widget","panel"]`, `entryPoints` y el bloque `barWidget`. SHALL pasar `omarchy plugin validate` y no SHALL tener symlinks.
+### Requirement: Valid plugin manifest
+The plugin SHALL have a `manifest.json` with `schemaVersion: 1`, `id` = `ar.scabb.omaslack` (the reversed `scabb.ar` domain; permanent in the marketplace and never in the `omarchy.*` namespace), `name`, `version`, `author`, `license`, `description`, `kinds: ["service","bar-widget","panel"]`, `entryPoints` and the `barWidget` block. It SHALL pass `omarchy plugin validate` and SHALL NOT contain symlinks.
 
-#### Scenario: Validación en CI
-- **WHEN** corre el CI del repo
-- **THEN** `omarchy plugin validate plugin/` y `qmllint` terminan sin errores
+#### Scenario: Local validation
+- **WHEN** `make local` runs
+- **THEN** `omarchy plugin validate plugin` and `qmllint` finish without errors
 
-### Requirement: Instalación y desinstalación documentadas
-El README del plugin SHALL explicar cómo instalar el binario (AUR) y el plugin (`omarchy plugin add <git-url> --enable`), cómo ubicarlo en la barra y cómo desinstalarlo por completo: plugin, servicio, plantilla, hook y datos.
+### Requirement: Documented install and removal
+The plugin README SHALL explain how to install the binary (AUR) and the plugin (`omarchy plugin add <git-url> --enable`), how to place it in the bar and how to remove it completely: plugin, service, template, hook and data.
 
-#### Scenario: Desinstalar
-- **WHEN** el usuario sigue los pasos de desinstalación
-- **THEN** no quedan la unit de systemd, el hook, la plantilla ni las credenciales en el keyring
+#### Scenario: Uninstalling
+- **WHEN** the user follows the removal steps
+- **THEN** no systemd unit, hook, template or keyring credentials are left behind
 
-### Requirement: Plantilla de tema y hook
-La instalación SHALL dejar `~/.config/omarchy/themed/omaslack.toml.tpl` (con las variables de color de Omarchy) y el hook `~/.config/omarchy/hooks/theme-set.d/omaslack`, que manda `SIGUSR1` a las TUIs abiertas. No SHALL pisar archivos que el usuario haya modificado.
+### Requirement: Theme template and hook
+Installation SHALL put `~/.config/omarchy/themed/omaslack.toml.tpl` (with Omarchy's color variables) and the `~/.config/omarchy/hooks/theme-set.d/omaslack` hook, which sends `SIGUSR1` to open TUIs, in place. It SHALL NOT overwrite files the user has modified.
 
-#### Scenario: Plantilla editada por el usuario
-- **WHEN** ya existe un `omaslack.toml.tpl` con cambios del usuario
-- **THEN** la instalación no lo sobrescribe y avisa que hay una versión nueva disponible
+#### Scenario: Template edited by the user
+- **WHEN** an `omaslack.toml.tpl` with user changes already exists
+- **THEN** installation does not overwrite it and reports that a newer version is available
 
-### Requirement: Atajos y launcher
-El proyecto SHALL incluir un `.desktop` para la TUI (visible en el launcher de Omarchy) y SHALL documentar los atajos sugeridos para Hyprland: abrir o cerrar la ventana (`omarchy-shell shell toggle ar.scabb.omaslack`) y abrir o enfocar la TUI.
+### Requirement: Shortcuts and launcher
+The project SHALL include a `.desktop` entry for the TUI (visible in the Omarchy launcher) and SHALL document suggested Hyprland shortcuts: toggling the window (`omarchy-shell shell toggle ar.scabb.omaslack`) and opening or focusing the TUI.
 
-#### Scenario: Buscar en el launcher
-- **WHEN** el usuario busca "omaslack" en el launcher
-- **THEN** aparece la entrada que abre o enfoca la TUI
+#### Scenario: Searching the launcher
+- **WHEN** the user searches for "omaslack" in the launcher
+- **THEN** the entry that opens or focuses the TUI appears
 
-### Requirement: Diagnóstico
-`omaslack doctor` SHALL verificar y reportar: versión del daemon y del protocolo, estado del servicio, permisos del socket, dónde están las credenciales, proveedores por workspace (con el aviso de términos de uso para `desktop-session`), presencia de la plantilla y el hook, y si el plugin está instalado y habilitado (`omarchy plugin list --json`).
+### Requirement: Diagnostics
+`omaslack doctor` SHALL check and report: daemon and protocol version, service state, socket permissions, where credentials live, the provider per workspace (with the terms-of-service warning for `desktop-session`), whether the template and hook are present, and whether the plugin is installed and enabled (`omarchy plugin list --json`).
 
-#### Scenario: Falta el hook
-- **WHEN** el hook `theme-set.d/omaslack` no existe
-- **THEN** `doctor` lo marca como advertencia e indica el comando para reinstalarlo
+#### Scenario: Missing hook
+- **WHEN** the `theme-set.d/omaslack` hook does not exist
+- **THEN** `doctor` flags it as a warning and prints the command to reinstall it
 
-### Requirement: Coexistencia con otros clientes de Slack
-La documentación SHALL indicar cómo convivir con la app oficial (ocultar su ícono de bandeja, evitar notificaciones duplicadas) y con otros plugins de Slack del marketplace. El plugin no SHALL modificar la configuración de otros plugins.
+### Requirement: Coexistence with other Slack clients
+The documentation SHALL explain how to coexist with the official app (hide its tray icon, avoid duplicate notifications) and with other Slack plugins from the marketplace. The plugin SHALL NOT change other plugins' configuration.
 
-#### Scenario: App oficial abierta
-- **WHEN** la app oficial de Slack también está corriendo
-- **THEN** el README explica cómo desactivar sus notificaciones para no recibirlas dos veces
+#### Scenario: Official app running
+- **WHEN** the official Slack app is also running
+- **THEN** the README explains how to turn off its notifications to avoid receiving them twice
 
-### Requirement: Distribución
-El binario SHALL publicarse con releases firmadas (goreleaser) y un paquete AUR `omaslack-bin`. El plugin SHALL enviarse al marketplace de Omarchy siguiendo `SUBMISSION.md`, declarando la instalación manual del binario si el marketplace lo exige.
+### Requirement: Distribution
+The binary SHALL be published with signed releases (goreleaser) and an AUR package `omaslack-bin`. The plugin SHALL be submitted to the Omarchy marketplace following `SUBMISSION.md`, declaring the binary's manual installation if the marketplace requires it.
 
-#### Scenario: Instalación limpia
-- **WHEN** un usuario nuevo instala `omaslack-bin` y después el plugin
-- **THEN** después de `omaslack auth add` tiene la barra, el panel, la ventana y la TUI funcionando contra el mismo daemon
+#### Scenario: Clean install
+- **WHEN** a new user installs `omaslack-bin` and then the plugin
+- **THEN** after `omaslack auth add` they have the bar, panel, window and TUI working against the same daemon

@@ -1,11 +1,12 @@
 # Go
 /bin/
 /dist/
+/.cache/
 *.test
 *.out
 coverage.*
 
-# Datos locales y secretos
+# Local data and secrets
 .env
 *.db
 *.db-wal
@@ -18,5 +19,5 @@ credentials
 .idea/
 .vscode/
 
-# Claude Code (configuración local)
+# Claude Code (local settings)
 .claude/settings.local.json

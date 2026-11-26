@@ -1,0 +1,8 @@
+{:entries [
+  {:name "Run", :namespace "gitlab.com/scabb-island/omaslack/internal/cli", :complexity 7, :coverage 100.0, :crap 7.0}
+  {:name "usage", :namespace "gitlab.com/scabb-island/omaslack/internal/cli", :complexity 4, :coverage 100.0, :crap 4.0}
+  {:name "main", :namespace "gitlab.com/scabb-island/omaslack/cmd/omaslack", :complexity 1, :coverage 0.0, :crap 2.0}
+  {:name "runVersion", :namespace "gitlab.com/scabb-island/omaslack/internal/cli", :complexity 2, :coverage 100.0, :crap 2.0}
+  {:name "String", :namespace "gitlab.com/scabb-island/omaslack/internal/version", :complexity 1, :coverage 0.0, :crap 2.0}
+  {:name "commands", :namespace "gitlab.com/scabb-island/omaslack/internal/cli", :complexity 1, :coverage 100.0, :crap 1.0}
+]}

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "ar.scabb.omaslack",
+  "name": "omaslack",
+  "version": "0.0.1",
+  "author": "Scabb Island",
+  "license": "MIT",
+  "description": "Slack for Omarchy, from the bar and from the terminal, on one local daemon. Early skeleton: shows whether the omaslack daemon is reachable.",
+  "kinds": [
+    "service",
+    "bar-widget"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "service": "Service.qml",
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "omaslack",
+    "description": "Slack unread badges and quick access to the omaslack window and terminal client.",
+    "category": "Communication",
+    "aliases": [
+      "slack",
+      "chat",
+      "messages",
+      "omaslack"
+    ],
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}
