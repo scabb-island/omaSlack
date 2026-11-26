@@ -235,7 +235,9 @@ func TestAuthAddDesktopRejectedBySlackStoresNothing(t *testing.T) {
 	if code != ExitError {
 		t.Errorf("exit code = %d, want %d", code, ExitError)
 	}
-	wantIn(t, "stderr", errOut, "Beta (T0BETA1)", "invalid_auth")
+	wantIn(t, "stderr", errOut, "Beta (T0BETA1)", "invalid_auth", "Nothing was stored",
+		"outside its own client", "stale", "--provider desktop-session --browser",
+		"bind sessions", "--provider internal-app", "internal-app-setup.md")
 	if f.opened || strings.Contains(out, "Added") {
 		t.Errorf("stored after Slack rejected a session:\n%s", out)
 	}
@@ -393,6 +395,33 @@ func TestAuthAddBrowserFailures(t *testing.T) {
 		}
 		wantIn(t, "stderr", errOut, says)
 		f.wantStored(nil)
+	}
+}
+
+// A session pasted fresh from a browser that Slack rejects is bound to the
+// browser: pasting another will not help, internal-app will.
+func TestAuthAddBrowserRejectedBySlackPointsToInternalApp(t *testing.T) {
+	f := newAuthFixture(t)
+	code, _, errOut := f.run("yes\nxoxc-rejected\n"+browserCookie+"\n", "auth", "add", "--provider", "desktop-session", "--browser")
+	if code != ExitError {
+		t.Errorf("exit code = %d, want %d", code, ExitError)
+	}
+	wantIn(t, "stderr", errOut, "invalid_auth", "Nothing was stored", "outside its own client",
+		"bind sessions", "--provider internal-app", "internal-app-setup.md")
+	if strings.Contains(errOut, "--browser") {
+		t.Errorf("suggests pasting another browser session:\n%s", errOut)
+	}
+	f.wantStored(nil)
+}
+
+// Only Slack's rejection gets the explanation; a paste with no session
+// in it is the user's mistake.
+func TestAuthAddBadPasteIsNotExplainedAsARejection(t *testing.T) {
+	f := newAuthFixture(t)
+	_, _, errOut := f.run("yes\ncurl 'https://app.slack.com/client'\n", "auth", "add", "--provider", "desktop-session", "--browser")
+	wantIn(t, "stderr", errOut, "no xoxc- token")
+	if strings.Contains(errOut, "internal-app") {
+		t.Errorf("explains a bad paste as a rejection:\n%s", errOut)
 	}
 }
 
