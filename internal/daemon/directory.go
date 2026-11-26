@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"maps"
 	"slices"
 	"strings"
 	"sync"
@@ -65,15 +64,12 @@ func (w *workspace) stop() error {
 // directory is the api.Directory of the running workspaces. It is safe
 // for concurrent use.
 type directory struct {
-	mu sync.RWMutex
-	ws map[domain.TeamID]*workspace
+	ws sync.Map // domain.TeamID → *workspace
 }
 
 var _ api.Directory = (*directory)(nil)
 
-func newDirectory() *directory {
-	return &directory{ws: map[domain.TeamID]*workspace{}}
-}
+func newDirectory() *directory { return &directory{} }
 
 // Workspaces returns every workspace, ordered by team ID.
 func (d *directory) Workspaces() []api.Workspace {
@@ -87,24 +83,20 @@ func (d *directory) Workspaces() []api.Workspace {
 
 // running returns the running workspaces, ordered by team ID.
 func (d *directory) running() []*workspace {
-	d.mu.RLock()
-	defer d.mu.RUnlock()
-	return slices.SortedFunc(maps.Values(d.ws), func(a, b *workspace) int {
+	var all []*workspace
+	d.ws.Range(func(_, w any) bool {
+		all = append(all, w.(*workspace))
+		return true
+	})
+	return slices.SortedFunc(slices.Values(all), func(a, b *workspace) int {
 		return strings.Compare(a.Team.String(), b.Team.String())
 	})
 }
 
-func (d *directory) put(w *workspace) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	d.ws[w.Team] = w
-}
+// put lists w, in place of any workspace of its team listed before.
+func (d *directory) put(w *workspace) { d.ws.Store(w.Team, w) }
 
-func (d *directory) remove(team domain.TeamID) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	delete(d.ws, team)
-}
+func (d *directory) remove(team domain.TeamID) { d.ws.Delete(team) }
 
 // hello adds the workspaces and each one's capabilities to the hello
 // result: {workspaces: []wire.Workspace, capabilities: {team: []string}}.
