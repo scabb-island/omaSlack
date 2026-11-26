@@ -28,7 +28,7 @@
 - [x] 1.19 Tolerant reaction mapping: accept reactions without `item.type` (as slk does) and log unexpected item types
 - [x] 1.20 The sync engine's `LoadOlder` continues from `Store.Oldest` instead of a client-supplied cursor
 - [x] 1.21 `auth add`: picking a workspace that needs sign-in goes straight to the browser paste flow
-- [x] 1.22 desktop-session: when only `client.counts` fails (Enterprise Grid), return the conversation list without read state
+- [x] 1.22 desktop-session: when only `client.counts` fails (workspaces where `client.counts` is refused), return the conversation list without read state
 - [x] 1.23 desktop-session: remember the presence subscription and send it again on every socket that opens
 - [x] 1.24 Sync engine: log the conversation list failing and recovering when the state changes
 - [x] 1.25 `auth add`: check desktop app credentials with `auth.test` before storing them, explain a session Slack rejects (point to `internal-app`), and require an interactive terminal

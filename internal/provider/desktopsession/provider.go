@@ -50,9 +50,9 @@ const (
 	defaultSocketURL = "wss://wss-primary.slack.com/"
 )
 
-// userAgent is the Chrome on Linux the web client runs in. Slack's
-// anomaly detection (Enterprise Grid in particular) flags requests that do
-// not look like they came from a browser.
+// userAgent is the Chrome on Linux the web client runs in, so requests
+// look like the web client's own. A field test (GitLab issue #1) found
+// that it is the session's cookies, not these headers, that Slack checks.
 const userAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
 
 // Option configures a Provider.

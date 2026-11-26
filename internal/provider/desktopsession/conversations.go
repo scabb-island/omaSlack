@@ -37,8 +37,9 @@ func (p *Provider) Conversations(ctx context.Context) ([]domain.Conversation, er
 		if mustSurface(err) {
 			return nil, err
 		}
-		// Enterprise Grid member workspaces refuse client.counts: the list
-		// is still worth having, with its read state unknown.
+		// Some workspaces refuse client.counts (team_is_restricted and
+		// similar): the list is still worth having, with its read state
+		// unknown.
 		p.log.Warn("desktop-session: no read state from client.counts", "team", p.team, "err", err)
 		return convs, nil
 	}
