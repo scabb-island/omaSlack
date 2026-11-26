@@ -60,5 +60,24 @@ local: check test-race qmllint plugin-validate specs
 snapshot:
 	goreleaser release --snapshot --clean
 
+# ── ub-mode quality gates (local only, never in CI) ──────────────────────────
+# crapper, dryer and mutator (github.com/unclebob) are installed by mise from
+# git, pinned to the commits we reviewed (see mise.toml). mutator gets crapper
+# in its own environment, which is where it looks for it first.
+GO_SOURCES := cmd internal
+
+.PHONY: crap dry mutate quality
+
+crap:      ## CRAP per function; fails if any is >= 10
+	crapper --threshold 9.99 $(GO_SOURCES)
+
+dry:       ## structural duplication >= 0.8
+	dryer --threshold 0.8 $(GO_SOURCES)
+
+mutate:    ## mutation testing; differential after the first run
+	mutator $(GO_SOURCES)
+
+quality: crap dry mutate
+
 clean:
 	rm -rf bin dist .cache

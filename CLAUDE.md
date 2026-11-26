@@ -26,7 +26,7 @@ The only exception is test data that deliberately exercises non-ASCII text (acce
 
 ## Toolchain and commands
 
-Tools are pinned in `mise.toml`: Go 1.26, golangci-lint 2.14.0 and goreleaser 2.20.2. Inside the directory they already resolve to those versions. From scripts, use `mise exec -- <cmd>`.
+Tools are pinned in `mise.toml`: Go 1.26, golangci-lint 2.14.0, goreleaser 2.20.2 and the ub-mode quality tools. On a fresh clone, run `mise install`. Inside the directory they already resolve to those versions. From scripts, use `mise exec -- <cmd>`.
 
 ```bash
 make check            # vet + golangci-lint + test: exactly what CI runs
@@ -37,6 +37,19 @@ go test ./internal/cli -run TestVersion   # a single test
 ```
 
 For QML, `make qmllint` maps `$OMARCHY_PATH/shell` as the `qs` import prefix (the way the shell does) and turns off `missing-property`, because the shell hands plugins a `bar` object with no static type.
+
+## ub-mode (change discipline)
+
+The project includes the `ub-mode` skill (`.claude/skills/ub-mode/SKILL.md`, from github.com/unclebob/ub-mode, MIT): make it work first (with TDD), then make it right, in small commits. Its quality gates run locally with unclebob's crapper, dryer and mutator. mise installs them with the `pypi` backend, from git, pinned by commit in `mise.toml`. mutator carries crapper in its own environment (`uvx_args = "--with ..."`) because that is where it reads function names from. If you bump crapper, keep the same commit in both entries.
+
+```bash
+make crap      # crapper: CRAP per function, fails if any reaches 10
+make dry       # dryer: structural duplication >= 0.8
+make mutate    # mutator: mutation testing; differential from the second run on
+make quality   # all three
+```
+
+They write their snapshots to `.metrics/` (gitignored) and never run in CI. uml-viewer is not installed: it needs Clojure and Java 21, and the skill does not use it.
 
 ## CI (GitLab): keep it cheap
 
