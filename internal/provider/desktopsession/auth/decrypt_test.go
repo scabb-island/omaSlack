@@ -63,6 +63,28 @@ func TestDecryptV10UsesChromiumsFixedKey(t *testing.T) {
 	}
 }
 
+// Space and tilde are the ends of printable ASCII, and cookie text.
+func TestDecryptAcceptsAllPrintableASCII(t *testing.T) {
+	enc := encryptCookie(t, "v10", []byte(" xoxd-~"), "peanuts")
+	if got, err := decryptCookie(context.Background(), enc, &passwords{}); err != nil || got != " xoxd-~" {
+		t.Errorf("decryptCookie = %q, %v", got, err)
+	}
+}
+
+// The key derivation must match Chromium's PBKDF2 for any password, which
+// the standard library computes independently here.
+func TestCookieKeyIsChromiumsPBKDF2(t *testing.T) {
+	for _, password := range []string{"", "peanuts", "a much longer password than one SHA-1 block of sixty-four bytes!!"} {
+		want, err := pbkdf2.Key(sha1.New, password, []byte("saltysalt"), 1, 16)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := cookieKey([]byte(password)); !bytes.Equal(got, want) {
+			t.Errorf("cookieKey(%q) = %x, want %x", password, got, want)
+		}
+	}
+}
+
 // A store can hold a stale key next to the right one; every candidate is
 // tried, from one lookup.
 func TestDecryptV11TriesEveryKeyringCandidate(t *testing.T) {
@@ -96,7 +118,7 @@ func wrongKeyPassingPadding(t *testing.T, enc []byte) string {
 	t.Helper()
 	for i := range 512 {
 		key := fmt.Sprintf("wrong-key-%d", i)
-		block, _ := cbcBlock([]byte(key))
+		block, _ := aes.NewCipher(cookieKey([]byte(key)))
 		out := make([]byte, len(enc)-3)
 		cipher.NewCBCDecrypter(block, bytes.Repeat([]byte{' '}, 16)).CryptBlocks(out, enc[3:])
 		if n := int(out[len(out)-1]); n >= 1 && n <= 16 {

@@ -7,10 +7,9 @@ import (
 	"context"
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/pbkdf2"
+	"crypto/hmac"
 	"crypto/sha1" //nolint:gosec // Chromium derives the cookie key with PBKDF2-SHA1
 	"crypto/sha256"
-	"errors"
 	"fmt"
 )
 
@@ -62,7 +61,7 @@ func decryptWith(body, password []byte) (string, error) {
 	if len(body) == 0 || len(body)%aes.BlockSize != 0 {
 		return "", fmt.Errorf("%w: bad ciphertext length %d", ErrDecryptFailed, len(body))
 	}
-	block, err := cbcBlock(password)
+	block, err := aes.NewCipher(cookieKey(password))
 	if err != nil {
 		return "", err
 	}
@@ -75,12 +74,15 @@ func decryptWith(body, password []byte) (string, error) {
 	return checked(removeDomainHash(out[:len(out)-n]))
 }
 
-// cbcBlock derives the AES-128 key. For these fixed sizes it fails only in
-// FIPS-only mode, which refuses Chromium's 9-byte salt.
-func cbcBlock(password []byte) (cipher.Block, error) {
-	key, keyErr := pbkdf2.Key(sha1.New, string(password), []byte("saltysalt"), 1, 16)
-	block, err := aes.NewCipher(key)
-	return block, errors.Join(keyErr, err)
+// cookieKey is Chromium's AES-128 key: PBKDF2-HMAC-SHA1 of password with
+// salt "saltysalt", one iteration, 16 bytes. With one iteration and a key
+// shorter than the hash, PBKDF2 is a single HMAC of the salt followed by
+// the block index 1 (RFC 8018, section 5.2). Computing it directly avoids
+// crypto/pbkdf2, which FIPS-only mode refuses for a 9-byte salt.
+func cookieKey(password []byte) []byte {
+	mac := hmac.New(sha1.New, password)
+	mac.Write([]byte("saltysalt\x00\x00\x00\x01"))
+	return mac.Sum(nil)[:16]
 }
 
 // Chromium 130 and later prefix the value with SHA-256 of the cookie's

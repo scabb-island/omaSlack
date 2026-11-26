@@ -141,6 +141,11 @@ type fakeKWallet struct {
 	password string
 	fail     map[string]error
 	calls    []string
+
+	// Set by the bus server: the window ID open() got and whether close()
+	// forced other apps off the wallet.
+	windowID int64
+	forced   bool
 }
 
 func workingKWallet() *fakeKWallet {
@@ -245,7 +250,8 @@ func serveKWallet(t *testing.T, addr, name string, path dbus.ObjectPath, f *fake
 		"isEnabled":     func() (bool, *dbus.Error) { v, _ := f.IsEnabled(ctx); return v, nil },
 		"networkWallet": func() (string, *dbus.Error) { v, _ := f.NetworkWallet(ctx); return v, nil },
 		"isOpen":        func(w string) (bool, *dbus.Error) { v, _ := f.IsOpen(ctx, w); return v, nil },
-		"open": func(w string, _ int64, app string) (int32, *dbus.Error) {
+		"open": func(w string, windowID int64, app string) (int32, *dbus.Error) {
+			f.windowID = windowID
 			v, _ := f.Open(ctx, w, app)
 			return v, nil
 		},
@@ -258,6 +264,7 @@ func serveKWallet(t *testing.T, addr, name string, path dbus.ObjectPath, f *fake
 			return v, nil
 		},
 		"close": func(h int32, force bool, app string) (int32, *dbus.Error) {
+			f.forced = force
 			_ = f.Close(ctx, h, app)
 			return 0, nil
 		},
@@ -295,6 +302,10 @@ func TestSystemPasswordsReadsKWallet(t *testing.T) {
 	}
 	if !slices.Contains(f.calls, "close omaslack") {
 		t.Errorf("KWallet handle left open: calls = %q", f.calls)
+	}
+	// No window to parent a prompt to, and other apps keep the wallet.
+	if f.windowID != 0 || f.forced {
+		t.Errorf("open() window ID = %d, close() forced = %t; want 0, false", f.windowID, f.forced)
 	}
 }
 

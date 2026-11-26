@@ -228,20 +228,24 @@ func TestDesktopWorkspacesFailures(t *testing.T) {
 	}
 }
 
+// A profile that is there but cannot be read is not "not signed in". The
+// failures are a directory where a file belongs and the reverse, which hold
+// even for root (CI runs tests as root, where chmod 0 blocks nothing).
 func TestDesktopWorkspacesReportsAnUnreadableProfile(t *testing.T) {
 	f := newDesktopFixture(t)
+	f.cookie = cookieRow{}
 	d := f.build(t)
-	if err := os.Chmod(filepath.Join(f.dir, "Cookies"), 0); err != nil {
+	if err := os.Mkdir(filepath.Join(f.dir, "Cookies"), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := d.Workspaces(context.Background()); err == nil || errors.Is(err, ErrCookieDBMissing) {
 		t.Errorf("error = %v, want a read failure", err)
 	}
 	ls := filepath.Join(f.dir, "Local Storage", "leveldb")
-	if err := os.Chmod(ls, 0); err != nil {
+	if err := os.RemoveAll(ls); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = os.Chmod(ls, 0o700) })
+	writeTestFile(t, ls, "")
 	if _, err := d.Workspaces(context.Background()); err == nil || errors.Is(err, ErrNotSignedIn) {
 		t.Errorf("error = %v, want a read failure", err)
 	}
