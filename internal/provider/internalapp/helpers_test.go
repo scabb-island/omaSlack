@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 
@@ -78,7 +79,8 @@ type call struct {
 }
 
 // fakeSlack is an httptest Web API: each method answers with its handler,
-// and every request is recorded.
+// and every request is recorded. A key that starts with "/" is a path
+// outside the Web API (an upload URL, a file), recorded under that path.
 type fakeSlack struct {
 	srv   *httptest.Server
 	mu    sync.Mutex
@@ -90,7 +92,11 @@ func newFakeSlack(t *testing.T, handlers map[string]http.HandlerFunc) *fakeSlack
 	f := &fakeSlack{}
 	mux := http.NewServeMux()
 	for method, h := range handlers {
-		mux.HandleFunc("/api/"+method, func(w http.ResponseWriter, r *http.Request) {
+		path := method
+		if !strings.HasPrefix(path, "/") {
+			path = "/api/" + method
+		}
+		mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 			if err := r.ParseForm(); err != nil {
 				t.Errorf("parse form: %v", err)
 			}

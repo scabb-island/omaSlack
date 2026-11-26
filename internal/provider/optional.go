@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"io"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 )
@@ -72,4 +73,29 @@ type PresenceSetter interface {
 type DNDController interface {
 	SnoozeDND(ctx context.Context, minutes int) error
 	EndDND(ctx context.Context) error
+}
+
+// Upload is one local file to share: the name Slack shows, its exact
+// size in bytes, and its content, which must hold exactly Size bytes.
+type Upload struct {
+	Name    string
+	Size    int64
+	Content io.Reader
+}
+
+// FileUploader shares files in conv, inside thread when it is not zero,
+// as one message with caption as its text (empty for none). It is
+// declared by the files capability. It returns the files as Slack stored
+// them; the message itself arrives on the stream, as Slack shares the
+// files after the call returns.
+type FileUploader interface {
+	UploadFiles(ctx context.Context, conv domain.ConversationID, thread domain.TS, files []Upload, caption string) ([]domain.File, error)
+}
+
+// FileDownloader streams a file's bytes into w with the provider's
+// credentials, and returns how many it wrote. A file larger than max
+// bytes fails with ErrFileTooLarge, having written at most max+1 bytes.
+// It is declared by the files capability.
+type FileDownloader interface {
+	DownloadFile(ctx context.Context, f domain.File, w io.Writer, max int64) (int64, error)
 }

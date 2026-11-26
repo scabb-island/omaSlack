@@ -21,3 +21,11 @@ type RateLimitedError struct {
 func (e *RateLimitedError) Error() string {
 	return fmt.Sprintf("rate limited on %s, retry after %s", e.Method, e.RetryAfter)
 }
+
+// ErrFileTooLarge reports a file over the size limit of an upload or a
+// download.
+var ErrFileTooLarge = errors.New("file is larger than the limit")
+
+// ErrNotDownloadable reports a file Slack offers no download for (an
+// external file, such as a document linked from another service).
+var ErrNotDownloadable = errors.New("file cannot be downloaded")

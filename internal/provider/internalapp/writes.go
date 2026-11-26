@@ -6,8 +6,10 @@ import "gitlab.com/scabb-island/omaslack/internal/provider"
 // (slackwire), signed with the user token: chat.update and chat.delete,
 // reactions.add and reactions.remove, search.messages, users.list (read
 // into a cached directory for user search, since the public API has no
-// filtered user search), users.setPresence, and dnd.setSnooze and
-// dnd.endSnooze. Every one accepts a user token with the scopes in
+// filtered user search), users.setPresence, dnd.setSnooze and
+// dnd.endSnooze, and files: files.getUploadURLExternal and
+// files.completeUploadExternal, and downloads of url_private_download
+// with the same bearer token. Every one accepts a user token with the scopes in
 // docs/slack-app-manifest.yml. These assertions keep them from silently
 // disappearing, since callers find them with type assertions.
 var (
@@ -17,4 +19,6 @@ var (
 	_ provider.UserSearcher    = (*Provider)(nil)
 	_ provider.PresenceSetter  = (*Provider)(nil)
 	_ provider.DNDController   = (*Provider)(nil)
+	_ provider.FileUploader    = (*Provider)(nil)
+	_ provider.FileDownloader  = (*Provider)(nil)
 )
