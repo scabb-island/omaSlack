@@ -89,6 +89,7 @@ type WebAPI struct {
 	caps domain.Capabilities
 	log  *slog.Logger
 	now  func() time.Time // the local clock; tests replace it
+	dir  directory        // the users SearchUsers searches
 }
 
 // NewWebAPI returns a Web API client that posts to base (which ends in
