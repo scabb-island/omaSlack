@@ -79,7 +79,7 @@ func New(team domain.TeamID, creds keyring.DesktopSession, opts ...Option) *Prov
 	for _, opt := range opts {
 		opt(p)
 	}
-	p.webAPI = slackwire.NewWebAPI(p.apiURL, p.http, p.sign, p.log.With("provider", "desktop-session", "team", team))
+	p.webAPI = slackwire.NewWebAPI(p.apiURL, p.http, p.sign, capabilities, p.log.With("provider", "desktop-session", "team", team))
 	return p
 }
 

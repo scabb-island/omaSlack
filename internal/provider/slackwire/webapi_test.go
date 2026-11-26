@@ -48,7 +48,7 @@ func (s *slack) serve(pages map[string]map[string]string, status int, header map
 	s.t.Cleanup(srv.Close)
 	var logs bytes.Buffer
 	sign := func(form url.Values, h http.Header) { form.Set("token", "secret"); h.Set("X-Signed", "yes") }
-	return NewWebAPI(srv.URL+"/api/", srv.Client(), sign, slog.New(slog.NewTextHandler(&logs, nil))), &logs
+	return NewWebAPI(srv.URL+"/api/", srv.Client(), sign, domain.NewCapabilities(domain.Search, domain.PresenceWrite), slog.New(slog.NewTextHandler(&logs, nil))), &logs
 }
 
 func fakeSlack(t *testing.T, pages map[string]map[string]string) (*WebAPI, *slack, *bytes.Buffer) {
@@ -291,7 +291,7 @@ func TestRequestsThatCannotBeSentAreErrors(t *testing.T) {
 		"unreachable": "http://127.0.0.1:1/",
 	} {
 		t.Run(name, func(t *testing.T) {
-			api := NewWebAPI(base, http.DefaultClient, func(url.Values, http.Header) {}, slog.Default())
+			api := NewWebAPI(base, http.DefaultClient, func(url.Values, http.Header) {}, domain.Capabilities{}, slog.Default())
 			err := api.Call(context.Background(), "auth.test", url.Values{}, &Envelope{})
 			if err == nil || !strings.HasPrefix(err.Error(), "auth.test: ") {
 				t.Fatalf("err = %v, want an auth.test error", err)

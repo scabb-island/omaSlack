@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"gitlab.com/scabb-island/omaslack/internal/domain"
 	"gitlab.com/scabb-island/omaslack/internal/provider"
 )
 
@@ -85,15 +86,18 @@ type WebAPI struct {
 	url  string
 	http *http.Client
 	sign Signer
+	caps domain.Capabilities
 	log  *slog.Logger
 	now  func() time.Time // the local clock; tests replace it
 }
 
 // NewWebAPI returns a Web API client that posts to base (which ends in
 // "/"; method names are appended to it) through client, signs every
-// request with sign, and logs the messages it drops to log.
-func NewWebAPI(base string, client *http.Client, sign Signer, log *slog.Logger) *WebAPI {
-	return &WebAPI{url: base, http: client, sign: sign, log: log, now: time.Now}
+// request with sign, and logs the messages it drops to log. caps are the
+// provider's capabilities: a method behind one it lacks fails with
+// domain.ErrUnsupported before any request.
+func NewWebAPI(base string, client *http.Client, sign Signer, caps domain.Capabilities, log *slog.Logger) *WebAPI {
+	return &WebAPI{url: base, http: client, sign: sign, caps: caps, log: log, now: time.Now}
 }
 
 // Call posts form to the Web API method and decodes the response into

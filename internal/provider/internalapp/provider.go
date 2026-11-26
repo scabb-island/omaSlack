@@ -50,7 +50,7 @@ func New(team domain.TeamID, creds keyring.InternalApp, opts ...Option) *Provide
 	for _, opt := range opts {
 		opt(p)
 	}
-	p.webAPI = slackwire.NewWebAPI(p.apiURL, p.http, bearer(creds.UserToken), p.log.With("provider", "internal-app", "team", team))
+	p.webAPI = slackwire.NewWebAPI(p.apiURL, p.http, bearer(creds.UserToken), capabilities, p.log.With("provider", "internal-app", "team", team))
 	return p
 }
 
