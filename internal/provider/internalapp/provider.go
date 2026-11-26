@@ -16,7 +16,8 @@ import (
 )
 
 // webAPI is embedded under an unexported name, so Provider gets its
-// History, Replies, Post and MarkRead without exposing the field.
+// History, Replies, Post, MarkRead and the writes (writes.go)
+// without exposing the field.
 type webAPI = slackwire.WebAPI
 
 // Provider is the internal-app connection to one workspace. Create it with
