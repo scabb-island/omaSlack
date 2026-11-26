@@ -1,0 +1,25 @@
+{
+  "ok": true,
+  "messages": [
+    {
+      "type": "message",
+      "user": "U0001",
+      "text": "thread root",
+      "ts": "1700000100.000100",
+      "thread_ts": "1700000100.000100",
+      "reply_count": 2,
+      "reply_users": ["U0002"],
+      "latest_reply": "1700000300.000300"
+    },
+    {
+      "type": "message",
+      "user": "U0002",
+      "text": "first reply",
+      "ts": "1700000200.000200",
+      "thread_ts": "1700000100.000100",
+      "parent_user_id": "U0001"
+    }
+  ],
+  "has_more": true,
+  "response_metadata": { "next_cursor": "bmV4dF90czoxNzAwMDAwMzAw" }
+}

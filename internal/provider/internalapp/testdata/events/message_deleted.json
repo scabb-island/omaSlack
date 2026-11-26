@@ -1,0 +1,23 @@
+{
+  "team_id": "T0001",
+  "api_app_id": "A0001",
+  "event": {
+    "type": "message",
+    "subtype": "message_deleted",
+    "previous_message": {
+      "type": "message",
+      "user": "U0002",
+      "text": "hello, edited",
+      "ts": "1700000600.000600"
+    },
+    "channel": "G0001",
+    "hidden": true,
+    "deleted_ts": "1700000600.000600",
+    "event_ts": "1700000750.000750",
+    "ts": "1700000750.000750",
+    "channel_type": "group"
+  },
+  "type": "event_callback",
+  "event_id": "Ev0004",
+  "event_time": 1700000750
+}

@@ -1,0 +1,31 @@
+{
+  "ok": true,
+  "messages": [
+    {
+      "type": "message",
+      "user": "U0002",
+      "text": "edited reply",
+      "ts": "1700000300.000300",
+      "thread_ts": "1700000100.000100",
+      "edited": { "user": "U0002", "ts": "1700000400.000000" }
+    },
+    {
+      "type": "message",
+      "subtype": "bot_message",
+      "bot_id": "B0001",
+      "text": "deploy finished",
+      "ts": "1700000200.000200"
+    },
+    {
+      "type": "message",
+      "user": "U0001",
+      "text": "hello",
+      "ts": "1700000100.000100",
+      "thread_ts": "1700000100.000100",
+      "reply_count": 1
+    }
+  ],
+  "has_more": true,
+  "pin_count": 0,
+  "response_metadata": { "next_cursor": "bmV4dF90czoxNzAwMDAwMDAw" }
+}
