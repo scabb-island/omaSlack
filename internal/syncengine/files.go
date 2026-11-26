@@ -118,12 +118,7 @@ func rewind(f *os.File) error {
 // other control characters become "_", invalid UTF-8 is replaced, and it
 // is cut to maxNameBytes. A name left empty, "." or ".." is the file ID.
 func safeName(f domain.File) string {
-	name := strings.Map(func(r rune) rune {
-		if r == '/' || r == '\\' || r < 0x20 || r == 0x7f {
-			return '_'
-		}
-		return r
-	}, strings.ToValidUTF8(f.Name, "_"))
+	name := strings.Map(pathSafe, strings.ToValidUTF8(f.Name, "_"))
 	for len(name) > maxNameBytes {
 		_, size := utf8.DecodeLastRuneInString(name)
 		name = name[:len(name)-size]
@@ -132,6 +127,15 @@ func safeName(f domain.File) string {
 		return f.ID.String()
 	}
 	return name
+}
+
+// pathSafe maps a rune of a name to one that is safe in a path
+// component: separators and control characters become "_".
+func pathSafe(r rune) rune {
+	if r == '/' || r == '\\' || r < 0x20 || r == 0x7f {
+		return '_'
+	}
+	return r
 }
 
 // UploadFiles shares local files in conv (inside thread when it is not
