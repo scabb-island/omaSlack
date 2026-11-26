@@ -11,6 +11,7 @@ import (
 	"fmt"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
+	"gitlab.com/scabb-island/omaslack/internal/provider"
 )
 
 // Code is a JSON-RPC error code.
@@ -39,7 +40,9 @@ func (e *Error) Error() string { return fmt.Sprintf("rpc error %d: %s", e.Code, 
 
 // FromError turns any error a handler returns into the error object a
 // client receives. An *Error passes through unchanged, a missing capability
-// becomes -32002, and anything else becomes a generic internal error whose
+// becomes -32002, credentials Slack rejected become -32003 auth_expired
+// (without the provider's text, which names Slack methods and codes the
+// client has no use for), and anything else becomes a generic internal error whose
 // text is not exposed (it may hold paths or Slack responses).
 func FromError(err error) *Error {
 	var rpcErr *Error
@@ -48,6 +51,9 @@ func FromError(err error) *Error {
 	}
 	if errors.Is(err, domain.ErrUnsupported) {
 		return &Error{Code: CodeUnsupportedCapability, Message: err.Error()}
+	}
+	if errors.Is(err, provider.ErrAuthExpired) {
+		return &Error{Code: CodeAuthExpired, Message: "auth_expired"}
 	}
 	return &Error{Code: CodeInternalError, Message: "internal error"}
 }

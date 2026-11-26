@@ -2,9 +2,11 @@ package rpc
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
+	"gitlab.com/scabb-island/omaslack/internal/provider"
 )
 
 // The codes are part of the protocol (spec daemon-api); changing one breaks
@@ -42,6 +44,16 @@ func TestUnsupportedCapabilityMapsToItsCode(t *testing.T) {
 	}
 	if got.Message != cause.Error() {
 		t.Errorf("message = %q, want %q", got.Message, cause.Error())
+	}
+}
+
+// Spec daemon-api lists -32003 auth_expired: a client must tell "sign in
+// again" apart from any other failure, however deep the provider wrapped it.
+func TestExpiredCredentialsMapToAuthExpired(t *testing.T) {
+	cause := fmt.Errorf("syncengine: send: %w", fmt.Errorf("chat.postMessage: invalid_auth: %w", provider.ErrAuthExpired))
+	got := FromError(cause)
+	if got.Code != CodeAuthExpired || got.Message != "auth_expired" {
+		t.Errorf("FromError = %+v, want -32003 auth_expired", got)
 	}
 }
 
