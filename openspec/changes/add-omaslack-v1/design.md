@@ -83,7 +83,7 @@ Slack remains the remote source of truth. The Store is a cache that can be rebui
 - Handshake: `hello{client, protocol: 1}` returns `{protocol, daemonVersion, workspaces[], capabilities}`. A major version mismatch gets error `-32001 incompatible_protocol`.
 - Methods (v1):
   - `workspaces.list`.
-  - `conversations.list{team, filter}`, `conversations.open{team, conv}`, `conversations.markRead{team, conv, ts}`.
+  - `conversations.list{team, filter}`, `conversations.open{team, conv}`, `conversations.close{team, conv}` (the client left it, so the engine stops treating it as open), `conversations.markRead{team, conv, ts}`.
   - `messages.history{team, conv, before?, limit}`, `messages.replies{…, threadTS}`, `messages.send{team, conv, threadTS?, text, files?, broadcast?}`, `messages.edit` and `messages.delete`.
   - `reactions.add` and `reactions.remove`.
   - `files.upload{team, conv, paths[], caption}` and `files.fetch{team, fileId}` (returns `local_path`).
@@ -97,6 +97,9 @@ Slack remains the remote source of truth. The Store is a cache that can be rebui
   - `read.changed`, `draft.changed`, `typing`, `presence.changed`.
   - `connection.state`, `unread.summary`, `ui.focus`.
 - Coalescing: `unread.summary` goes out at most once every 250 ms, so the bar is not flooded.
+- Concurrency: at most 16 calls run at once per connection. Past that the daemon stops reading the connection until one finishes (backpressure, no error).
+- Slow subscribers: each subscriber has a bounded queue (1024 events). A subscriber that overflows it is disconnected and logged, and reloads on reconnect, instead of silently missing events.
+- Shapes: method results and event payloads are the types in `internal/wire`.
 
 ### Clients
 

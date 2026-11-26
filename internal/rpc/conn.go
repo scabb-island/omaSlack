@@ -46,6 +46,11 @@ func newConn(s *Server, nc *net.UnixConn) *Conn {
 // Done is closed once the connection has ended.
 func (c *Conn) Done() <-chan struct{} { return c.ctx.Done() }
 
+// Close ends the connection from the daemon's side, for example when a
+// subscriber falls too far behind its events. Calls still running finish
+// first, but their answers can no longer be delivered.
+func (c *Conn) Close() error { return c.nc.Close() }
+
 // Notify sends a JSON-RPC notification (no id) to the client. It fails if
 // params cannot be marshaled or the connection has ended.
 func (c *Conn) Notify(method string, params any) error {

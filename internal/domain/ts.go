@@ -36,6 +36,15 @@ func ParseTS(s string) (TS, error) {
 // ten digits, which is what Slack sends for any time after 2001.
 func (t TS) String() string { return fmt.Sprintf("%010d.%06d", t.sec, t.micro) }
 
+// OrEmpty is String for an optional timestamp: the zero TS becomes "",
+// which is how the Store and the wire format spell "none".
+func (t TS) OrEmpty() string {
+	if t.IsZero() {
+		return ""
+	}
+	return t.String()
+}
+
 // Before reports whether t is strictly earlier than u.
 func (t TS) Before(u TS) bool {
 	return t.sec < u.sec || (t.sec == u.sec && t.micro < u.micro)

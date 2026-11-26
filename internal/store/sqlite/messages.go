@@ -137,9 +137,4 @@ func parseOpt[T any](s string, parse func(string) (T, error)) (T, error) {
 }
 
 // optTS stores an optional timestamp: the zero TS becomes "".
-func optTS(t domain.TS) string {
-	if t.IsZero() {
-		return ""
-	}
-	return t.String()
-}
+func optTS(t domain.TS) string { return t.OrEmpty() }

@@ -21,6 +21,20 @@ The daemon SHALL reject JSON-RPC batch requests (a JSON array on one line) with 
 - **WHEN** a client sends `[{"jsonrpc":"2.0","id":1,"method":"workspaces.list"}]`
 - **THEN** the daemon answers with error `-32600 Invalid Request` and the connection stays open
 
+### Requirement: Bounded concurrency per connection
+The daemon SHALL run at most 16 calls at once per connection. While 16 are running it SHALL stop reading that connection until one finishes, so a client cannot make the daemon queue unbounded work. Other connections SHALL NOT be affected.
+
+#### Scenario: A client floods calls
+- **WHEN** a client sends 100 slow calls without waiting for answers
+- **THEN** at most 16 of them run at the same time, all 100 are eventually answered, and another client's calls are answered meanwhile
+
+### Requirement: Slow subscribers are disconnected
+Publishing an event SHALL NOT block the sync engine. Each subscriber SHALL have a bounded queue; a subscriber whose queue overflows SHALL be disconnected and the daemon SHALL log it, so that a client never shows a view with silently missing events.
+
+#### Scenario: A client stops reading
+- **WHEN** a subscribed client stops reading its socket and more than 1024 events are queued for it
+- **THEN** the daemon closes that connection, logs it, and keeps delivering events to every other subscriber
+
 ### Requirement: Handshake and protocol version
 Every client SHALL start with `hello{client, protocol}`. The daemon SHALL answer with its protocol version, daemon version, workspaces and capabilities. If the major protocol version does not match, it SHALL answer `-32001` and close the connection.
 
