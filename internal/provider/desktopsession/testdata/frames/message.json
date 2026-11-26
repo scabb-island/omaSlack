@@ -1,0 +1,14 @@
+{
+  "type": "message",
+  "channel": "C0001",
+  "user": "U0002",
+  "text": "hello <@U0001>",
+  "ts": "1700000600.000600",
+  "client_msg_id": "6f1c0e0e-0000-4000-8000-000000000001",
+  "team": "T0001",
+  "source_team": "T0001",
+  "user_team": "T0001",
+  "blocks": [],
+  "suppress_notification": false,
+  "event_ts": "1700000600.000600"
+}

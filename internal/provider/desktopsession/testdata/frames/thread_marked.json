@@ -1,0 +1,12 @@
+{
+  "type": "thread_marked",
+  "subscription": {
+    "type": "thread",
+    "channel": "C0001",
+    "thread_ts": "1700000100.000100",
+    "date_create": 1700000100,
+    "active": true,
+    "last_read": "1700000620.000620"
+  },
+  "event_ts": "1700000950.000950"
+}
