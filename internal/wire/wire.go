@@ -20,6 +20,22 @@ type Message struct {
 	Text      string     `json:"text"`
 	Edited    string     `json:"edited,omitempty"`
 	Reactions []Reaction `json:"reactions,omitempty"`
+	Files     []File     `json:"files,omitempty"`
+}
+
+// File is one file attached to a message: what a client shows. Its bytes
+// are fetched through the daemon (files.fetch), never from Slack.
+type File struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Title    string `json:"title,omitempty"`
+	MIMEType string `json:"mimetype,omitempty"`
+	Size     int64  `json:"size"`
+}
+
+// FromFile converts one file. Its download URL stays in the daemon.
+func FromFile(f domain.File) File {
+	return File{ID: f.ID.String(), Name: f.Name, Title: f.Title, MIMEType: f.MIMEType, Size: f.Size}
 }
 
 // Reaction is one emoji on a message and who added it.
@@ -74,6 +90,9 @@ func FromMessage(m domain.Message, reactions []store.Reaction) Message {
 	}
 	for _, r := range reactions {
 		out.Reactions = append(out.Reactions, Reaction{Emoji: r.Emoji, Users: ids(r.Users)})
+	}
+	for _, f := range m.Files {
+		out.Files = append(out.Files, FromFile(f))
 	}
 	return out
 }
