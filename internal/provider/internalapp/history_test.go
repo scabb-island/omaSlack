@@ -28,14 +28,19 @@ func TestHistoryReturnsTheParsedMessagesNewestFirst(t *testing.T) {
 		{
 			TS:       mustTS(t, "1700000300.000300"),
 			ThreadTS: mustTS(t, "1700000100.000100"),
-			Author:   mustUser(t, "U0002"),
+			Author:   mustAuthor(t, "U0002"),
 			Text:     "edited reply",
 			Edited:   mustTS(t, "1700000400.000000"),
 		},
 		{
+			TS:     mustTS(t, "1700000200.000200"),
+			Author: mustAuthor(t, "B0001"),
+			Text:   "deploy finished",
+		},
+		{
 			TS:       mustTS(t, "1700000100.000100"),
 			ThreadTS: mustTS(t, "1700000100.000100"),
-			Author:   mustUser(t, "U0001"),
+			Author:   mustAuthor(t, "U0001"),
 			Text:     "hello",
 		},
 	}
@@ -53,8 +58,8 @@ func TestHistoryLogsTheMessagesItCannotRepresent(t *testing.T) {
 	if _, err := p.History(context.Background(), mustConv(t, "C0001"), domain.TS{}, 50); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(logs.String(), "1700000200.000200") {
-		t.Fatalf("the dropped bot message is not logged; logs:\n%s", logs)
+	if !strings.Contains(logs.String(), "1700000050.000050") {
+		t.Fatalf("the dropped message without an author is not logged; logs:\n%s", logs)
 	}
 }
 

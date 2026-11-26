@@ -129,3 +129,12 @@ func newTestProvider(t *testing.T, f *fakeSlack) (*Provider, *bytes.Buffer) {
 	)
 	return p, &logs
 }
+
+func mustAuthor(t *testing.T, s string) domain.Author {
+	t.Helper()
+	a, err := domain.ParseAuthor(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return a
+}

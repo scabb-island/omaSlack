@@ -43,3 +43,12 @@ func ts(t *testing.T, s string) domain.TS {
 	}
 	return v
 }
+
+func author(t *testing.T, s string) domain.Author {
+	t.Helper()
+	a, err := domain.ParseAuthor(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return a
+}
