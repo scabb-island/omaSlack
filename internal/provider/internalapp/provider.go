@@ -8,14 +8,21 @@ package internalapp
 import (
 	"log/slog"
 	"net/http"
+	"net/url"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 	"gitlab.com/scabb-island/omaslack/internal/keyring"
+	"gitlab.com/scabb-island/omaslack/internal/provider/slackwire"
 )
+
+// webAPI is embedded under an unexported name, so Provider gets its
+// History, Replies, Post and MarkRead without exposing the field.
+type webAPI = slackwire.WebAPI
 
 // Provider is the internal-app connection to one workspace. Create it with
 // New; it is safe for concurrent use.
 type Provider struct {
+	*webAPI
 	team   domain.TeamID
 	creds  keyring.InternalApp
 	apiURL string
@@ -43,7 +50,13 @@ func New(team domain.TeamID, creds keyring.InternalApp, opts ...Option) *Provide
 	for _, opt := range opts {
 		opt(p)
 	}
+	p.webAPI = slackwire.NewWebAPI(p.apiURL, p.http, bearer(creds.UserToken), p.log.With("provider", "internal-app", "team", team))
 	return p
+}
+
+// bearer signs Web API requests with the user token, the documented way.
+func bearer(token string) slackwire.Signer {
+	return func(_ url.Values, h http.Header) { h.Set("Authorization", "Bearer "+token) }
 }
 
 // Team is the workspace this provider is bound to.

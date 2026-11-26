@@ -1,0 +1,8 @@
+{
+  "type": "presence_change",
+  "presence": "away",
+  "users": [
+    "U0002",
+    "U0003"
+  ]
+}

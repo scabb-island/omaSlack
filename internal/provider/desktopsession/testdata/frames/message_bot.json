@@ -1,0 +1,10 @@
+{
+  "type": "message",
+  "subtype": "bot_message",
+  "channel": "C0001",
+  "bot_id": "B0001",
+  "username": "deploybot",
+  "text": "deploy finished",
+  "ts": "1700000610.000610",
+  "event_ts": "1700000610.000610"
+}

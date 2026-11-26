@@ -1,0 +1,10 @@
+{
+  "type": "message",
+  "channel": "C0001",
+  "user": "U0002",
+  "text": "a reply",
+  "ts": "1700000620.000620",
+  "thread_ts": "1700000100.000100",
+  "parent_user_id": "U0001",
+  "event_ts": "1700000620.000620"
+}

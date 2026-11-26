@@ -1,0 +1,9 @@
+{
+  "type": "message",
+  "channel": "C0001",
+  "user": "USLACKBOT",
+  "text": "You are not in this channel.",
+  "ts": "1700000720.000720",
+  "is_ephemeral": true,
+  "event_ts": "1700000720.000720"
+}

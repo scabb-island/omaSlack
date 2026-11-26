@@ -1,0 +1,12 @@
+{
+  "type": "channel_marked",
+  "channel": "C0001",
+  "ts": "1700000600.000600",
+  "unread_count": 0,
+  "unread_count_display": 0,
+  "num_mentions": 0,
+  "num_mentions_display": 0,
+  "mention_count": 0,
+  "mention_count_display": 0,
+  "event_ts": "1700000900.000900"
+}
