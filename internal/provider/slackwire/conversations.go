@@ -38,7 +38,7 @@ func (w Conversation) Parse() (domain.Conversation, error) {
 	if err != nil {
 		return domain.Conversation{}, fmt.Errorf("conversation id: %w", err)
 	}
-	lastRead, err := parseOptionalTS(w.LastRead)
+	lastRead, err := ParseOptionalTS(w.LastRead)
 	if err != nil {
 		return domain.Conversation{}, fmt.Errorf("conversation %s last_read: %w", w.ID, err)
 	}

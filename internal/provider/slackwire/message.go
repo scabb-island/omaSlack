@@ -31,11 +31,11 @@ func (w Message) Parse() (domain.Message, error) {
 	if err != nil {
 		return domain.Message{}, fmt.Errorf("message %s author: %w", w.TS, err)
 	}
-	thread, err := parseOptionalTS(w.ThreadTS)
+	thread, err := ParseOptionalTS(w.ThreadTS)
 	if err != nil {
 		return domain.Message{}, fmt.Errorf("message %s thread_ts: %w", w.TS, err)
 	}
-	edited, err := parseOptionalTS(w.Edited.TS)
+	edited, err := ParseOptionalTS(w.Edited.TS)
 	if err != nil {
 		return domain.Message{}, fmt.Errorf("message %s edited.ts: %w", w.TS, err)
 	}
@@ -51,8 +51,8 @@ func (w Message) author() (domain.Author, error) {
 	return domain.BotAuthor(bot), err
 }
 
-// parseOptionalTS parses s, where an empty s means "no timestamp".
-func parseOptionalTS(s string) (domain.TS, error) {
+// ParseOptionalTS parses s, where an empty s means "no timestamp".
+func ParseOptionalTS(s string) (domain.TS, error) {
 	if s == "" {
 		return domain.TS{}, nil
 	}
