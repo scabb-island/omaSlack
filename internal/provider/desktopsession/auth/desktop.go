@@ -28,6 +28,10 @@ type Workspace struct {
 	Credentials keyring.DesktopSession
 }
 
+// NeedsSignIn reports a workspace the desktop app lists but holds no
+// token for: it has no credentials until the user signs in to it again.
+func (w Workspace) NeedsSignIn() bool { return w.Credentials.Token == "" }
+
 // FindDesktopDir returns the Slack desktop app's config directory, the
 // first that exists of: $XDG_CONFIG_HOME/Slack, ~/.config/Slack, the
 // Flatpak one and the Snap one.
@@ -57,10 +61,11 @@ type Desktop struct {
 	Passwords PasswordSource
 }
 
-// Workspaces lists every workspace the desktop app is signed in to and
-// holds a token for, sorted by name. They share the app's one "d" cookie.
-// Slack's profile is only read, through temporary copies, so it is safe to
-// call while Slack runs.
+// Workspaces lists every workspace the desktop app is signed in to, sorted
+// by name. Those it holds a token for share the app's one "d" cookie; the
+// others come back without credentials (see NeedsSignIn). Slack's profile
+// is only read, through temporary copies, so it is safe to call while
+// Slack runs.
 func (d Desktop) Workspaces(ctx context.Context) ([]Workspace, error) {
 	listed, err := readWorkspaceList(filepath.Join(d.Dir, "storage", "root-state.json"))
 	if err != nil {
@@ -70,28 +75,19 @@ func (d Desktop) Workspaces(ctx context.Context) ([]Workspace, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(tokens) == 0 {
+		return listed, nil
+	}
 	cookie, err := readCookie(ctx, filepath.Join(d.Dir, "Cookies"), d.Passwords)
 	if err != nil {
 		return nil, err
 	}
-	return withCredentials(listed, tokens, cookie)
-}
-
-// withCredentials keeps the listed workspaces that have a token and gives
-// each its credentials.
-func withCredentials(listed []Workspace, tokens map[domain.TeamID]string, cookie string) ([]Workspace, error) {
-	var out []Workspace
-	for _, w := range listed {
+	for i, w := range listed {
 		if token := tokens[w.Team]; token != "" {
-			w.Credentials = keyring.DesktopSession{Token: token, Cookie: cookie}
-			out = append(out, w)
+			listed[i].Credentials = keyring.DesktopSession{Token: token, Cookie: cookie}
 		}
 	}
-	if len(out) == 0 {
-		return nil, ErrNotSignedIn
-	}
-	slices.SortFunc(out, func(a, b Workspace) int { return cmp.Compare(a.Name, b.Name) })
-	return out, nil
+	return listed, nil
 }
 
 // rootState is the part of storage/root-state.json that lists the
@@ -122,5 +118,9 @@ func readWorkspaceList(path string) ([]Workspace, error) {
 			out = append(out, Workspace{Team: team, Name: w.Name, URL: w.URL})
 		}
 	}
+	if len(out) == 0 {
+		return nil, ErrNotSignedIn
+	}
+	slices.SortFunc(out, func(a, b Workspace) int { return cmp.Compare(a.Name, b.Name) })
 	return out, nil
 }

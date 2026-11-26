@@ -98,6 +98,16 @@ func TestDecryptV11TriesEveryKeyringCandidate(t *testing.T) {
 	}
 }
 
+// PKCS#7 padding runs from one byte to a whole block.
+func TestDecryptAcceptsEveryPaddingLength(t *testing.T) {
+	for _, value := range []string{"xoxd-0123456789", "xoxd-0123456789a"} { // 15 and 16 bytes
+		enc := encryptCookie(t, "v10", []byte(value), "peanuts")
+		if got, err := decryptCookie(context.Background(), enc, &passwords{}); err != nil || got != value {
+			t.Errorf("%d bytes: decryptCookie = %q, %v", len(value), got, err)
+		}
+	}
+}
+
 // Chromium 130 and later put SHA-256 of the cookie's host before the value.
 func TestDecryptStripsTheDomainHash(t *testing.T) {
 	for _, host := range []string{"slack.com", ".slack.com"} {

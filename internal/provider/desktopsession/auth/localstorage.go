@@ -11,7 +11,6 @@ import (
 	"unicode/utf16"
 
 	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/syndtr/goleveldb/leveldb/opt"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 )
@@ -29,11 +28,12 @@ type localConfig struct {
 
 // readTokens returns each team's xoxc token from the desktop app's Local
 // Storage. The LevelDB is read from a copy (see withCopies); its directory
-// is flat, so copying its regular files is enough.
+// is flat, so copying its regular files is enough. No Local Storage means
+// no tokens.
 func readTokens(dir string) (map[domain.TeamID]string, error) {
 	entries, err := os.ReadDir(dir)
 	if errors.Is(err, fs.ErrNotExist) {
-		return nil, ErrNotSignedIn
+		return nil, nil
 	}
 	if err != nil {
 		return nil, err
@@ -57,7 +57,9 @@ func readTokens(dir string) (map[domain.TeamID]string, error) {
 // origin is unknown (app.slack.com or a workspace host), so only the
 // suffix is matched. Entries that do not parse are skipped.
 func tokensFromLevelDB(dir string) (map[domain.TeamID]string, error) {
-	db, err := leveldb.OpenFile(dir, &opt.Options{ReadOnly: true})
+	// dir is a throwaway copy, so opening it read-write cannot touch
+	// Slack's profile.
+	db, err := leveldb.OpenFile(dir, nil)
 	if err != nil {
 		return nil, err
 	}
