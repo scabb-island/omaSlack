@@ -21,18 +21,12 @@ type peer interface {
 	Done() <-chan struct{}
 }
 
-// note is one notification waiting in a subscriber's queue.
-type note struct {
-	method string
-	params any
-}
-
 // subscriber is one connection's topics and queue. Its own goroutine
 // (drain) is the only writer of notifications to the connection, so they
 // leave in the order they were queued.
 type subscriber struct {
 	topics map[string]bool // guarded by Hub.mu
-	queue  chan note
+	queue  *queue
 }
 
 type subscribeParams struct {
@@ -75,7 +69,7 @@ func (h *Hub) subscribe(p peer, topics []string) error {
 	}
 	s, ok := h.subs[p]
 	if !ok {
-		s = &subscriber{queue: make(chan note, h.opts.QueueSize)}
+		s = &subscriber{queue: newQueue(h.opts.QueueSize)}
 		h.subs[p] = s
 		go h.drain(p, s)
 	}
@@ -91,10 +85,24 @@ func (h *Hub) drain(p peer, s *subscriber) {
 		select {
 		case <-p.Done():
 			return
-		case n := <-s.queue:
-			_ = p.Notify(n.method, n.params)
+		case <-s.queue.wake:
+		}
+		if !flush(p, s.queue) {
+			return
 		}
 	}
+}
+
+// flush writes q to p until q is empty, or reports false if the
+// connection ends first.
+func flush(p peer, q *queue) bool {
+	for n, ok := q.pop(); ok; n, ok = q.pop() {
+		if ended(p) {
+			return false
+		}
+		_ = p.Notify(n.method, n.params)
+	}
+	return true
 }
 
 func (h *Hub) forget(p peer, s *subscriber) {
@@ -105,9 +113,10 @@ func (h *Hub) forget(p peer, s *subscriber) {
 	}
 }
 
-// fanOut queues one notification of topic for each of its subscribers and
-// returns how many it reached. payload is only built when someone wants it.
-func (h *Hub) fanOut(topic string, payload func() any) int {
+// fanOut queues one notification of topic, coalesced by k (see queue), for
+// each of its subscribers and returns how many it reached. payload is only
+// built when someone wants it.
+func (h *Hub) fanOut(topic string, k key, payload func() any) int {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	var n note
@@ -117,7 +126,7 @@ func (h *Hub) fanOut(topic string, payload func() any) int {
 			continue
 		}
 		if n.method == "" {
-			n = note{method: topic, params: payload()}
+			n = note{method: topic, params: payload(), key: k}
 		}
 		if h.enqueue(p, s, n) {
 			reached++
@@ -139,15 +148,13 @@ func (h *Hub) live(p peer) bool {
 // stopped keeping up: it is disconnected and forgotten, and reloads when it
 // reconnects. Callers hold h.mu.
 func (h *Hub) enqueue(p peer, s *subscriber, n note) bool {
-	select {
-	case s.queue <- n:
+	if s.queue.push(n) {
 		return true
-	default:
-		delete(h.subs, p)
-		_ = p.Close()
-		h.opts.Log.Warn("events: disconnected a slow subscriber", "queued", cap(s.queue), "topic", n.method)
-		return false
 	}
+	delete(h.subs, p)
+	_ = p.Close()
+	h.opts.Log.Warn("events: disconnected a slow subscriber", "queued", h.opts.QueueSize, "topic", n.method)
+	return false
 }
 
 // wants reports whether anyone is subscribed to topic.
@@ -169,7 +176,7 @@ func (h *Hub) sendSummary(ctx context.Context) {
 		return
 	}
 	if sum, ok := h.summary(ctx); ok {
-		h.fanOut(TopicUnreadSummary, func() any { return sum })
+		h.fanOut(TopicUnreadSummary, summaryKey, func() any { return sum })
 	}
 }
 
@@ -183,7 +190,7 @@ func (h *Hub) sendSummaryTo(ctx context.Context, p peer) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if s, ok := h.subs[p]; ok {
-		h.enqueue(p, s, note{method: TopicUnreadSummary, params: sum})
+		h.enqueue(p, s, note{method: TopicUnreadSummary, params: sum, key: summaryKey})
 	}
 }
 
