@@ -53,6 +53,10 @@ func (p *Provider) run(ctx context.Context, out chan<- domain.Event) {
 		return
 	}
 	defer conn.Close()
+	// Writes may use the socket from now until the stream ends; the
+	// deferred clear runs before the deferred Close.
+	p.live.set(conn)
+	defer p.live.clear(conn)
 	// Closing the connection is what unblocks a read when ctx ends.
 	stop := context.AfterFunc(ctx, func() { _ = conn.Close() })
 	defer stop()

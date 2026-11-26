@@ -2,6 +2,7 @@ package slackwire
 
 import (
 	"errors"
+	"fmt"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 )
@@ -12,10 +13,11 @@ import (
 // Mapped: message (no subtype, thread_broadcast, file_share, me_message,
 // bot_message) → MessageCreated; message_changed → MessageUpdated;
 // message_deleted → MessageDeleted; reaction_added and reaction_removed on
-// messages → ReactionChanged.
+// messages, or on an item with no type → ReactionChanged.
 //
 // Every other message subtype (channel_join, channel_topic, …) has no
-// mapper, and reactions on files map to nothing: callers ignore both.
+// mapper, and callers ignore it. A reaction on any other item (a file)
+// is an ErrUnsupportedReactionItem, which callers log and drop.
 
 // Head is what every event shares: enough to pick its mapper before
 // decoding the fields, whose shapes differ between event types.
@@ -117,10 +119,17 @@ func messageDeleted(team domain.TeamID, e Event) (domain.Event, error) {
 // errNoEmoji reports a reaction event without its emoji name.
 var errNoEmoji = errors.New("reaction without an emoji name")
 
+// ErrUnsupportedReactionItem reports a reaction on something other than a
+// message (a file, a file comment). The domain tracks reactions on
+// messages only, so callers drop the event and log why.
+var ErrUnsupportedReactionItem = errors.New("reaction on an item that is not a message")
+
 func reactionChanged(added bool) Mapper {
 	return func(team domain.TeamID, e Event) (domain.Event, error) {
-		if e.Item.Type != "message" {
-			return nil, nil
+		// The web client's socket sometimes sends no item type; slk takes
+		// those as messages, and so does this mapper.
+		if t := e.Item.Type; t != "message" && t != "" {
+			return nil, fmt.Errorf("%w: %q", ErrUnsupportedReactionItem, t)
 		}
 		conv, ts, err := ParseItem(e.Item.Channel, e.Item.TS)
 		if err != nil {

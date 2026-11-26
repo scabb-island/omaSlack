@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "channels": [
+    { "id": "C0001", "name": "general", "is_channel": true, "is_group": false, "is_im": false, "is_mpim": false, "is_private": false, "is_archived": false, "is_member": true, "created": 1600000000 },
+    { "id": "C0002", "name": "secret", "is_channel": true, "is_group": false, "is_im": false, "is_mpim": false, "is_private": true, "is_archived": false, "is_member": true, "created": 1600000100 },
+    { "id": "C0003", "name": "quiet", "is_channel": true, "is_private": false, "is_member": true, "created": 1600000150 },
+    { "id": "G0001", "name": "mpdm-alice--bob--me-1", "is_channel": false, "is_group": true, "is_im": false, "is_mpim": true, "is_private": true, "is_archived": false, "created": 1600000200 },
+    { "id": "D0001", "is_im": true, "user": "U0002", "is_user_deleted": false, "created": 1600000300, "priority": 0 }
+  ],
+  "response_metadata": { "next_cursor": "" }
+}
