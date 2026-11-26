@@ -82,11 +82,13 @@ func (r *recorder) expectNothing(t *testing.T) {
 	}
 }
 
-// fakeClock hands every timer the engine creates to the test, which checks
-// its delay and fires it. Time never passes on its own.
+// fakeClock hands every timer the engine creates to the test, which finds
+// it by its delay and fires it. Time never passes on its own. Timers with
+// other delays (a backoff next to a read poll) wait their turn.
 type fakeClock struct {
 	now    time.Time
 	timers chan *fakeTimer
+	held   []*fakeTimer // received but not fired; only the test touches it
 }
 
 func newFakeClock() *fakeClock {
@@ -101,18 +103,46 @@ func (c *fakeClock) NewTimer(at time.Time) ratebudget.Timer {
 	return t
 }
 
-// fire waits for the engine's next timer, checks its delay and fires it.
+// fire waits for a timer with this delay and fires it.
 func (c *fakeClock) fire(t *testing.T, delay time.Duration) {
 	t.Helper()
-	select {
-	case tm := <-c.timers:
-		if tm.delay != delay {
-			t.Fatalf("timer delay = %v, want %v", tm.delay, delay)
+	tm := c.take(t, delay)
+	tm.c <- c.now.Add(delay)
+}
+
+// await waits until the engine has created a timer with this delay,
+// without firing it.
+func (c *fakeClock) await(t *testing.T, delay time.Duration) {
+	t.Helper()
+	c.held = append(c.held, c.take(t, delay))
+}
+
+func (c *fakeClock) take(t *testing.T, delay time.Duration) *fakeTimer {
+	t.Helper()
+	deadline := time.After(patience)
+	for {
+		for i, tm := range c.held {
+			if tm.delay == delay {
+				c.held = slices.Delete(c.held, i, i+1)
+				return tm
+			}
 		}
-		tm.c <- c.now.Add(delay)
-	case <-time.After(patience):
-		t.Fatalf("no timer for %v", delay)
+		select {
+		case tm := <-c.timers:
+			c.held = append(c.held, tm)
+		case <-deadline:
+			t.Fatalf("no timer for %v; pending: %v", delay, c.pending())
+			return nil
+		}
 	}
+}
+
+func (c *fakeClock) pending() []time.Duration {
+	var out []time.Duration
+	for _, tm := range c.held {
+		out = append(out, tm.delay)
+	}
+	return out
 }
 
 func (c *fakeClock) expectNoTimer(t *testing.T) {
@@ -121,6 +151,9 @@ func (c *fakeClock) expectNoTimer(t *testing.T) {
 	case tm := <-c.timers:
 		t.Fatalf("unexpected timer for %v", tm.delay)
 	default:
+	}
+	if len(c.held) > 0 {
+		t.Fatalf("unexpected timers for %v", c.pending())
 	}
 }
 

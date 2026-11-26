@@ -9,23 +9,77 @@ import (
 	"gitlab.com/scabb-island/omaslack/internal/ratebudget"
 )
 
+// ReadMarkerReader is implemented by a provider that cannot stream
+// read.changed but can read a conversation's marker on demand. Socket
+// Mode, behind internal-app, has no read events; conversations.info
+// returns last_read. The engine finds this hook by a type assertion, so
+// provider.Provider does not change; it polls the markers of the
+// conversations that matter every Config.ReadPollInterval and after every
+// reconnect.
+type ReadMarkerReader interface {
+	LastRead(ctx context.Context, conv domain.ConversationID) (domain.TS, error)
+}
+
+// methodReadMarker is the budget key of ReadMarkerReader.LastRead.
+const methodReadMarker = "conversations.info"
+
 // reconcile catches up, at Background priority, every conversation open in
 // a client or with activity since startup (spec sync-engine,
-// "Reconciliation after reconnecting"). A conversation that fails is
-// logged and skipped; rejected credentials or an ended ctx stop it all.
+// "Reconciliation after reconnecting"), with its read marker.
 func (e *Engine) reconcile(ctx context.Context) {
+	e.eachInteresting(ctx, "catch up", func(conv domain.ConversationID) error {
+		if err := e.catchUp(ctx, conv, ratebudget.Background); err != nil {
+			return err
+		}
+		return e.syncRead(ctx, conv)
+	})
+}
+
+// pollReads keeps read markers current for a provider that does not
+// stream them, until ctx ends or the credentials are rejected.
+func (e *Engine) pollReads(ctx context.Context) {
+	for e.sleep(ctx, e.cfg.ReadPollInterval) == nil {
+		e.eachInteresting(ctx, "read the marker of", func(conv domain.ConversationID) error {
+			return e.syncRead(ctx, conv)
+		})
+	}
+}
+
+// eachInteresting runs fn for every conversation open in a client or with
+// activity since startup. A conversation that fails is logged and
+// skipped; rejected credentials or an ended ctx stop the round.
+func (e *Engine) eachInteresting(ctx context.Context, what string, fn func(domain.ConversationID) error) {
 	var convs []domain.ConversationID
 	if err := e.do(ctx, interestOp(&convs)); err != nil {
 		return
 	}
 	for _, conv := range convs {
-		if err := e.catchUp(ctx, conv, ratebudget.Background); err != nil {
+		if err := fn(conv); err != nil {
 			if stopping(ctx, err) {
 				return
 			}
-			e.cfg.Log.Warn("sync: could not catch up a conversation", "team", e.w.team, "conversation", conv, "err", err)
+			e.cfg.Log.Warn("sync: could not "+what+" a conversation", "team", e.w.team, "conversation", conv, "err", err)
 		}
 	}
+}
+
+// syncRead moves conv's stored marker to the provider's, when the
+// provider can read it.
+func (e *Engine) syncRead(ctx context.Context, conv domain.ConversationID) error {
+	r, ok := e.cfg.Provider.(ReadMarkerReader)
+	if !ok {
+		return nil
+	}
+	var at domain.TS
+	err := e.call(ctx, methodReadMarker, ratebudget.Background, func(ctx context.Context) error {
+		var err error
+		at, err = r.LastRead(ctx, conv)
+		return err
+	})
+	if err != nil || at.IsZero() {
+		return err
+	}
+	return e.do(ctx, readOp(conv, at))
 }
 
 // stopping reports whether err means the engine is shutting down, so
@@ -40,4 +94,8 @@ func interestOp(out *[]domain.ConversationID) op {
 		*out = reconcileSet(w.open, w.active)
 		return nil
 	}
+}
+
+func readOp(conv domain.ConversationID, at domain.TS) op {
+	return func(ctx context.Context, w *writer) error { return w.moveRead(ctx, conv, at) }
 }

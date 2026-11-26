@@ -45,6 +45,10 @@ type Config struct {
 	Rand     func() float64   // in [0, 1), for jitter; default: math/rand
 	PageSize int              // messages per History call; default 100
 	Log      *slog.Logger     // default: discard
+
+	// ReadPollInterval is how often read markers are polled when the
+	// provider implements ReadMarkerReader; default one minute.
+	ReadPollInterval time.Duration
 }
 
 func (c Config) withDefaults() Config {
@@ -59,6 +63,9 @@ func (c Config) withDefaults() Config {
 	}
 	if c.Log == nil {
 		c.Log = slog.New(slog.DiscardHandler)
+	}
+	if c.ReadPollInterval <= 0 {
+		c.ReadPollInterval = time.Minute
 	}
 	return c
 }
@@ -104,6 +111,9 @@ func (e *Engine) Run(ctx context.Context) error {
 		defer cancel()
 		result <- e.connectLoop(ctx)
 	})
+	if _, ok := e.cfg.Provider.(ReadMarkerReader); ok {
+		e.wg.Go(func() { e.pollReads(ctx) })
+	}
 	e.w.serve(ctx, e.ops)
 	close(e.stopped)
 	e.wg.Wait()

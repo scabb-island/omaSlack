@@ -145,6 +145,17 @@ func (w *writer) storedSince(ctx context.Context, conv domain.ConversationID, si
 	return known, err
 }
 
+// moveRead stores and publishes conv's read marker when at moves it
+// forward. A marker never moves back (store.Store.Apply), so an older one
+// is not news.
+func (w *writer) moveRead(ctx context.Context, conv domain.ConversationID, at domain.TS) error {
+	current, err := w.store.LastRead(ctx, conv)
+	if err != nil || !current.Before(at) {
+		return err
+	}
+	return w.apply(ctx, domain.ReadChanged{Team: w.team, Conversation: conv, LastRead: at})
+}
+
 func putOp(conv domain.ConversationID, msgs []domain.Message) op {
 	return func(ctx context.Context, w *writer) error { return w.store.PutHistory(ctx, conv, msgs) }
 }
