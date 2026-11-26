@@ -70,7 +70,9 @@ func (l *Limiter) Wait(ctx context.Context, method string, p Priority) error {
 }
 
 // Penalize stops method until retryAfter from now. A shorter penalty never
-// cuts a longer one short.
+// cuts a longer one short. The burst is drained too: a 429 means Slack
+// wants fewer calls, so when the penalty ends one call goes out and the
+// next waits a full interval, instead of the burst that accrued meanwhile.
 func (l *Limiter) Penalize(method string, retryAfter time.Duration) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -78,6 +80,9 @@ func (l *Limiter) Penalize(method string, retryAfter time.Duration) {
 	until := l.clock.Now().Add(retryAfter)
 	if until.After(b.blockedUntil) {
 		b.blockedUntil = until
+		// With tat at until+tolerance, readyAt is until and only one token
+		// is available then.
+		b.tat = later(b.tat, until.Add(b.tolerance))
 		b.notify()
 	}
 }

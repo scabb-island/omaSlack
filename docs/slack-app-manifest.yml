@@ -5,11 +5,19 @@
 # and every scope is a user scope, so messages are read and sent as you.
 # How to use it: docs/internal-app-setup.md.
 #
-# The scopes are the minimum for what the provider calls today:
-#   conversations.history, conversations.replies  -> *:history
-#   chat.postMessage                              -> chat:write
-#   conversations.mark                            -> *:write
-#   reaction_added / reaction_removed events      -> reactions:read
+# The scopes cover the whole v1 feature set, so the app never needs a
+# reinstall as features land:
+#   history and threads (conversations.history/replies) -> *:history
+#   the conversation list (conversations.list/info)     -> *:read
+#   sending (chat.postMessage)                          -> chat:write
+#   marking read (conversations.mark)                   -> *:write
+#   reactions: events and adding/removing yours         -> reactions:read, reactions:write
+#   names, avatars and presence (users.*)               -> users:read
+#   setting your presence (users.setPresence)           -> users:write
+#   do not disturb (dnd.*)                              -> dnd:read, dnd:write
+#   search (search.messages)                            -> search:read
+#   files: download and upload (files.*)                -> files:read, files:write
+#   custom emoji (emoji.list)                           -> emoji:read
 # Socket Mode itself needs an app-level token with connections:write,
 # which is created separately (it is not part of a manifest).
 display_information:
@@ -22,12 +30,25 @@ oauth_config:
       - groups:history
       - im:history
       - mpim:history
+      - channels:read
+      - groups:read
+      - im:read
+      - mpim:read
       - chat:write
       - channels:write
       - groups:write
       - im:write
       - mpim:write
       - reactions:read
+      - reactions:write
+      - users:read
+      - users:write
+      - dnd:read
+      - dnd:write
+      - search:read
+      - files:read
+      - files:write
+      - emoji:read
 settings:
   event_subscriptions:
     user_events:

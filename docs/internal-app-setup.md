@@ -48,10 +48,9 @@ in a 0600 file when there is none) and never returns them over its socket.
 
 Supported: real-time messages, edits, deletions and reactions; history and
 threads; sending; marking conversations read; and, as those features land,
-search, files, setting your presence and custom emoji. Each of those later
-features needs its own user scope (`search:read`, `files:read`/`files:write`,
-`users:write`, `emoji:read`); the manifest will gain them when the feature
-ships, and you will need to reinstall the app to grant them.
+search, files, presence, do not disturb and custom emoji. The manifest
+already requests the user scopes for all of them, so you install the app
+once and do not need to reinstall it when a feature ships.
 
 Not available to Slack apps, so omaslack hides them for this provider:
 
