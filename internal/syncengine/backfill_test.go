@@ -11,6 +11,7 @@ import (
 	"gitlab.com/scabb-island/omaslack/internal/provider"
 	"gitlab.com/scabb-island/omaslack/internal/provider/providertest"
 	"gitlab.com/scabb-island/omaslack/internal/ratebudget"
+	"gitlab.com/scabb-island/omaslack/internal/store"
 	"gitlab.com/scabb-island/omaslack/internal/syncengine"
 )
 
@@ -83,16 +84,17 @@ func TestOpeningAConversationSlackHasNothingInStoresNothing(t *testing.T) {
 	}
 }
 
-func TestLoadOlderFetchesThePageBeforeTheCursor(t *testing.T) {
+func TestLoadOlderContinuesFromTheOldestStoredMessage(t *testing.T) {
 	r := newRig(t)
+	r.cache(t, convA, msg(ts4), msg(ts3))
 	r.fake.SetHistory(convA, msg(ts1), msg(ts2), msg(ts3), msg(ts4))
 	r.connected(t)
 
-	n, err := r.engine.LoadOlder(bg, convA, ts3)
+	n, err := r.engine.LoadOlder(bg, convA)
 	if err != nil || n != 2 {
 		t.Fatalf("LoadOlder = %d, %v; want 2", n, err)
 	}
-	if got := r.stored(t, convA); !slices.Equal(got, []domain.TS{ts2, ts1}) {
+	if got := r.stored(t, convA); !slices.Equal(got, []domain.TS{ts4, ts3, ts2, ts1}) {
 		t.Fatalf("store = %v", got)
 	}
 	if got := r.callsAfterConnect(); !slices.Equal(got, []providertest.Call{{Method: providertest.MethodHistory, Conv: convA, TS: ts3}}) {
@@ -102,6 +104,46 @@ func TestLoadOlderFetchesThePageBeforeTheCursor(t *testing.T) {
 		t.Fatalf("budget wait = %v", g)
 	}
 	r.pub.expectNothing(t)
+}
+
+func TestLoadOlderOnAnEmptyStoreFetchesTheNewestPage(t *testing.T) {
+	r := newRig(t)
+	r.fake.SetHistory(convA, msg(ts1), msg(ts2), msg(ts3), msg(ts4))
+	r.connected(t)
+
+	n, err := r.engine.LoadOlder(bg, convA)
+	if err != nil || n != 3 {
+		t.Fatalf("LoadOlder = %d, %v; want a full page", n, err)
+	}
+	if got := r.stored(t, convA); !slices.Equal(got, []domain.TS{ts4, ts3, ts2}) {
+		t.Fatalf("store = %v, want the newest page", got)
+	}
+	if got := r.callsAfterConnect(); !slices.Equal(got, []providertest.Call{{Method: providertest.MethodHistory, Conv: convA}}) {
+		t.Fatalf("calls = %v", got)
+	}
+}
+
+func TestLoadOlderFailsWhenTheStoreCannotSayWhereToContinue(t *testing.T) {
+	boom := errors.New("disk on fire")
+	r := newRigFrom(t, nil, func(s store.Store) store.Store { return oldestFails{s, boom} })
+	r.connected(t)
+
+	if n, err := r.engine.LoadOlder(bg, convA); !errors.Is(err, boom) || n != 0 {
+		t.Fatalf("LoadOlder = %d, %v", n, err)
+	}
+	if got := r.callsAfterConnect(); len(got) != 0 {
+		t.Fatalf("calls = %v, want none", got)
+	}
+}
+
+// oldestFails is a store whose Oldest always fails.
+type oldestFails struct {
+	store.Store
+	err error
+}
+
+func (s oldestFails) Oldest(context.Context, domain.ConversationID) (domain.TS, error) {
+	return domain.TS{}, s.err
 }
 
 func TestOpeningAThreadStoresItsReplies(t *testing.T) {
@@ -136,7 +178,7 @@ func TestProviderErrorsReachTheCaller(t *testing.T) {
 	if err := r.engine.OpenConversation(bg, convA); !errors.Is(err, boom) {
 		t.Fatalf("OpenConversation = %v", err)
 	}
-	if n, err := r.engine.LoadOlder(bg, convA, ts1); !errors.Is(err, boom) || n != 0 {
+	if n, err := r.engine.LoadOlder(bg, convA); !errors.Is(err, boom) || n != 0 {
 		t.Fatalf("LoadOlder = %d, %v", n, err)
 	}
 	r.pub.expectNothing(t)
@@ -149,7 +191,7 @@ func TestARateLimitedBackfillShowsRateLimitedUntilItGetsThrough(t *testing.T) {
 	limited := &provider.RateLimitedError{Method: "conversations.history", RetryAfter: 30 * time.Second}
 	r.fake.Fail(providertest.MethodHistory, limited, limited)
 
-	if _, err := r.engine.LoadOlder(bg, convA, zeroTS); err != nil {
+	if _, err := r.engine.LoadOlder(bg, convA); err != nil {
 		t.Fatal(err)
 	}
 	r.pub.expect(t, state(domain.RateLimited), state(domain.Connected))
@@ -168,7 +210,7 @@ func TestRejectedCredentialsDuringBackfillStopTheEngine(t *testing.T) {
 	_, result := r.connected(t)
 	r.fake.Fail(providertest.MethodHistory, provider.ErrAuthExpired)
 
-	if _, err := r.engine.LoadOlder(bg, convA, zeroTS); !errors.Is(err, provider.ErrAuthExpired) {
+	if _, err := r.engine.LoadOlder(bg, convA); !errors.Is(err, provider.ErrAuthExpired) {
 		t.Fatalf("LoadOlder = %v", err)
 	}
 	r.pub.expect(t, state(domain.AuthExpired))
@@ -196,7 +238,7 @@ func TestBackfillGivesUpWhenItsCallerDoes(t *testing.T) {
 	r.fake.SetHistory(convA, msg(ts1))
 	ctx, cancel := context.WithCancel(bg)
 	cancel()
-	if _, err := r.engine.LoadOlder(ctx, convA, zeroTS); !errors.Is(err, context.Canceled) {
+	if _, err := r.engine.LoadOlder(ctx, convA); !errors.Is(err, context.Canceled) {
 		t.Fatalf("LoadOlder = %v", err)
 	}
 }

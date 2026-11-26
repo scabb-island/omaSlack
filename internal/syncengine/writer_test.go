@@ -66,7 +66,7 @@ func TestTheEngineIsTheStoresOnlyWriter(t *testing.T) {
 		wg.Go(func() {
 			for range rounds {
 				_ = r.engine.OpenConversation(bg, convB)
-				_, _ = r.engine.LoadOlder(bg, convB, tsAt(2*events))
+				_, _ = r.engine.LoadOlder(bg, convB)
 				_ = r.engine.OpenThread(bg, convB, tsAt(events))
 				_ = r.engine.CloseConversation(bg, convB)
 			}
