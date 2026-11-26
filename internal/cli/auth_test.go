@@ -1,0 +1,446 @@
+package cli
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"gitlab.com/scabb-island/omaslack/internal/domain"
+	"gitlab.com/scabb-island/omaslack/internal/keyring"
+	"gitlab.com/scabb-island/omaslack/internal/provider/desktopsession/auth"
+)
+
+// Every token, cookie and workspace below is fake.
+const (
+	browserToken  = "xoxc-browser-1-2"
+	browserCookie = "xoxd-browser%2Fcookie"
+	userToken     = "xoxp-user-1-2"
+	appToken      = "xapp-app-1-2"
+)
+
+// secrets is every secret a fixture hands out; none may be printed.
+var secrets = []string{"xoxc-alpha", "xoxc-beta", "xoxd-desktop", browserToken, browserCookie, userToken, appToken, "xoxc-rejected", "xoxp-rejected"}
+
+// browserCurl is a "Copy as cURL" of a request to Slack's Web API.
+const browserCurl = `curl 'https://acme.slack.com/api/client.counts' \
+  -b 'b=abc; d=` + browserCookie + `; d-s=17' \
+  --data-raw 'token=` + browserToken + `'
+`
+
+// secretService is a file store that says it is the Secret Service.
+type secretService struct{ *keyring.FileStore }
+
+func (secretService) Backend() keyring.Backend { return keyring.SecretService }
+
+// authFixture is an Env with a fake Slack, a fake desktop app and a
+// keyring in a temporary file.
+type authFixture struct {
+	t          *testing.T
+	store      keyring.ClosableStore
+	desktop    []auth.Workspace
+	desktopErr error
+	keyringErr error
+	opened     bool
+	slackCalls int
+}
+
+func newAuthFixture(t *testing.T) *authFixture {
+	t.Helper()
+	desk := keyring.DesktopSession{Cookie: "xoxd-desktop"}
+	alpha, beta := desk, desk
+	alpha.Token, beta.Token = "xoxc-alpha", "xoxc-beta"
+	return &authFixture{
+		t:     t,
+		store: keyring.NewFileStore(filepath.Join(t.TempDir(), "credentials")),
+		desktop: []auth.Workspace{
+			{Team: team(t, "T0ALPHA"), Name: "Alpha", URL: "https://alpha.slack.com/", Credentials: alpha},
+			{Team: team(t, "T0BETA1"), Name: "Beta", URL: "https://beta.slack.com/", Credentials: beta},
+			{Team: team(t, "T0GONE1"), Name: "Gone", URL: "https://gone.slack.com/"},
+		},
+	}
+}
+
+func team(t *testing.T, s string) domain.TeamID {
+	t.Helper()
+	id, err := domain.ParseTeamID(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+// slack answers auth.test: the browser session is Browser (T0BRWSR), the
+// user token is Acme (T0ACME1), anything else is rejected.
+func (f *authFixture) slack(w http.ResponseWriter, r *http.Request) {
+	f.slackCalls++
+	token := r.FormValue("token") + strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	cookie, _ := r.Cookie("d")
+	switch {
+	case token == browserToken && cookie != nil && cookie.Value == browserCookie:
+		_, _ = w.Write([]byte(`{"ok":true,"team":"Browser","team_id":"T0BRWSR","url":"https://browser.slack.com/"}`))
+	case token == userToken:
+		_, _ = w.Write([]byte(`{"ok":true,"team":"Acme","team_id":"T0ACME1","url":"https://acme.slack.com/"}`))
+	default:
+		_, _ = w.Write([]byte(`{"ok":false,"error":"invalid_auth"}`))
+	}
+}
+
+func (f *authFixture) env(stdin string, out, errOut *bytes.Buffer) Env {
+	srv := httptest.NewServer(http.HandlerFunc(f.slack))
+	f.t.Cleanup(srv.Close)
+	return Env{
+		Stdout: out,
+		Stderr: errOut,
+		Stdin:  strings.NewReader(stdin),
+		Keyring: func(context.Context) (keyring.ClosableStore, error) {
+			f.opened = true
+			return f.store, f.keyringErr
+		},
+		DesktopWorkspaces: func(context.Context) ([]auth.Workspace, error) { return f.desktop, f.desktopErr },
+		SlackAPIURL:       srv.URL + "/api/",
+	}
+}
+
+// run runs omaslack with stdin as what the user types, and checks that no
+// secret reached the output.
+func (f *authFixture) run(stdin string, args ...string) (code int, stdout, stderr string) {
+	f.t.Helper()
+	var out, errb bytes.Buffer
+	code = Run(f.env(stdin, &out, &errb), args)
+	for _, s := range secrets {
+		if strings.Contains(out.String()+errb.String(), s) {
+			f.t.Errorf("a secret was printed: %s\nstdout:\n%s\nstderr:\n%s", s, out.String(), errb.String())
+		}
+	}
+	return code, out.String(), errb.String()
+}
+
+// stored returns every stored credential by team.
+func (f *authFixture) stored() map[string]keyring.Credentials {
+	f.t.Helper()
+	ctx := context.Background()
+	teams, err := f.store.Teams(ctx)
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	out := map[string]keyring.Credentials{}
+	for _, tm := range teams {
+		if out[tm.String()], err = f.store.Get(ctx, tm); err != nil {
+			f.t.Fatal(err)
+		}
+	}
+	return out
+}
+
+func (f *authFixture) wantStored(want map[string]keyring.Credentials) {
+	f.t.Helper()
+	got := f.stored()
+	if len(got) != len(want) {
+		f.t.Fatalf("stored %v, want %v", got, want)
+	}
+	for tm, c := range want {
+		if got[tm] != c {
+			f.t.Errorf("%s: stored %v, want %v", tm, got[tm], c)
+		}
+	}
+}
+
+func wantIn(t *testing.T, where, text string, parts ...string) {
+	t.Helper()
+	for _, p := range parts {
+		if !strings.Contains(text, p) {
+			t.Errorf("%s does not say %q:\n%s", where, p, text)
+		}
+	}
+}
+
+var (
+	alphaCreds   = keyring.DesktopSession{Token: "xoxc-alpha", Cookie: "xoxd-desktop"}
+	betaCreds    = keyring.DesktopSession{Token: "xoxc-beta", Cookie: "xoxd-desktop"}
+	browserCreds = keyring.DesktopSession{Token: browserToken, Cookie: browserCookie}
+)
+
+func TestAuthAddDesktopDeclinedStoresNothing(t *testing.T) {
+	for _, answer := range []string{"no\n", "\n", "y\n", ""} {
+		f := newAuthFixture(t)
+		code, out, errOut := f.run(answer, "auth", "add", "--provider", "desktop-session")
+		if code != ExitError {
+			t.Errorf("%q: exit code = %d, want %d", answer, code, ExitError)
+		}
+		wantIn(t, "stdout", out, "terms of service", "unofficial", "internal-app-setup.md", "--provider internal-app")
+		wantIn(t, "stderr", errOut, "not accepted")
+		if f.opened || f.slackCalls != 0 || strings.Contains(out, "Alpha") {
+			t.Errorf("%q: went on after a no (keyring opened %v, %d Slack calls)", answer, f.opened, f.slackCalls)
+		}
+	}
+}
+
+func TestAuthAddDesktopListsAndAddsThePicked(t *testing.T) {
+	f := newAuthFixture(t)
+	code, out, errOut := f.run("yes\n2\n", "auth", "add", "--provider", "desktop-session")
+	if code != ExitOK {
+		t.Fatalf("exit code = %d, stderr %q", code, errOut)
+	}
+	wantIn(t, "stdout", out, "1. Alpha", "T0ALPHA", "2. Beta", "3. Gone", "T0GONE1", "needs sign-in", "Added Beta (T0BETA1)")
+	f.wantStored(map[string]keyring.Credentials{"T0BETA1": betaCreds})
+}
+
+func TestAuthAddDesktopAddsEverySignedInByDefault(t *testing.T) {
+	for _, pick := range []string{"\n", "all\n", "1 2\n", "1,2\n"} {
+		f := newAuthFixture(t)
+		if code, _, errOut := f.run("yes\n"+pick, "auth", "add", "--provider", "desktop-session"); code != ExitOK {
+			t.Fatalf("%q: exit code = %d, stderr %q", pick, code, errOut)
+		}
+		f.wantStored(map[string]keyring.Credentials{"T0ALPHA": alphaCreds, "T0BETA1": betaCreds})
+	}
+}
+
+func TestAuthAddDesktopRejectsABadPick(t *testing.T) {
+	for pick, says := range map[string]string{
+		"3\n":   "Gone (T0GONE1) needs sign-in",
+		"1 3\n": "needs sign-in",
+		"4\n":   `no workspace "4"`,
+		"0\n":   `no workspace "0"`,
+		"x\n":   `no workspace "x"`,
+	} {
+		f := newAuthFixture(t)
+		code, _, errOut := f.run("yes\n"+pick, "auth", "add", "--provider", "desktop-session")
+		if code != ExitError {
+			t.Errorf("%q: exit code = %d", pick, code)
+		}
+		wantIn(t, "stderr", errOut, says)
+		f.wantStored(nil)
+	}
+}
+
+func TestAuthAddDesktopWithEveryWorkspaceSignedOut(t *testing.T) {
+	f := newAuthFixture(t)
+	f.desktop = f.desktop[2:]
+	code, out, errOut := f.run("yes\n\n", "auth", "add", "--provider", "desktop-session")
+	if code != ExitError {
+		t.Errorf("exit code = %d", code)
+	}
+	wantIn(t, "stdout", out, "Gone", "needs sign-in")
+	wantIn(t, "stderr", errOut, "no workspace to add")
+	f.wantStored(nil)
+}
+
+// Spec slack-connection, "No desktop app installed".
+func TestAuthAddDesktopFallsBackToABrowserPaste(t *testing.T) {
+	f := newAuthFixture(t)
+	f.desktopErr = auth.ErrDesktopNotFound
+	code, out, errOut := f.run("yes\n"+browserCurl, "auth", "add", "--provider", "desktop-session")
+	if code != ExitOK {
+		t.Fatalf("exit code = %d, stderr %q", code, errOut)
+	}
+	wantIn(t, "stdout", out, auth.ErrDesktopNotFound.Error(), "Copy as cURL", "Added Browser (T0BRWSR)")
+	f.wantStored(map[string]keyring.Credentials{"T0BRWSR": browserCreds})
+}
+
+func TestAuthAddDesktopBrowserOnRequest(t *testing.T) {
+	for name, in := range map[string]struct {
+		stdin string
+		args  []string
+	}{
+		"picked b":  {"yes\nb\n" + browserCurl, nil},
+		"--browser": {"yes\n" + browserCurl, []string{"--browser"}},
+	} {
+		f := newAuthFixture(t)
+		args := append([]string{"auth", "add", "--provider", "desktop-session"}, in.args...)
+		if code, _, errOut := f.run(in.stdin, args...); code != ExitOK {
+			t.Fatalf("%s: exit code = %d, stderr %q", name, code, errOut)
+		}
+		f.wantStored(map[string]keyring.Credentials{"T0BRWSR": browserCreds})
+	}
+}
+
+func TestAuthAddBrowserAsksForTheCookieApart(t *testing.T) {
+	f := newAuthFixture(t)
+	code, out, errOut := f.run("yes\n"+browserToken+"\n"+browserCookie+"\n", "auth", "add", "--provider", "desktop-session", "--browser")
+	if code != ExitOK {
+		t.Fatalf("exit code = %d, stderr %q", code, errOut)
+	}
+	wantIn(t, "stdout", out, "d cookie")
+	f.wantStored(map[string]keyring.Credentials{"T0BRWSR": browserCreds})
+}
+
+func TestAuthAddBrowserFailures(t *testing.T) {
+	for paste, says := range map[string]string{
+		"curl 'https://app.slack.com/client'\n":               "no xoxc- token",
+		browserToken + "\nnot a cookie\n":                     "no d cookie",
+		"xoxc-rejected\n" + browserCookie + "\n":              "invalid_auth",
+		"curl -b 'd=xoxd-x' --data-raw 'token=xoxc-1' \\\x03": "cancelled",
+	} {
+		f := newAuthFixture(t)
+		code, _, errOut := f.run("yes\n"+paste, "auth", "add", "--provider", "desktop-session", "--browser")
+		if code != ExitError {
+			t.Errorf("%q: exit code = %d", paste, code)
+		}
+		wantIn(t, "stderr", errOut, says)
+		f.wantStored(nil)
+	}
+}
+
+func TestAuthAddInternalApp(t *testing.T) {
+	f := newAuthFixture(t)
+	code, out, errOut := f.run(userToken+"\n"+appToken+"\n", "auth", "add", "--provider", "internal-app")
+	if code != ExitOK {
+		t.Fatalf("exit code = %d, stderr %q", code, errOut)
+	}
+	wantIn(t, "stdout", out, "xoxp-", "xapp-", "Added Acme (T0ACME1)", "internal-app")
+	f.wantStored(map[string]keyring.Credentials{"T0ACME1": keyring.InternalApp{UserToken: userToken, AppToken: appToken}})
+}
+
+func TestAuthAddInternalAppFailures(t *testing.T) {
+	for stdin, says := range map[string]string{
+		appToken + "\n" + appToken + "\n":   "user token must start with xoxp-",
+		userToken + "\n" + userToken + "\n": "app-level token must start with xapp-",
+		"xoxp-rejected\n" + appToken + "\n": "invalid_auth",
+		"":                                  "user token must start with xoxp-",
+	} {
+		f := newAuthFixture(t)
+		code, _, errOut := f.run(stdin, "auth", "add", "--provider", "internal-app")
+		if code != ExitError {
+			t.Errorf("exit code = %d", code)
+		}
+		wantIn(t, "stderr", errOut, says)
+		f.wantStored(nil)
+	}
+}
+
+func TestAuthAddReportsAKeyringItCannotOpen(t *testing.T) {
+	f := newAuthFixture(t)
+	f.keyringErr = errors.New("keyring is locked")
+	code, _, errOut := f.run(userToken+"\n"+appToken+"\n", "auth", "add", "--provider", "internal-app")
+	if code != ExitError {
+		t.Errorf("exit code = %d", code)
+	}
+	wantIn(t, "stderr", errOut, "keyring is locked")
+}
+
+func TestAuthAddSaysWhereTheCredentialsAre(t *testing.T) {
+	f := newAuthFixture(t)
+	_, out, _ := f.run(userToken+"\n"+appToken+"\n", "auth", "add", "--provider", "internal-app")
+	wantIn(t, "stdout", out, "file", fileBackendWarning)
+	f = newAuthFixture(t)
+	f.store = secretService{keyring.NewFileStore(filepath.Join(t.TempDir(), "credentials"))}
+	_, out, _ = f.run(userToken+"\n"+appToken+"\n", "auth", "add", "--provider", "internal-app")
+	wantIn(t, "stdout", out, "secret-service")
+	if strings.Contains(out, fileBackendWarning) {
+		t.Errorf("warns about a file with the Secret Service:\n%s", out)
+	}
+}
+
+func (f *authFixture) seed() {
+	f.t.Helper()
+	ctx := context.Background()
+	for tm, c := range map[string]keyring.Credentials{
+		"T0BETA1": betaCreds,
+		"T0ACME1": keyring.InternalApp{UserToken: userToken, AppToken: appToken},
+	} {
+		if err := f.store.Set(ctx, team(f.t, tm), c); err != nil {
+			f.t.Fatal(err)
+		}
+	}
+}
+
+func TestAuthList(t *testing.T) {
+	f := newAuthFixture(t)
+	f.seed()
+	code, out, errOut := f.run("", "auth", "list")
+	if code != ExitOK {
+		t.Fatalf("exit code = %d, stderr %q", code, errOut)
+	}
+	acme, beta := strings.Index(out, "T0ACME1"), strings.Index(out, "T0BETA1")
+	if acme < 0 || beta < acme {
+		t.Errorf("teams missing or out of order:\n%s", out)
+	}
+	wantIn(t, "stdout", out, "T0ACME1      internal-app\n", "T0BETA1      desktop-session\n", "file", fileBackendWarning)
+}
+
+func TestAuthListSecretServiceHasNoWarning(t *testing.T) {
+	f := newAuthFixture(t)
+	f.store = secretService{keyring.NewFileStore(filepath.Join(t.TempDir(), "credentials"))}
+	f.seed()
+	_, out, _ := f.run("", "auth", "list")
+	wantIn(t, "stdout", out, "T0ACME1", "secret-service")
+	if strings.Contains(out, fileBackendWarning) {
+		t.Errorf("warns about a file with the Secret Service:\n%s", out)
+	}
+}
+
+func TestAuthListEmpty(t *testing.T) {
+	f := newAuthFixture(t)
+	code, out, _ := f.run("", "auth", "list")
+	if code != ExitOK {
+		t.Errorf("exit code = %d", code)
+	}
+	wantIn(t, "stdout", out, "No workspaces", "omaslack auth add")
+}
+
+func TestAuthListReportsAKeyringItCannotOpen(t *testing.T) {
+	f := newAuthFixture(t)
+	f.keyringErr = errors.New("no keyring")
+	if code, _, errOut := f.run("", "auth", "list"); code != ExitError || !strings.Contains(errOut, "no keyring") {
+		t.Errorf("exit code = %d, stderr %q", code, errOut)
+	}
+}
+
+func TestAuthRemove(t *testing.T) {
+	f := newAuthFixture(t)
+	f.seed()
+	code, out, _ := f.run("", "auth", "remove", "T0BETA1")
+	if code != ExitOK {
+		t.Errorf("exit code = %d", code)
+	}
+	wantIn(t, "stdout", out, "Removed T0BETA1")
+	f.wantStored(map[string]keyring.Credentials{"T0ACME1": keyring.InternalApp{UserToken: userToken, AppToken: appToken}})
+}
+
+func TestAuthRemoveUnknownIsNotAnError(t *testing.T) {
+	f := newAuthFixture(t)
+	code, out, _ := f.run("", "auth", "remove", "T0NOPE1")
+	if code != ExitOK {
+		t.Errorf("exit code = %d", code)
+	}
+	wantIn(t, "stdout", out, "No credentials stored for T0NOPE1")
+}
+
+func TestAuthRemoveReportsAKeyringItCannotOpen(t *testing.T) {
+	f := newAuthFixture(t)
+	f.keyringErr = errors.New("no keyring")
+	if code, _, errOut := f.run("", "auth", "remove", "T0BETA1"); code != ExitError || !strings.Contains(errOut, "no keyring") {
+		t.Errorf("exit code = %d, stderr %q", code, errOut)
+	}
+}
+
+func TestAuthUsageErrors(t *testing.T) {
+	for _, args := range [][]string{
+		{"auth"},
+		{"auth", "frob"},
+		{"auth", "add"},
+		{"auth", "add", "--provider", "carrier-pigeon"},
+		{"auth", "add", "--provider", "internal-app", "extra"},
+		{"auth", "add", "--provider", "internal-app", "--browser"},
+		{"auth", "add", "--nope"},
+		{"auth", "list", "extra"},
+		{"auth", "remove"},
+		{"auth", "remove", "T0BETA1", "T0ACME1"},
+		{"auth", "remove", "not-a-team"},
+	} {
+		f := newAuthFixture(t)
+		code, _, errOut := f.run("", args...)
+		if code != ExitUsage {
+			t.Errorf("%v: exit code = %d, want %d", args, code, ExitUsage)
+		}
+		wantIn(t, "stderr", errOut, "Usage: omaslack auth")
+		if f.opened {
+			t.Errorf("%v: opened the keyring", args)
+		}
+	}
+}

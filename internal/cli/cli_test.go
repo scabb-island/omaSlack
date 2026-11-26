@@ -86,7 +86,7 @@ func TestUnknownCommand(t *testing.T) {
 }
 
 func TestPlaceholdersSayWhichMilestone(t *testing.T) {
-	cases := map[string]string{"daemon": "M1/M2", "tui": "M3", "ctl": "M2", "auth": "M1", "doctor": "M5"}
+	cases := map[string]string{"daemon": "M1/M2", "tui": "M3", "ctl": "M2", "doctor": "M5"}
 	for name, milestone := range cases {
 		code, _, errOut := run(name)
 		if code != ExitNotImplemented {

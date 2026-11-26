@@ -3,11 +3,31 @@
 package main
 
 import (
+	"context"
 	"os"
 
 	"gitlab.com/scabb-island/omaslack/internal/cli"
+	"gitlab.com/scabb-island/omaslack/internal/keyring"
+	"gitlab.com/scabb-island/omaslack/internal/provider/desktopsession"
+	"gitlab.com/scabb-island/omaslack/internal/provider/desktopsession/auth"
 )
 
 func main() {
-	os.Exit(cli.Run(cli.Env{Stdout: os.Stdout, Stderr: os.Stderr}, os.Args[1:]))
+	os.Exit(cli.Run(cli.Env{
+		Stdout:            os.Stdout,
+		Stderr:            os.Stderr,
+		Stdin:             os.Stdin,
+		Keyring:           keyring.Open,
+		DesktopWorkspaces: desktopWorkspaces,
+		SlackAPIURL:       desktopsession.DefaultAPIURL,
+	}, os.Args[1:]))
+}
+
+// desktopWorkspaces reads the installed Slack desktop app's workspaces.
+func desktopWorkspaces(ctx context.Context) ([]auth.Workspace, error) {
+	dir, err := auth.FindDesktopDir()
+	if err != nil {
+		return nil, err
+	}
+	return auth.Desktop{Dir: dir, Passwords: auth.SystemPasswords{}}.Workspaces(ctx)
 }

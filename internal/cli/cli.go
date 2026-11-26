@@ -6,6 +6,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +14,8 @@ import (
 	"slices"
 	"strings"
 
+	"gitlab.com/scabb-island/omaslack/internal/keyring"
+	"gitlab.com/scabb-island/omaslack/internal/provider/desktopsession/auth"
 	"gitlab.com/scabb-island/omaslack/internal/version"
 )
 
@@ -28,11 +31,29 @@ const (
 var ErrNotImplemented = errors.New("not implemented yet")
 
 // Env is what a subcommand gets to work with. Injected so tests never touch
-// the real process streams.
+// the real process streams, keyring, Slack desktop app or network.
 type Env struct {
 	Stdout io.Writer
 	Stderr io.Writer
+	// Stdin is what the user types or pastes. When it is a terminal,
+	// secrets are read from it without echo.
+	Stdin io.Reader
+	// Keyring opens the credential store (keyring.Open).
+	Keyring func(context.Context) (keyring.ClosableStore, error)
+	// DesktopWorkspaces lists the workspaces of the Slack desktop app.
+	DesktopWorkspaces func(context.Context) ([]auth.Workspace, error)
+	// SlackAPIURL is Slack's Web API base URL, ending in "/".
+	SlackAPIURL string
 }
+
+// usageError reports a command line that does not parse. Run prints it
+// with the usage of the command and exits with ExitUsage.
+type usageError struct {
+	err   error
+	usage string
+}
+
+func (e *usageError) Error() string { return e.err.Error() }
 
 type command struct {
 	summary   string
@@ -45,7 +66,7 @@ func commands() map[string]command {
 		"daemon":  {summary: "run the local daemon that talks to Slack", milestone: "M1/M2"},
 		"tui":     {summary: "open the terminal client", milestone: "M3"},
 		"ctl":     {summary: "call a daemon RPC method or stream its events", milestone: "M2"},
-		"auth":    {summary: "add, list or remove Slack workspaces", milestone: "M1"},
+		"auth":    {summary: "add, list or remove Slack workspaces", run: runAuth},
 		"doctor":  {summary: "check the installation and report problems", milestone: "M5"},
 		"version": {summary: "print version information", run: runVersion},
 	}
@@ -76,11 +97,21 @@ func Run(env Env, args []string) int {
 		fmt.Fprintf(env.Stderr, "omaslack %s: %v (planned for %s)\n", name, ErrNotImplemented, cmd.milestone)
 		return ExitNotImplemented
 	}
-	if err := cmd.run(env, args[1:]); err != nil {
-		fmt.Fprintf(env.Stderr, "omaslack %s: %v\n", name, err)
-		return ExitError
+	return exitCode(env, name, cmd.run(env, args[1:]))
+}
+
+// exitCode reports err, if any, and returns the exit code it means.
+func exitCode(env Env, name string, err error) int {
+	if err == nil {
+		return ExitOK
 	}
-	return ExitOK
+	fmt.Fprintf(env.Stderr, "omaslack %s: %v\n", name, err)
+	var usage *usageError
+	if errors.As(err, &usage) {
+		fmt.Fprint(env.Stderr, usage.usage)
+		return ExitUsage
+	}
+	return ExitError
 }
 
 func runVersion(env Env, args []string) error {
