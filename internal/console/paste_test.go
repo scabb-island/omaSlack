@@ -162,6 +162,13 @@ func TestDrainInput(t *testing.T) {
 			t.Errorf("slept %v, want %v (a full quiet window after the tail)", f.slept, want)
 		}
 	})
+	t.Run("a single byte restarts the quiet window", func(t *testing.T) {
+		f := &fakeTerminal{arrivals: []int{1}}
+		drainInput(f.pending, f.flush, f.sleep)
+		if want := 50*time.Millisecond + 500*time.Millisecond; f.slept != want || f.flushes != 2 {
+			t.Errorf("slept %v, %d flushes; want %v and 2", f.slept, f.flushes, want)
+		}
+	})
 	t.Run("a terminal that cannot say counts as quiet", func(t *testing.T) {
 		f := &fakeTerminal{arrivals: []int{5}, failing: true}
 		drainInput(f.pending, f.flush, f.sleep)

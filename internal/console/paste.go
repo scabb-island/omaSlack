@@ -60,7 +60,7 @@ func ReadPaste(r io.Reader) (string, error) {
 	buf := make([]byte, 1)
 	for {
 		n, err := r.Read(buf)
-		if done, cerr := takePaste(&b, buf[:n]); done || cerr != nil {
+		if done, cerr := takePaste(&b, buf[:n]); done {
 			return b.String(), cerr
 		}
 		if errors.Is(err, io.EOF) {
@@ -98,23 +98,25 @@ func takePaste(b *strings.Builder, chunk []byte) (done bool, err error) {
 // left for the shell to read once omaslack exits. A paste reaches the
 // terminal in chunks, slower over SSH, so a single flush right away can
 // miss the tail. Input is discarded until it has been quiet for
-// drainQuiet, for drainMax at most.
+// drainQuietPolls polls in a row (500 ms), for drainMaxPolls polls (5 s)
+// at most.
 const (
-	drainPoll  = 50 * time.Millisecond
-	drainQuiet = 500 * time.Millisecond
-	drainMax   = 5 * time.Second
+	drainPoll       = 50 * time.Millisecond
+	drainQuietPolls = 10
+	drainMaxPolls   = 100
 )
 
-// drainInput discards pending input until none has arrived for drainQuiet,
-// or drainMax has passed. pending, flush and sleep are injected for tests.
+// drainInput discards pending input until none has arrived for
+// drainQuietPolls polls, or drainMaxPolls have passed. pending, flush and
+// sleep are injected for tests.
 func drainInput(pending func() (int, error), flush func() error, sleep func(time.Duration)) {
-	quiet := time.Duration(0)
-	for total := time.Duration(0); total < drainMax && quiet < drainQuiet; total += drainPoll {
+	quiet := 0
+	for polls := 0; polls < drainMaxPolls && quiet < drainQuietPolls; polls++ {
 		if n, err := pending(); err == nil && n > 0 {
 			_ = flush()
 			quiet = 0
 		} else {
-			quiet += drainPoll
+			quiet++
 		}
 		sleep(drainPoll)
 	}
