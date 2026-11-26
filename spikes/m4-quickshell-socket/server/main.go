@@ -77,13 +77,13 @@ func (c *conn) reply(id int, result any) error {
 func eventText(seq int) string {
 	switch {
 	case seq%2000 == 1999:
-		return strings.Repeat("línea larga ✓ ", 256*1024/16)
+		return strings.Repeat("long line ✓ é ", 256*1024/16)
 	case seq%7 == 0:
-		return fmt.Sprintf("mensaje %d con\nvarias\nlíneas y \"comillas\"", seq)
+		return fmt.Sprintf("message %d with\nseveral\nlines and \"quotes\"", seq)
 	case seq%5 == 0:
-		return fmt.Sprintf("acentos áéíóú ñ y emoji 🚀🔥 #%d", seq)
+		return fmt.Sprintf("accents áéíóú ñ and emoji 🚀🔥 #%d", seq)
 	default:
-		return fmt.Sprintf("mensaje %d", seq)
+		return fmt.Sprintf("message %d", seq)
 	}
 }
 

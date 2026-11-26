@@ -1,6 +1,6 @@
 // Package cli dispatches the omaslack subcommands.
 //
-// omaslack ships as a single binary (design.md, "Binario único"): the daemon,
+// omaslack ships as a single binary (design.md, "Single binary"): the daemon,
 // the TUI client, the control CLI and the auth/doctor tooling are subcommands,
 // so client and daemon always speak the same protocol version.
 package cli

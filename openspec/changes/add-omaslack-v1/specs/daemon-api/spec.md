@@ -1,50 +1,50 @@
 ## ADDED Requirements
 
-### Requirement: Socket local privado
-El daemon SHALL escuchar en un unix socket en `$XDG_RUNTIME_DIR/omaslack.sock` con permisos 0600 y SHALL rechazar las conexiones cuyo UID (obtenido con `SO_PEERCRED`) no sea el del dueño del daemon.
+### Requirement: Private local socket
+The daemon SHALL listen on a unix socket at `$XDG_RUNTIME_DIR/omaslack.sock` with 0600 permissions and SHALL reject connections whose UID (from `SO_PEERCRED`) is not the daemon owner's.
 
-#### Scenario: Otro usuario intenta conectarse
-- **WHEN** un proceso de otro UID se conecta al socket
-- **THEN** el daemon cierra la conexión sin procesar ningún mensaje y lo registra en el log
+#### Scenario: Another user tries to connect
+- **WHEN** a process with a different UID connects to the socket
+- **THEN** the daemon closes the connection without processing any message and logs it
 
-### Requirement: JSON-RPC 2.0 sobre NDJSON
-El protocolo SHALL ser JSON-RPC 2.0, con un objeto JSON por línea (NDJSON). Los errores SHALL usar los códigos estándar de JSON-RPC y códigos propios desde `-32000` (por ejemplo `-32001 incompatible_protocol`, `-32002 unsupported_capability`, `-32003 auth_expired`).
+### Requirement: JSON-RPC 2.0 over NDJSON
+The protocol SHALL be JSON-RPC 2.0 with one JSON object per line (NDJSON). Errors SHALL use the standard JSON-RPC codes plus custom codes from `-32000` (for example `-32001 incompatible_protocol`, `-32002 unsupported_capability`, `-32003 auth_expired`).
 
-#### Scenario: Método inexistente
-- **WHEN** un cliente envía `{"jsonrpc":"2.0","id":1,"method":"foo.bar"}`
-- **THEN** el daemon responde con el error `-32601 Method not found` y la conexión sigue abierta
+#### Scenario: Unknown method
+- **WHEN** a client sends `{"jsonrpc":"2.0","id":1,"method":"foo.bar"}`
+- **THEN** the daemon answers with error `-32601 Method not found` and the connection stays open
 
-### Requirement: Handshake y versión de protocolo
-Todo cliente SHALL empezar con `hello{client, protocol}`. El daemon SHALL responder con su versión de protocolo, su versión de daemon, los workspaces y las capacidades. Si la versión mayor del protocolo no coincide, SHALL responder `-32001` y cerrar la conexión.
+### Requirement: Handshake and protocol version
+Every client SHALL start with `hello{client, protocol}`. The daemon SHALL answer with its protocol version, daemon version, workspaces and capabilities. If the major protocol version does not match, it SHALL answer `-32001` and close the connection.
 
-#### Scenario: Plugin QML más nuevo que el daemon
-- **WHEN** el plugin envía `hello{protocol: 2}` y el daemon soporta sólo la versión 1
-- **THEN** el daemon responde `-32001 incompatible_protocol` y la barra muestra "actualizá omaslack"
+#### Scenario: QML plugin newer than the daemon
+- **WHEN** the plugin sends `hello{protocol: 2}` and the daemon only supports version 1
+- **THEN** the daemon answers `-32001 incompatible_protocol` and the bar shows "update omaslack"
 
-### Requirement: Suscripción a eventos
-Un cliente SHALL poder llamar a `events.subscribe{topics[]}` y, desde ese momento, recibir notificaciones JSON-RPC (sin `id`) de los tópicos pedidos en la misma conexión. `unread.summary` SHALL coalescerse a no más de una emisión cada 250 ms.
+### Requirement: Event subscription
+A client SHALL be able to call `events.subscribe{topics[]}` and from then on receive JSON-RPC notifications (without `id`) for the requested topics on the same connection. `unread.summary` SHALL be coalesced to at most one emission every 250 ms.
 
-#### Scenario: Ráfaga de mensajes
-- **WHEN** llegan 40 mensajes en un segundo
-- **THEN** cada cliente suscripto a `message.created` recibe 40 eventos, y el suscripto a `unread.summary` recibe como máximo 4
+#### Scenario: Message burst
+- **WHEN** 40 messages arrive within one second
+- **THEN** each client subscribed to `message.created` receives 40 events, and a client subscribed to `unread.summary` receives at most 4
 
-### Requirement: Métodos de mensajería y estado
-El daemon SHALL exponer, como mínimo, los métodos v1 listados en `design.md`: workspaces, conversations, messages, reactions, files, drafts, search, users, presence, dnd, unread.summary y ui.focus. Un método que requiere una capacidad que el proveedor no tiene SHALL responder `-32002 unsupported_capability`.
+### Requirement: Messaging and state methods
+The daemon SHALL expose at least the v1 methods listed in `design.md`: workspaces, conversations, messages, reactions, files, drafts, search, users, presence, dnd, unread.summary and ui.focus. A method that needs a capability the provider lacks SHALL answer `-32002 unsupported_capability`.
 
-#### Scenario: Búsqueda sin soporte
-- **WHEN** un cliente llama a `search.messages` en un workspace cuyo proveedor declara `search = false`
-- **THEN** el daemon responde `-32002 unsupported_capability`
+#### Scenario: Search not supported
+- **WHEN** a client calls `search.messages` on a workspace whose provider declares `search = false`
+- **THEN** the daemon answers `-32002 unsupported_capability`
 
-### Requirement: Servicio de usuario y arranque bajo demanda
-El daemon SHALL distribuirse con una unit de systemd de usuario (`omaslack.service`). Si un cliente no encuentra el socket, SHALL intentar `systemctl --user start omaslack` antes de fallar.
+### Requirement: User service and on-demand start
+The daemon SHALL ship with a systemd user unit (`omaslack.service`). If a client cannot find the socket, it SHALL try `systemctl --user start omaslack` before failing.
 
-#### Scenario: Se abre la TUI con el daemon apagado
-- **WHEN** el usuario corre `omaslack tui` y el daemon no está corriendo
-- **THEN** la TUI arranca el servicio, espera el socket hasta 5 segundos y se conecta
+#### Scenario: Opening the TUI with the daemon stopped
+- **WHEN** the user runs `omaslack tui` and the daemon is not running
+- **THEN** the TUI starts the service, waits up to 5 seconds for the socket and connects
 
-### Requirement: CLI de control para scripts
-`omaslack ctl <método> [params-json]` SHALL hacer una llamada RPC e imprimir la respuesta como JSON. `omaslack ctl --stream <tópicos>` SHALL imprimir eventos como NDJSON en stdout y aceptar requests NDJSON por stdin, para que sirva de puente con clientes que no pueden abrir el socket directamente.
+### Requirement: Control CLI for scripts
+`omaslack ctl <method> [params-json]` SHALL make one RPC call and print the response as JSON. `omaslack ctl --stream <topics>` SHALL print events as NDJSON on stdout and accept NDJSON requests on stdin, so it can bridge clients that cannot open the socket directly.
 
-#### Scenario: Script de la barra
-- **WHEN** se corre `omaslack ctl unread.summary`
-- **THEN** stdout tiene un solo objeto JSON con `dms`, `mentions`, `channels` y `threads` por workspace y en total
+#### Scenario: Bar script
+- **WHEN** `omaslack ctl unread.summary` runs
+- **THEN** stdout holds a single JSON object with `dms`, `mentions`, `channels` and `threads` per workspace and in total

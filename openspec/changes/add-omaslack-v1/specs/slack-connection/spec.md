@@ -1,58 +1,58 @@
 ## ADDED Requirements
 
-### Requirement: Proveedores de conexión intercambiables
-El daemon SHALL hablar con Slack sólo a través de la interfaz `Provider`. En v1 SHALL existir dos implementaciones: `desktop-session` e `internal-app`. Cada workspace SHALL tener exactamente un proveedor asignado.
+### Requirement: Interchangeable connection providers
+The daemon SHALL talk to Slack only through the `Provider` interface. v1 SHALL ship two implementations: `desktop-session` and `internal-app`. Each workspace SHALL have exactly one provider assigned.
 
-#### Scenario: Workspace con proveedor internal-app
-- **WHEN** el usuario corre `omaslack auth add --provider internal-app` y carga un user token xoxp y un app token xapp válidos
-- **THEN** el workspace queda registrado con `provider = internal-app` y el daemon se conecta usando la Web API y Socket Mode
+#### Scenario: Workspace with the internal-app provider
+- **WHEN** the user runs `omaslack auth add --provider internal-app` and enters a valid xoxp user token and xapp app token
+- **THEN** the workspace is registered with `provider = internal-app` and the daemon connects through the Web API and Socket Mode
 
-#### Scenario: Workspace con proveedor desktop-session
-- **WHEN** el usuario corre `omaslack auth add --provider desktop-session` y tiene la app de escritorio de Slack con la sesión iniciada
-- **THEN** el CLI lista los workspaces encontrados en la sesión de escritorio, el usuario elige cuáles agregar y cada uno queda registrado con `provider = desktop-session`
+#### Scenario: Workspace with the desktop-session provider
+- **WHEN** the user runs `omaslack auth add --provider desktop-session` and the Slack desktop app is signed in
+- **THEN** the CLI lists the workspaces found in the desktop session, the user picks which to add, and each one is registered with `provider = desktop-session`
 
-### Requirement: Consentimiento explícito para el protocolo no oficial
-El proveedor `desktop-session` MUST requerir que el usuario acepte un aviso que explica que usa un protocolo no oficial que puede violar los términos de uso de Slack. Sin esa aceptación, el workspace no MUST registrarse.
+### Requirement: Explicit consent for the unofficial protocol
+The `desktop-session` provider MUST require the user to accept a warning explaining that it uses an unofficial protocol that may violate Slack's terms of service. Without that acceptance, the workspace MUST NOT be registered.
 
-#### Scenario: El usuario rechaza el aviso
-- **WHEN** el usuario elige `desktop-session` y responde "no" al aviso de términos de uso
-- **THEN** no se guarda ninguna credencial y el CLI sugiere el proveedor `internal-app` con un link a su guía
+#### Scenario: The user declines the warning
+- **WHEN** the user picks `desktop-session` and answers "no" to the terms-of-service warning
+- **THEN** no credential is stored and the CLI suggests the `internal-app` provider with a link to its guide
 
-### Requirement: Login alternativo por sesión del navegador
-El proveedor `desktop-session` SHALL aceptar como alternativa un comando cURL copiado de las DevTools del navegador (un request a `/api/` de app.slack.com) y extraer de ahí el token xoxc y la cookie xoxd.
+### Requirement: Browser session login as an alternative
+The `desktop-session` provider SHALL accept, as an alternative, a cURL command copied from the browser's DevTools (a request to `/api/` on app.slack.com) and extract the xoxc token and xoxd cookie from it.
 
-#### Scenario: No hay app de escritorio instalada
-- **WHEN** no se encuentra la sesión de la app de escritorio y el usuario pega un cURL válido
-- **THEN** el workspace queda registrado con las credenciales extraídas del cURL
+#### Scenario: No desktop app installed
+- **WHEN** no desktop app session is found and the user pastes a valid cURL command
+- **THEN** the workspace is registered with the credentials extracted from the cURL command
 
-### Requirement: Anuncio de capacidades del proveedor
-Cada proveedor SHALL declarar un conjunto `Capabilities` (por ejemplo `realtime`, `search`, `files`, `presenceWrite`, `typing`, `customEmoji`). El daemon SHALL exponerlo por RPC para que la TUI y la UI oculten o deshabiliten lo que el proveedor no soporta.
+### Requirement: Provider capability advertisement
+Each provider SHALL declare a `Capabilities` set (for example `realtime`, `search`, `files`, `presenceWrite`, `typing`, `customEmoji`). The daemon SHALL expose it over RPC so the TUI and the UI hide or disable what the provider does not support.
 
-#### Scenario: Función no soportada
-- **WHEN** un proveedor declara `typing = false`
-- **THEN** ni la TUI ni la UI muestran indicadores de "está escribiendo" para ese workspace
+#### Scenario: Unsupported feature
+- **WHEN** a provider declares `typing = false`
+- **THEN** neither the TUI nor the UI shows "is typing" indicators for that workspace
 
-### Requirement: Credenciales en el keyring
-Las credenciales SHALL guardarse en el Secret Service con el atributo `service=omaslack`. Si no hay Secret Service, SHALL usarse un archivo con permisos 0600 en `$XDG_CONFIG_HOME/omaslack/credentials` y mostrarse un aviso en `omaslack doctor`. Ningún método RPC MUST devolver credenciales.
+### Requirement: Credentials in the keyring
+Credentials SHALL be stored in the Secret Service with the attribute `service=omaslack`. Without a Secret Service, a file with 0600 permissions at `$XDG_CONFIG_HOME/omaslack/credentials` SHALL be used, and `omaslack doctor` SHALL show a warning. No RPC method MUST ever return credentials.
 
-#### Scenario: Sin Secret Service
-- **WHEN** no hay ningún proveedor de Secret Service en D-Bus
-- **THEN** las credenciales se guardan en el archivo con permisos 0600 y `omaslack doctor` marca el aviso "credenciales en archivo"
+#### Scenario: No Secret Service
+- **WHEN** there is no Secret Service provider on D-Bus
+- **THEN** credentials are stored in the 0600 file and `omaslack doctor` flags the "credentials in a file" warning
 
-#### Scenario: Un cliente pide datos del workspace
-- **WHEN** un cliente llama a `workspaces.list`
-- **THEN** la respuesta incluye nombre, team_id, proveedor y estado, pero ningún token ni cookie
+#### Scenario: A client asks for workspace data
+- **WHEN** a client calls `workspaces.list`
+- **THEN** the response includes name, team_id, provider and state, but no token or cookie
 
-### Requirement: Multi-workspace en paralelo
-El daemon SHALL mantener conectados en paralelo todos los workspaces registrados, cada uno con su propio proveedor, estado de conexión y contadores de no leídos.
+### Requirement: Parallel multi-workspace
+The daemon SHALL keep every registered workspace connected in parallel, each with its own provider, connection state and unread counters.
 
-#### Scenario: Dos workspaces con proveedores distintos
-- **WHEN** hay un workspace con `internal-app` y otro con `desktop-session`
-- **THEN** los dos reciben mensajes en tiempo real y `unread.summary` agrega los contadores de ambos
+#### Scenario: Two workspaces with different providers
+- **WHEN** one workspace uses `internal-app` and another uses `desktop-session`
+- **THEN** both receive messages in real time and `unread.summary` aggregates the counters of both
 
-### Requirement: Credenciales vencidas
-Cuando Slack rechace una credencial (por ejemplo `invalid_auth` o `token_revoked`), el daemon SHALL marcar el workspace como `auth_expired`, dejar de reintentar y publicar `connection.state` para que los clientes pidan volver a autenticar.
+### Requirement: Expired credentials
+When Slack rejects a credential (for example `invalid_auth` or `token_revoked`), the daemon SHALL mark the workspace as `auth_expired`, stop retrying and publish `connection.state` so clients ask the user to authenticate again.
 
-#### Scenario: Token revocado
-- **WHEN** Slack responde `token_revoked` a un workspace
-- **THEN** el workspace pasa a `auth_expired`, la barra muestra el ícono en estado de error y la TUI muestra "volver a autenticar: omaslack auth add"
+#### Scenario: Revoked token
+- **WHEN** Slack answers `token_revoked` for a workspace
+- **THEN** the workspace moves to `auth_expired`, the bar shows the icon in its error state and the TUI shows "authenticate again: omaslack auth add"

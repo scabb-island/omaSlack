@@ -1,51 +1,51 @@
 ## ADDED Requirements
 
-### Requirement: Recepción en tiempo real
-El sync engine SHALL consumir el stream de eventos del proveedor, normalizarlo a eventos de dominio (`message.created`, `message.updated`, `message.deleted`, `reaction.changed`, `conversation.updated`, `read.changed`, `presence.changed`, `typing`), persistirlos en el Store y publicarlos a los clientes suscriptos.
+### Requirement: Real-time reception
+The sync engine SHALL consume the provider's event stream, normalize it into domain events (`message.created`, `message.updated`, `message.deleted`, `reaction.changed`, `conversation.updated`, `read.changed`, `presence.changed`, `typing`), persist them in the Store and publish them to subscribed clients.
 
-#### Scenario: Llega un mensaje nuevo
-- **WHEN** alguien publica un mensaje en un canal del que el usuario es miembro
-- **THEN** el mensaje queda guardado en el Store y los clientes suscriptos reciben `message.created` en menos de 1 segundo desde que llegó el evento del proveedor
+#### Scenario: A new message arrives
+- **WHEN** someone posts a message in a channel the user is a member of
+- **THEN** the message is saved in the Store and subscribed clients receive `message.created` less than 1 second after the provider event arrived
 
-### Requirement: Reconexión con backoff
-Ante una desconexión, el engine SHALL reintentar con backoff exponencial con jitter, entre 1 y 30 segundos, y publicar `connection.state` (`connecting`, `connected`, `disconnected`) en cada transición.
+### Requirement: Reconnection with backoff
+On disconnection, the engine SHALL retry with exponential backoff and jitter, between 1 and 30 seconds, and publish `connection.state` (`connecting`, `connected`, `disconnected`) on every transition.
 
-#### Scenario: Se cae la red
-- **WHEN** se pierde la conexión de red durante 2 minutos
-- **THEN** los clientes ven el estado `disconnected` y después `connecting`, y al volver la red el estado pasa a `connected` sin intervención del usuario
+#### Scenario: The network drops
+- **WHEN** the network connection is lost for 2 minutes
+- **THEN** clients see the `disconnected` state and then `connecting`, and when the network returns the state moves to `connected` with no user action
 
-### Requirement: Reconciliación tras reconectar
-Después de reconectar, el engine SHALL traer lo que pasó durante el corte en las conversaciones con actividad (como mínimo las abiertas en algún cliente y las que tienen menciones o DMs) y actualizar los contadores de no leídos.
+### Requirement: Reconciliation after reconnecting
+After reconnecting, the engine SHALL fetch what happened during the outage in active conversations (at least those open in any client and those with mentions or DMs) and update the unread counters.
 
-#### Scenario: Mensajes durante el corte
-- **WHEN** llegaron 3 DMs mientras el daemon estaba desconectado
-- **THEN** después de reconectar los 3 mensajes aparecen en el Store y el contador de DMs refleja 3 no leídos
+#### Scenario: Messages during the outage
+- **WHEN** 3 DMs arrived while the daemon was disconnected
+- **THEN** after reconnecting the 3 messages are in the Store and the DM counter shows 3 unread
 
-### Requirement: Cache local en SQLite
-El Store SHALL ser una base SQLite por workspace, en modo WAL, con migraciones versionadas. SHALL tratarse como cache: borrarla no MUST perder datos del usuario, salvo borradores no enviados y preferencias locales.
+### Requirement: Local SQLite cache
+The Store SHALL be one SQLite database per workspace, in WAL mode, with versioned migrations. It SHALL be treated as a cache: deleting it MUST NOT lose user data, except unsent drafts and local preferences.
 
-#### Scenario: Arranque en frío con cache
-- **WHEN** el daemon arranca y ya existe una cache de la sesión anterior
-- **THEN** los clientes pueden mostrar la sidebar y los últimos mensajes desde la cache antes de que termine la reconexión
+#### Scenario: Cold start with a cache
+- **WHEN** the daemon starts and a cache from the previous session exists
+- **THEN** clients can show the sidebar and the latest messages from the cache before reconnection finishes
 
-#### Scenario: Cache borrada
-- **WHEN** el usuario borra el directorio de la cache y reinicia el daemon
-- **THEN** el daemon reconstruye la cache desde Slack sin pedir credenciales de nuevo
+#### Scenario: Cache deleted
+- **WHEN** the user deletes the cache directory and restarts the daemon
+- **THEN** the daemon rebuilds the cache from Slack without asking for credentials again
 
-### Requirement: Backfill bajo demanda
-El historial de una conversación SHALL traerse por páginas cuando un cliente la abre o pide mensajes más viejos, en lugar de descargar todo el workspace al arrancar.
+### Requirement: On-demand backfill
+A conversation's history SHALL be fetched in pages when a client opens it or asks for older messages, instead of downloading the whole workspace at startup.
 
-#### Scenario: Scroll hacia atrás
-- **WHEN** el usuario llega al principio de los mensajes cargados de una conversación
-- **THEN** el daemon trae la página anterior y el cliente la agrega sin perder la posición del scroll
+#### Scenario: Scrolling back
+- **WHEN** the user reaches the oldest loaded message of a conversation
+- **THEN** the daemon fetches the previous page and the client prepends it without losing the scroll position
 
-### Requirement: Presupuesto de rate limit
-El engine SHALL mantener un presupuesto por método y tier de la API, respetar `Retry-After` y priorizar lo que pide el usuario (abrir una conversación, enviar) sobre las tareas de fondo (backfill, presencia). Cuando el proveedor es una app que no está en el Marketplace ni es interna, SHALL aplicar el límite de 1 llamada por minuto a `conversations.history` y `conversations.replies`.
+### Requirement: Rate-limit budget
+The engine SHALL keep a budget per API method and tier, honor `Retry-After` and give user requests (opening a conversation, sending) priority over background work (backfill, presence). When the provider is an app that is neither in the Marketplace nor internal, it SHALL apply the 1-call-per-minute limit to `conversations.history` and `conversations.replies`.
 
-#### Scenario: Pedido del usuario con el presupuesto agotado por backfill
-- **WHEN** hay backfill en curso y el usuario abre una conversación
-- **THEN** el pedido del usuario pasa adelante en la cola y el backfill se pausa hasta que vuelva a haber presupuesto
+#### Scenario: User request while backfill used up the budget
+- **WHEN** a backfill is running and the user opens a conversation
+- **THEN** the user's request jumps the queue and the backfill pauses until budget is available again
 
-#### Scenario: Slack responde 429
-- **WHEN** Slack responde HTTP 429 con `Retry-After: 30`
-- **THEN** no se hacen llamadas a ese método durante 30 segundos y los clientes reciben un evento `connection.state` con el detalle `rate_limited`
+#### Scenario: Slack answers 429
+- **WHEN** Slack answers HTTP 429 with `Retry-After: 30`
+- **THEN** no calls to that method are made for 30 seconds and clients receive a `connection.state` event with the `rate_limited` detail

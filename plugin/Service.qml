@@ -3,7 +3,7 @@ import Quickshell
 import Quickshell.Io
 
 // The one connection between omarchy-shell and the omaslack daemon
-// (spec gui-client, "Service único como cliente del daemon"). The shell mounts
+// (spec gui-client, "Single Service as the daemon client"). The shell mounts
 // this once and hands it to every screen's bar widget, so the bar, the panel
 // and the window always read the same state.
 //

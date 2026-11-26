@@ -1,43 +1,43 @@
 ## ADDED Requirements
 
-### Requirement: Cliente de terminal sobre el daemon
-`omaslack tui` SHALL ser un cliente del daemon, sin conexión directa con Slack ni credenciales propias, y SHALL implementar todas las operaciones de la capacidad `messaging`.
+### Requirement: Terminal client on the daemon
+`omaslack tui` SHALL be a client of the daemon, with no direct connection to Slack and no credentials of its own, and SHALL implement every operation of the `messaging` capability.
 
-#### Scenario: Sin credenciales en la TUI
-- **WHEN** se inspecciona el proceso `omaslack tui`
-- **THEN** no tiene abierto ningún archivo de credenciales ni conexiones de red a Slack, sólo el socket del daemon
+#### Scenario: No credentials in the TUI
+- **WHEN** the `omaslack tui` process is inspected
+- **THEN** it holds no credentials file open and no network connections to Slack, only the daemon socket
 
-### Requirement: Layout de paneles
-La TUI SHALL mostrar un rail de workspaces, una sidebar de conversaciones, el panel de mensajes, un panel de hilo opcional, el compose y una barra de estado con el modo, la conversación, el workspace y el estado de conexión. La sidebar SHALL poder ocultarse y cambiar de ancho.
+### Requirement: Panel layout
+The TUI SHALL show a workspace rail, a conversation sidebar, the message pane, an optional thread pane, the compose box and a status bar with the mode, conversation, workspace and connection state. The sidebar SHALL be hideable and resizable.
 
-#### Scenario: Terminal angosta
-- **WHEN** la terminal tiene menos de 80 columnas
-- **THEN** la sidebar se oculta automáticamente y se puede mostrar con un atajo
+#### Scenario: Narrow terminal
+- **WHEN** the terminal is narrower than 80 columns
+- **THEN** the sidebar hides automatically and can be shown with a shortcut
 
-### Requirement: Modos y teclas tipo vim
-La TUI SHALL tener los modos NORMAL, INSERT y COMMAND, con `j/k` para moverse, `h/l`/`Tab` para cambiar de panel, `i` para escribir, `Esc` para volver, `1`–`9` para cambiar de workspace y `Ctrl+k`/`Ctrl+t` para el buscador. Las teclas SHALL documentarse en una ayuda integrada (`?`).
+### Requirement: Vim-like modes and keys
+The TUI SHALL have NORMAL, INSERT and COMMAND modes, with `j/k` to move, `h/l`/`Tab` to switch panes, `i` to type, `Esc` to go back, `1`–`9` to switch workspaces and `Ctrl+k`/`Ctrl+t` for the finder. Keys SHALL be documented in built-in help (`?`).
 
-#### Scenario: Cambiar de workspace
-- **WHEN** el usuario aprieta `2` en modo NORMAL
-- **THEN** la TUI pasa al segundo workspace del rail
+#### Scenario: Switching workspace
+- **WHEN** the user presses `2` in NORMAL mode
+- **THEN** the TUI switches to the second workspace in the rail
 
-### Requirement: Tema de Omarchy con recarga en caliente
-La TUI SHALL leer el tema de `~/.local/state/omarchy/current/theme/omaslack.toml` (generado desde la plantilla de Omarchy). Si no existe, SHALL leer `colors.toml` del tema activo. Al recibir `SIGUSR1`, SHALL recargar el tema sin reiniciarse.
+### Requirement: Omarchy theme with live reload
+The TUI SHALL read its theme from `~/.local/state/omarchy/current/theme/omaslack.toml` (rendered from the Omarchy template). If it does not exist, it SHALL read the active theme's `colors.toml`. On `SIGUSR1` it SHALL reload the theme without restarting.
 
-#### Scenario: Cambio de tema
-- **WHEN** el usuario cambia el tema de Omarchy con la TUI abierta
-- **THEN** el hook manda `SIGUSR1` y la TUI se redibuja con los colores nuevos sin perder el estado
+#### Scenario: Theme change
+- **WHEN** the user changes the Omarchy theme with the TUI open
+- **THEN** the hook sends `SIGUSR1` and the TUI redraws with the new colors without losing state
 
-### Requirement: Imágenes en la terminal
-La TUI SHALL mostrar imágenes inline con el protocolo gráfico de kitty o con sixel, según lo que soporte la terminal, y SHALL usar bloques half-block como fallback. SHALL permitir abrir la imagen a tamaño completo en un visor externo.
+### Requirement: Images in the terminal
+The TUI SHALL show images inline with the kitty graphics protocol or sixel, depending on what the terminal supports, and SHALL fall back to half-block characters. It SHALL be able to open an image at full size in an external viewer.
 
-#### Scenario: Terminal sin gráficos
-- **WHEN** la TUI corre en Alacritty
-- **THEN** las imágenes se muestran con half-block y se pueden abrir en el visor externo con un atajo
+#### Scenario: Terminal without graphics
+- **WHEN** the TUI runs in Alacritty
+- **THEN** images render as half-block and can be opened in the external viewer with a shortcut
 
-### Requirement: Lanzamiento al estilo Omarchy
-La TUI SHALL poder lanzarse con `omarchy-launch-or-focus-tui omaslack tui` y con una clase de ventana fija (`org.omarchy.omaslack`), para que se puedan escribir reglas de Hyprland y atajos.
+### Requirement: Omarchy-style launch
+The TUI SHALL be launchable with `omarchy-launch-or-focus-tui omaslack tui` and with a fixed window class (`org.omarchy.omaslack`), so Hyprland rules and shortcuts can target it.
 
-#### Scenario: Atajo con la TUI ya abierta
-- **WHEN** la TUI ya está abierta y el usuario aprieta el atajo
-- **THEN** se enfoca la ventana existente en lugar de abrir otra
+#### Scenario: Shortcut with the TUI already open
+- **WHEN** the TUI is already open and the user presses the shortcut
+- **THEN** the existing window is focused instead of opening another

@@ -1,78 +1,78 @@
 ## ADDED Requirements
 
-### Requirement: Paridad entre UI y TUI
-Toda operación de mensajería de esta capacidad SHALL estar disponible tanto en la TUI como en la UI (ventana del plugin). Que un cliente no ofrezca una operación sólo SHALL pasar cuando el proveedor no la soporta.
+### Requirement: UI and TUI parity
+Every messaging operation in this capability SHALL be available in both the TUI and the UI (the plugin window). A client SHALL omit an operation only when the provider does not support it.
 
-#### Scenario: Operación hecha en un cliente se ve en el otro
-- **WHEN** el usuario reacciona a un mensaje desde la TUI mientras la ventana de la UI está abierta en la misma conversación
-- **THEN** la reacción aparece en la ventana sin recargar, por el evento `reaction.changed`
+#### Scenario: An operation in one client shows in the other
+- **WHEN** the user reacts to a message from the TUI while the UI window is open on the same conversation
+- **THEN** the reaction appears in the window without a reload, through the `reaction.changed` event
 
-### Requirement: Listado de conversaciones
-Los clientes SHALL mostrar canales, DMs y DMs grupales del workspace activo, agrupados por las secciones de Slack cuando el proveedor las soporte, con marcas de no leído y contadores de menciones.
+### Requirement: Conversation list
+Clients SHALL show the channels, DMs and group DMs of the active workspace, grouped by Slack's sections when the provider supports them, with unread marks and mention counters.
 
-#### Scenario: Canal silenciado
-- **WHEN** un canal está silenciado en Slack y recibe mensajes
-- **THEN** aparece como no leído atenuado, sin sumar al badge de la barra
+#### Scenario: Muted channel
+- **WHEN** a channel is muted in Slack and receives messages
+- **THEN** it shows as a dimmed unread and does not add to the bar badge
 
-### Requirement: Lectura de mensajes
-Los clientes SHALL mostrar los mensajes con autor, hora, separadores de día, mrkdwn renderizado (negrita, itálica, tachado, código, bloques, citas, links), menciones resueltas a nombres, emoji, indicador de editado, respuestas en hilo y reacciones.
+### Requirement: Reading messages
+Clients SHALL show messages with author, time, day separators, rendered mrkdwn (bold, italic, strikethrough, code, code blocks, quotes, links), mentions resolved to names, emoji, an edited indicator, thread replies and reactions.
 
-#### Scenario: Mensaje con mención y link
-- **WHEN** un mensaje contiene `<@U123>` y `<https://x.y|texto>`
-- **THEN** se muestra `@NombreVisible` y el link con el texto "texto", que se puede abrir con `xdg-open`
+#### Scenario: Message with a mention and a link
+- **WHEN** a message contains `<@U123>` and `<https://x.y|text>`
+- **THEN** it shows `@DisplayName` and a link labeled "text" that opens with `xdg-open`
 
-### Requirement: Envío, edición y borrado
-El usuario SHALL poder enviar mensajes de varias líneas, editar y borrar los propios (borrar pide confirmación) y responder en hilo, con la opción de enviar también al canal.
+### Requirement: Sending, editing and deleting
+The user SHALL be able to send multi-line messages, edit and delete their own (deleting asks for confirmation) and reply in a thread, optionally also sending to the channel.
 
-#### Scenario: Borrar un mensaje propio
-- **WHEN** el usuario elige borrar un mensaje propio y confirma
-- **THEN** el mensaje desaparece en todos los clientes por `message.deleted`
+#### Scenario: Deleting an own message
+- **WHEN** the user chooses to delete one of their messages and confirms
+- **THEN** the message disappears from every client through `message.deleted`
 
-### Requirement: Hilos
-Los clientes SHALL abrir un hilo en una vista propia (panel lateral en la TUI y vista o panel en la ventana de la UI), marcar los hilos con respuestas nuevas y ofrecer una vista de "hilos que sigo".
+### Requirement: Threads
+Clients SHALL open a thread in its own view (a side panel in the TUI, a view or panel in the UI window), mark threads with new replies and offer a "threads I follow" view.
 
-#### Scenario: Respuesta nueva en un hilo seguido
-- **WHEN** llega una respuesta a un hilo que el usuario sigue
-- **THEN** el mensaje raíz muestra el indicador de "nuevo" y el hilo aparece en la vista de hilos
+#### Scenario: New reply in a followed thread
+- **WHEN** a reply arrives in a thread the user follows
+- **THEN** the root message shows the "new" indicator and the thread appears in the threads view
 
-### Requirement: Reacciones
-El usuario SHALL poder agregar y quitar reacciones con un selector de emoji que ofrezca primero los usados recientemente, y ver quién reaccionó.
+### Requirement: Reactions
+The user SHALL be able to add and remove reactions with an emoji picker that lists recently used emoji first, and see who reacted.
 
-#### Scenario: Quitar la reacción propia
-- **WHEN** el usuario elige una reacción que ya había puesto
-- **THEN** la reacción se quita y el contador baja en uno
+#### Scenario: Removing an own reaction
+- **WHEN** the user picks a reaction they had already added
+- **THEN** the reaction is removed and its counter goes down by one
 
-### Requirement: Archivos e imágenes
-El usuario SHALL poder adjuntar archivos (rutas o imagen del portapapeles) con un texto, y abrir o descargar los archivos recibidos. Las descargas SHALL pasar por el daemon (`files.fetch`) y los clientes sólo SHALL recibir la ruta local.
+### Requirement: Files and images
+The user SHALL be able to attach files (paths or a clipboard image) with a caption, and open or download received files. Downloads SHALL go through the daemon (`files.fetch`) and clients SHALL only receive the local path.
 
-#### Scenario: Pegar una imagen del portapapeles
-- **WHEN** el usuario pega una imagen en el compose y envía
-- **THEN** la imagen se sube a la conversación con el texto escrito, en un solo mensaje
+#### Scenario: Pasting an image from the clipboard
+- **WHEN** the user pastes an image into the compose box and sends
+- **THEN** the image is uploaded to the conversation with the typed text, as one message
 
-### Requirement: Menciones y autocompletado
-El compose SHALL autocompletar `@usuario`, `#canal` y `:emoji:`, y traducir las menciones al formato de Slack al enviar.
+### Requirement: Mentions and autocomplete
+The compose box SHALL autocomplete `@user`, `#channel` and `:emoji:`, and translate mentions to Slack's format on send.
 
-#### Scenario: Autocompletar usuario
-- **WHEN** el usuario escribe `@ana` y elige "Ana Pérez" del autocompletado
-- **THEN** el mensaje enviado contiene `<@ID_DE_ANA>`
+#### Scenario: Autocompleting a user
+- **WHEN** the user types `@ana` and picks "Ana Pérez" from the autocomplete
+- **THEN** the sent message contains `<@ANA_ID>`
 
-### Requirement: Búsqueda y saltos
-Los clientes SHALL ofrecer un buscador de conversaciones y personas (fuzzy, abre DMs y permite unirse a canales) y, cuando el proveedor lo soporte, la búsqueda de mensajes de Slack. Un resultado de búsqueda SHALL abrir la conversación en ese mensaje.
+### Requirement: Search and jumps
+Clients SHALL offer a finder for conversations and people (fuzzy; opens DMs and joins channels) and, when the provider supports it, Slack's message search. A search result SHALL open the conversation at that message.
 
-#### Scenario: Resultado de búsqueda
-- **WHEN** el usuario elige un resultado de búsqueda de un mensaje de hace un mes
-- **THEN** la conversación se abre posicionada en ese mensaje y no en el final
+#### Scenario: Search result
+- **WHEN** the user picks a search result from a month ago
+- **THEN** the conversation opens positioned on that message, not at the end
 
-### Requirement: Estado de lectura único
-Marcar una conversación como leída en cualquier cliente SHALL actualizar el Store del daemon, enviarse a Slack y publicar `read.changed` y `unread.summary`, de modo que todos los clientes queden de acuerdo en menos de 1 segundo.
+### Requirement: Single read state
+Marking a conversation as read in any client SHALL update the daemon's Store, be sent to Slack and publish `read.changed` and `unread.summary`, so every client agrees within 1 second.
 
-#### Scenario: Leer en la ventana, ver la barra
-- **WHEN** el usuario abre en la ventana un DM no leído
-- **THEN** el badge de la barra baja en menos de 1 segundo, sin esperar ningún polling
+#### Scenario: Read in the window, check the bar
+- **WHEN** the user opens an unread DM in the window
+- **THEN** the bar badge drops within 1 second, without waiting for any polling
 
-### Requirement: Borradores compartidos
-Los borradores SHALL guardarse en el daemon por conversación e hilo, y SHALL estar disponibles en cualquier cliente.
+### Requirement: Shared drafts
+Drafts SHALL be stored in the daemon per conversation and thread, and SHALL be available in any client.
 
-#### Scenario: Empezar en la ventana, terminar en la TUI
-- **WHEN** el usuario escribe un borrador en la ventana, la cierra y abre la misma conversación en la TUI
-- **THEN** el compose de la TUI muestra el mismo borrador
+#### Scenario: Start in the window, finish in the TUI
+- **WHEN** the user writes a draft in the window, closes it and opens the same conversation in the TUI
+- **THEN** the TUI compose box shows the same draft

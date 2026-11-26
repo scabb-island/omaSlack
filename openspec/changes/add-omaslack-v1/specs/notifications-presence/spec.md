@@ -1,43 +1,43 @@
 ## ADDED Requirements
 
-### Requirement: Notificaciones de escritorio centralizadas
-Las notificaciones SHALL emitirse desde el daemon, una sola vez por mensaje, aunque haya varios clientes abiertos. Las SHALL emitir por el servicio de notificaciones del escritorio (Freedesktop, que en Omarchy atiende `omarchy.notifications`).
+### Requirement: Centralized desktop notifications
+Notifications SHALL be emitted by the daemon, once per message, even when several clients are open. They SHALL go through the desktop notification service (Freedesktop, served on Omarchy by `omarchy.notifications`).
 
-#### Scenario: TUI y ventana abiertas
-- **WHEN** llega un DM con la TUI y la ventana de la UI abiertas
-- **THEN** se muestra una sola notificación
+#### Scenario: TUI and window both open
+- **WHEN** a DM arrives with the TUI and the UI window open
+- **THEN** a single notification is shown
 
-### Requirement: Reglas de notificación
-Por defecto SHALL notificarse DMs, DMs grupales, menciones (directas y de grupos del usuario) y respuestas en hilos que el usuario sigue. El usuario SHALL poder agregar palabras clave y canales que notifiquen todo, y silenciar canales. No SHALL notificarse lo que el usuario envía ni lo que ya estaba pendiente cuando arrancó el daemon.
+### Requirement: Notification rules
+By default, DMs, group DMs, mentions (direct and of the user's groups) and replies in threads the user follows SHALL notify. The user SHALL be able to add keywords and channels that notify on everything, and to mute channels. Messages the user sends and anything already pending when the daemon started SHALL NOT notify.
 
-#### Scenario: Palabra clave
-- **WHEN** el usuario configuró la palabra clave "deploy" y un mensaje en un canal la contiene
-- **THEN** se emite una notificación aunque el canal no esté en la lista de canales que notifican todo
+#### Scenario: Keyword
+- **WHEN** the user configured the keyword "deploy" and a channel message contains it
+- **THEN** a notification is emitted even if the channel is not in the notify-on-everything list
 
-### Requirement: Supresión si la conversación está a la vista
-El daemon SHALL omitir la notificación cuando algún cliente reporta que esa conversación está abierta y con foco.
+### Requirement: Suppression when the conversation is in view
+The daemon SHALL skip the notification when a client reports that the conversation is open and focused.
 
-#### Scenario: Conversación abierta en la ventana con foco
-- **WHEN** llega un mensaje a la conversación abierta en la ventana y la ventana tiene foco
-- **THEN** no se emite ninguna notificación
+#### Scenario: Conversation open in the focused window
+- **WHEN** a message arrives in the conversation open in the window and the window has focus
+- **THEN** no notification is emitted
 
-### Requirement: Clic en la notificación
-Al hacer clic en una notificación, SHALL abrirse la conversación (o el hilo) en el cliente preferido: la ventana de la UI si el plugin está cargado y, si no, la TUI con `omarchy-launch-or-focus-tui`. La preferencia SHALL poder configurarse.
+### Requirement: Notification click
+Clicking a notification SHALL open the conversation (or thread) in the preferred client: the UI window if the plugin is loaded, otherwise the TUI through `omarchy-launch-or-focus-tui`. The preference SHALL be configurable.
 
-#### Scenario: Preferencia UI con el plugin cargado
-- **WHEN** el usuario hace clic en la notificación de un DM y su preferencia es UI
-- **THEN** se abre la ventana del plugin en ese DM, mediante el evento `ui.focus`
+#### Scenario: UI preference with the plugin loaded
+- **WHEN** the user clicks a DM notification and their preference is UI
+- **THEN** the plugin window opens on that DM, through the `ui.focus` event
 
-### Requirement: No molestar
-El usuario SHALL poder activar No molestar en Slack por un tiempo (30 min, 1 h, 2 h, hasta mañana) y terminarlo, desde la UI (barra o panel) y desde la TUI. Mientras esté activo, el daemon no SHALL emitir notificaciones y la barra SHALL indicarlo.
+### Requirement: Do not disturb
+The user SHALL be able to turn on Slack's Do Not Disturb for a period (30 min, 1 h, 2 h, until tomorrow) and end it, from the UI (bar or panel) and from the TUI. While it is on, the daemon SHALL NOT emit notifications and the bar SHALL show it.
 
-#### Scenario: Snooze desde la barra
-- **WHEN** el usuario activa No molestar por 1 hora desde el panel
-- **THEN** Slack queda en DND 1 hora, el ícono de la barra muestra el indicador de silencio y la TUI muestra el mismo estado
+#### Scenario: Snooze from the bar
+- **WHEN** the user turns on Do Not Disturb for 1 hour from the panel
+- **THEN** Slack is in DND for 1 hour, the bar icon shows the muted indicator and the TUI shows the same state
 
-### Requirement: Presencia
-El usuario SHALL poder poner su presencia en automática o ausente desde los dos clientes, y los clientes SHALL mostrar la presencia de las personas en DMs cuando el proveedor lo soporte.
+### Requirement: Presence
+The user SHALL be able to set their presence to automatic or away from both clients, and clients SHALL show people's presence in DMs when the provider supports it.
 
-#### Scenario: Ponerse ausente desde la TUI
-- **WHEN** el usuario corre el comando `:away` en la TUI
-- **THEN** la presencia en Slack pasa a ausente y la UI lo refleja
+#### Scenario: Going away from the TUI
+- **WHEN** the user runs the `:away` command in the TUI
+- **THEN** their Slack presence becomes away and the UI reflects it

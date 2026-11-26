@@ -25,8 +25,8 @@ BarWidget {
     slotSize: Style.bar.statusSlot
     opacity: root.available ? 1 : 0.45
     tooltipText: root.available
-      ? "omaslack: daemon conectado"
-      : "omaslack: el daemon no está corriendo (systemctl --user start omaslack)"
+      ? "omaslack: daemon connected"
+      : "omaslack: the daemon is not running (systemctl --user start omaslack)"
 
     onPressed: function(b) {
       if (root.service) root.service.probe()

@@ -2,65 +2,68 @@
 
 ## Purpose
 
-omaslack es un cliente de Slack "Omarchy Way": liviano, manejable con el teclado y con el tema del sistema. Ofrece dos caras sobre el mismo motor:
+omaslack is an "Omarchy Way" Slack client: lightweight, keyboard-driven and themed by the system. It offers two faces on one engine:
 
-- **UI**: un plugin del shell Quattro de Omarchy (Quickshell/QML) que aporta ícono con badges en la barra, panel de vista rápida y ventana completa.
-- **TUI**: un cliente de terminal (bubbletea) con la misma funcionalidad de mensajería, lanzado con `omarchy-launch-tui`.
+- **UI**: a plugin for Omarchy's Quattro shell (Quickshell/QML) with a bar icon and badges, a quick-view panel and a full window.
+- **TUI**: a terminal client (bubbletea) with the same messaging features, launched with `omarchy-launch-tui`.
 
-Los dos clientes son vistas finas sobre un daemon local (`omaslack daemon`), que es la única pieza que habla con Slack, guarda credenciales y mantiene el estado.
+Both clients are thin views over a local daemon (`omaslack daemon`). The daemon is the only piece that talks to Slack, stores credentials and keeps state.
 
-Condición de diseño innegociable: **toda capacidad de mensajería tiene que poder usarse por UI y por TUI.**
+Non-negotiable design rule: **every messaging capability must be usable from both the UI and the TUI.**
 
-**ID del plugin:** `ar.scabb.omaslack`, el DNS invertido de `scabb.ar`. Los IDs del marketplace son permanentes: no se cambia.
+**Plugin ID:** `ar.scabb.omaslack`, the reversed domain of `scabb.ar`. Marketplace IDs are permanent: it does not change.
 
 ## Tech Stack
 
-| Pieza | Tecnología |
+| Piece | Technology |
 |---|---|
-| Daemon + CLI + TUI | Go 1.26, un solo binario `omaslack` con subcomandos `daemon`, `tui`, `ctl`, `auth` |
+| Daemon + CLI + TUI | Go 1.26, one `omaslack` binary with `daemon`, `tui`, `ctl`, `auth` subcommands |
 | TUI | `charm.land/bubbletea/v2`, `lipgloss/v2`, `bubbles/v2` |
-| Slack | `github.com/slack-go/slack` (Web API, Socket Mode) + cliente WebSocket propio (`gorilla/websocket`) para el protocolo del navegador |
-| Cache | SQLite vía `modernc.org/sqlite` (sin cgo) |
-| Credenciales | Secret Service (`secret-tool`/D-Bus, `godbus/dbus/v5`), con fallback a un archivo 0600 |
-| UI | QML sobre Quickshell (shell Quattro de Omarchy): `Quickshell`, `Quickshell.Io`, `qs.Commons`, `qs.Ui` |
-| Empaquetado | goreleaser + PKGBUILD (AUR) para el binario; repo git del plugin para `omarchy plugin add` |
+| Slack | `github.com/slack-go/slack` (Web API, Socket Mode) + our own WebSocket client (`gorilla/websocket`) for the browser protocol |
+| Cache | SQLite via `modernc.org/sqlite` (no cgo) |
+| Credentials | Secret Service (`secret-tool`/D-Bus, `godbus/dbus/v5`), falling back to a 0600 file |
+| UI | QML on Quickshell (Omarchy's Quattro shell): `Quickshell`, `Quickshell.Io`, `qs.Commons`, `qs.Ui` |
+| Packaging | goreleaser + PKGBUILD (AUR) for the binary; a git repo for `omarchy plugin add` |
 
 ## Project Conventions
 
+### Language
+- Everything in the repository and on GitLab is in English: code, comments, docs, specs, commit messages, merge requests and issues.
+
 ### Code Style
-- Go: `gofmt`, `go vet ./...` y `golangci-lint`. Paquetes bajo `internal/` organizados por capacidad: `provider/`, `sync/`, `store/`, `rpc/`, `notify/`, `tui/`.
-- QML: validar con `qmllint -I "$OMARCHY_PATH/shell"`. Colores, fuentes y espaciados salen sólo del singleton `Style`, sin hex hardcodeados.
-- Cualquier código portado de slk (MIT, © Grant Ammons) lleva un encabezado de atribución en el archivo, y el aviso se repite en `THIRD_PARTY_NOTICES.md`.
+- Go: `gofmt`, `go vet ./...` and `golangci-lint`. Packages under `internal/` are organized by capability: `provider/`, `sync/`, `store/`, `rpc/`, `notify/`, `tui/`.
+- QML: lint with `make qmllint`. Colors, fonts and spacing come only from the `Style` singleton; no hardcoded hex values.
+- Any code ported from slk (MIT, © Grant Ammons) carries an attribution header in the file, and the notice is repeated in `THIRD_PARTY_NOTICES.md`.
 
 ### Architecture Patterns
-- **Daemon como fuente única de verdad.** Los clientes no guardan estado de Slack propio: ni estado de lectura, ni borradores, ni cache.
-- **Puertos y adaptadores.** La conexión a Slack es la interfaz `Provider`, con una implementación por método de conexión, y cada una declara qué capacidades soporta.
-- **Event sourcing liviano.** El daemon publica eventos de dominio (`message.created`, `conversation.read`, etc.) y los clientes se actualizan reaccionando a ellos.
+- **The daemon is the single source of truth.** Clients keep no Slack state of their own: no read state, no drafts, no cache.
+- **Ports and adapters.** The Slack connection is the `Provider` interface, with one implementation per connection method, and each declares which capabilities it supports.
+- **Lightweight event sourcing.** The daemon publishes domain events (`message.created`, `conversation.read`, etc.) and clients update by reacting to them.
 
 ### Testing Strategy
-- Unit tests de Go por paquete. Para el sync se usa un `Provider` falso que reproduce eventos grabados.
-- Tests de contrato del protocolo JSON-RPC: para cada método, un golden de request y response.
-- Tests de QML con `qmltestrunner` sobre los modelos JS/QML.
-- Tests golden de la TUI (snapshot de la vista renderizada).
+- Go unit tests per package. Sync is tested against a fake `Provider` that replays recorded events.
+- JSON-RPC contract tests: a golden request and response for every method.
+- QML tests with `qmltestrunner` on the JS/QML models.
+- Golden tests for the TUI (snapshot of the rendered view).
 
 ### Git Workflow
-- Trunk-based. Cada cambio de comportamiento entra con su cambio OpenSpec (`openspec/changes/<id>`) y se archiva al mergear.
+- `main` is protected: changes land only through merge requests. Every behavior change comes with its OpenSpec change (`openspec/changes/<id>`), archived on merge.
 
 ## Domain Context
-- **Workspace (team):** una organización de Slack. Un usuario puede tener varias activas.
-- **Conversation:** un canal público o privado, un DM (`im`) o un DM grupal (`mpim`).
-- **Thread:** respuestas a un mensaje raíz (`thread_ts`).
-- **xoxc/xoxd:** token y cookie de la sesión de la app de escritorio o del navegador, que usa el proveedor `desktop-session`.
-- **xoxp:** user token de una app de Slack, que usa el proveedor `internal-app`.
-- **App interna:** una app creada e instalada sólo en el propio workspace. No le aplican los límites de uso de 2025 para apps fuera del Marketplace, que dejan `conversations.history` en 1 llamada por minuto.
+- **Workspace (team):** a Slack organization. A user may have several active.
+- **Conversation:** a public or private channel, a DM (`im`) or a group DM (`mpim`).
+- **Thread:** replies to a root message (`thread_ts`).
+- **xoxc/xoxd:** the token and cookie of the desktop app or browser session, used by the `desktop-session` provider.
+- **xoxp:** a Slack app user token, used by the `internal-app` provider.
+- **Internal app:** an app created and installed only in its own workspace. The 2025 rate limits for non-Marketplace apps, which cap `conversations.history` at 1 call per minute, do not apply to it.
 
 ## Important Constraints
-- Los plugins de Omarchy corren **sin sandbox** dentro del proceso `omarchy-shell`. Por eso el QML nunca maneja tokens, y lo pesado (red, parseo) queda en el daemon.
-- La API de plugins está en `schemaVersion: 1` y es joven, así que la UI tiene que aislar lo que dependa del shell.
-- El proveedor `desktop-session` usa un protocolo no oficial que puede violar los términos de uso de Slack. Se ofrece como opción explícita con aviso al usuario y nunca se activa por defecto sin consentimiento.
-- La marca "Slack" sólo se usa para describir interoperabilidad. No va en el nombre del producto ni en su logo.
+- Omarchy plugins run **unsandboxed** inside the `omarchy-shell` process. QML therefore never handles tokens, and the heavy work (network, parsing) stays in the daemon.
+- The plugin API is at `schemaVersion: 1` and young, so the UI must isolate whatever depends on the shell.
+- The `desktop-session` provider uses an unofficial protocol that may violate Slack's terms of service. It is offered as an explicit option with a warning, and is never enabled by default without consent.
+- The "Slack" trademark is used only to describe interoperability. It is not part of the product name or logo.
 
 ## External Dependencies
-- Slack Web API, Socket Mode y el WebSocket del cliente web (no oficial).
-- Shell Quattro de Omarchy (`omarchy-shell`, `omarchy plugin`), plantillas `~/.config/omarchy/themed/*.tpl` y hooks `~/.config/omarchy/hooks/theme-set.d/`.
-- Secret Service (gnome-keyring o KWallet).
+- Slack Web API, Socket Mode and the web client's WebSocket (unofficial).
+- Omarchy's Quattro shell (`omarchy-shell`, `omarchy plugin`), the `~/.config/omarchy/themed/*.tpl` templates and the `~/.config/omarchy/hooks/theme-set.d/` hooks.
+- Secret Service (gnome-keyring or KWallet).

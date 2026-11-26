@@ -2,61 +2,68 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Estado del proyecto
+## Project status
 
-omaslack es un cliente de Slack "Omarchy Way" con UI (plugin QML del shell Quattro) y TUI (Go/bubbletea) sobre un daemon común. M0 (esqueleto y CI) está hecho y el spike M4.1 está resuelto. El próximo hito es M1 (proveedores y sync). Los subcomandos salvo `version` todavía devuelven "not implemented" (exit 3) e indican en qué hito llegan.
+omaslack is an "Omarchy Way" Slack client with a UI (a QML plugin for Omarchy's Quattro shell) and a TUI (Go/bubbletea) on one shared daemon. M0 (skeleton and CI) is done and spike M4.1 is resolved. The next milestone is M1 (providers and sync). Every subcommand except `version` still returns "not implemented" (exit 3) and names the milestone it lands in.
 
-- Informe de factibilidad: `docs/factibilidad.md`. Resultados de spikes: `docs/spikes/`
-- Contexto, stack y convenciones: `openspec/project.md`
-- Cambio en curso: `openspec/changes/add-omaslack-v1/` (`tasks.md` marca el avance por hito)
-- El ID del plugin en Omarchy es `ar.scabb.omaslack`. Es permanente en el marketplace, así que no se cambia.
-- Repo: gitlab.com/scabb-island/omaslack (privado)
+- Feasibility report: `docs/feasibility.md`. Spike results: `docs/spikes/`
+- Context, stack and conventions: `openspec/project.md`
+- Change in progress: `openspec/changes/add-omaslack-v1/` (`tasks.md` tracks progress per milestone)
+- The Omarchy plugin ID is `ar.scabb.omaslack`. It is permanent in the marketplace, so it does not change.
+- Repo: gitlab.com/scabb-island/omaslack (private)
 
-## Toolchain y comandos
+## Language
 
-Las herramientas están fijadas en `mise.toml`: Go 1.26, golangci-lint 2.14.0 y goreleaser 2.20.2. Dentro del directorio ya apuntan a esas versiones. Desde scripts, usá `mise exec -- <cmd>`.
+Everything in this repository and on GitLab is written in English: code, comments, docs, specs, commit messages, merge requests and issues. The only exception is test data that deliberately exercises non-ASCII text.
+
+## Toolchain and commands
+
+Tools are pinned in `mise.toml`: Go 1.26, golangci-lint 2.14.0 and goreleaser 2.20.2. Inside the directory they already resolve to those versions. From scripts, use `mise exec -- <cmd>`.
 
 ```bash
-make check            # vet + golangci-lint + test: exactamente lo que corre la CI
+make check            # vet + golangci-lint + test: exactly what CI runs
 make local            # check + test -race + qmllint + omarchy plugin validate + OpenSpec
-make build            # bin/omaslack con la versión inyectada por ldflags
-make snapshot         # goreleaser snapshot (linux amd64/arm64) en dist/
-go test ./internal/cli -run TestVersion   # un solo test
+make build            # bin/omaslack with the version injected through ldflags
+make snapshot         # goreleaser snapshot (linux amd64/arm64) in dist/
+go test ./internal/cli -run TestVersion   # a single test
 ```
 
-Para QML, `make qmllint` mapea `$OMARCHY_PATH/shell` como prefijo de import `qs` (así lo hace el shell) y apaga `missing-property`, porque el shell les pasa a los plugins un `bar` sin tipo estático.
+For QML, `make qmllint` maps `$OMARCHY_PATH/shell` as the `qs` import prefix (the way the shell does) and turns off `missing-property`, because the shell hands plugins a `bar` object with no static type.
 
-## CI (GitLab): minutos contados
+## CI (GitLab): keep it cheap
 
-Los minutos de los runners compartidos son limitados. Mantené `.gitlab-ci.yml` así:
+CI minutes are limited. Keep `.gitlab-ci.yml` like this:
 
-- Un solo job `check` con la imagen `golang:1.26-alpine`. golangci-lint se baja como binario con checksum fijo; no se compila.
-- Corre sólo si cambió código Go o la CI. Los cambios de docs y specs no gastan minutos.
-- No hay pipelines duplicados de rama y MR.
-- La caché la escribe sólo `main`; los MRs sólo la leen.
-- `release` corre sólo en tags `vX.Y.Z`.
+- A single `check` job on the `golang:1.26-alpine` image. golangci-lint is downloaded as a binary with a pinned checksum; it is not compiled.
+- It runs only when Go code or the CI config changes. Docs and spec changes cost no minutes.
+- No duplicate branch and MR pipelines.
+- Only `main` writes the cache; MRs only read it.
+- `release` runs only on `vX.Y.Z` tags.
+- Jobs run on the group's own Kubernetes runner; shared runners are disabled for the project.
 
-Lo que necesita una máquina con Omarchy (qmllint contra el shell, `omarchy plugin validate`, OpenSpec) va en `make local`, nunca en la CI. Antes de cambiar la CI, simulá el job en local con `podman run ... golang:1.26-alpine` en vez de probar con pushes.
+Anything that needs an Omarchy machine (qmllint against the shell, `omarchy plugin validate`, OpenSpec) belongs in `make local`, never in CI. Before changing CI, simulate the job locally with `podman run ... golang:1.26-alpine` instead of testing with pushes.
 
-## Flujo con OpenSpec
+`main` is protected: nobody pushes to it directly, and changes land only through merge requests.
 
-Todo cambio de comportamiento entra como un cambio OpenSpec antes de tocar código. Al mergear se archiva.
+## OpenSpec workflow
+
+Every behavior change starts as an OpenSpec change before any code is touched, and is archived on merge.
 
 ```bash
 npx -y @fission-ai/openspec@latest show add-omaslack-v1
-npx -y @fission-ai/openspec@latest validate --all --strict      # también lo corre `make specs`
-npx -y @fission-ai/openspec@latest archive add-omaslack-v1      # al completar tasks.md
+npx -y @fission-ai/openspec@latest validate --all --strict      # also run by `make specs`
+npx -y @fission-ai/openspec@latest archive add-omaslack-v1      # once tasks.md is complete
 ```
 
-Formato de las specs: la prosa va en español, pero los encabezados y las palabras normativas quedan en inglés para que pase el validador: `## ADDED Requirements`, `### Requirement:`, `#### Scenario:`, **SHALL/MUST** en el texto y bullets `- **WHEN**` / `- **THEN**`.
+Spec format: `## ADDED Requirements`, `### Requirement:`, `#### Scenario:`, **SHALL/MUST** in the requirement text, and `- **WHEN**` / `- **THEN**` bullets. Every requirement needs at least one scenario.
 
-## Arquitectura (decisiones ya tomadas)
+## Architecture (decisions already made)
 
-- **Un solo binario:** `cmd/omaslack` despacha subcomandos con `internal/cli`, cuyas dependencias se inyectan con `cli.Env` para testear sin tocar stdout. La versión de protocolo vive en `internal/version.Protocol`.
-- **El daemon es la única fuente de verdad local.** Es lo único que habla con Slack y guarda credenciales. La TUI y el plugin QML son clientes finos sobre JSON-RPC 2.0 + NDJSON en `$XDG_RUNTIME_DIR/omaslack.sock`. No agregues estado de Slack en los clientes: así se evita el bug de "la barra no se entera de que la ventana marcó como leído" (SLACK-1 en el plugin janrenz).
-- **Plugin (`plugin/`):** el shell monta `Service.qml` una sola vez y cada barra lo obtiene con `bar.shell.serviceFor("ar.scabb.omaslack")`. El Service se conecta directo al socket con `Quickshell.Io` `Socket` + `SplitParser`, validado en el spike M4.1. Los reintentos de conexión van con backoff, porque cada falla deja un WARN en el log del shell.
-- **El QML corre sin sandbox** dentro de `omarchy-shell`: nada de tokens ni requests a Slack desde QML. Colores y fuentes salen sólo de `Style` y `Commons`.
-- **Dos proveedores de conexión** detrás de `Provider`: `desktop-session` (xoxc/xoxd, no oficial, requiere consentimiento explícito) e `internal-app` (xoxp + Socket Mode). Lo que un proveedor no soporta se declara en `Capabilities`.
-- **Hecho desde cero, no es un fork de slk.** Se porta código MIT de `gammons/slk` con encabezado de atribución en cada archivo y en `THIRD_PARTY_NOTICES.md`.
-- **Paridad UI/TUI:** toda operación de mensajería tiene que estar en los dos clientes.
-- **`spikes/`** tiene experimentos descartables que se corren a mano. golangci-lint les perdona gosec y noctx.
+- **Single binary:** `cmd/omaslack` dispatches subcommands through `internal/cli`, whose dependencies are injected with `cli.Env` so tests never touch stdout. The protocol version lives in `internal/version.Protocol`.
+- **The daemon is the single local source of truth.** It is the only thing that talks to Slack and stores credentials. The TUI and the QML plugin are thin clients over JSON-RPC 2.0 + NDJSON on `$XDG_RUNTIME_DIR/omaslack.sock`. Do not add Slack state to the clients: that is how the "the bar never learns the window marked it read" bug (SLACK-1 in the janrenz plugin) is avoided.
+- **Plugin (`plugin/`):** the shell mounts `Service.qml` once and each bar gets it with `bar.shell.serviceFor("ar.scabb.omaslack")`. The Service connects straight to the socket with `Quickshell.Io` `Socket` + `SplitParser`, validated in spike M4.1. Connection retries use backoff, because every failure leaves a WARN in the shell log.
+- **QML runs unsandboxed** inside `omarchy-shell`: no tokens and no Slack requests from QML. Colors and fonts come only from `Style` and `Commons`.
+- **Two connection providers** behind `Provider`: `desktop-session` (xoxc/xoxd, unofficial, requires explicit consent) and `internal-app` (xoxp + Socket Mode). Whatever a provider does not support is declared in `Capabilities`.
+- **Built from scratch, not a fork of slk.** MIT code from `gammons/slk` is ported with an attribution header in each file and in `THIRD_PARTY_NOTICES.md`.
+- **UI/TUI parity:** every messaging operation must exist in both clients.
+- **`spikes/`** holds throwaway experiments run by hand. golangci-lint skips gosec and noctx there.
