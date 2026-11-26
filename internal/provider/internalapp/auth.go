@@ -6,6 +6,7 @@ import (
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 	"gitlab.com/scabb-island/omaslack/internal/keyring"
+	"gitlab.com/scabb-island/omaslack/internal/provider/slackwire"
 )
 
 // Identity is the workspace a user token belongs to.
@@ -16,7 +17,7 @@ type Identity struct {
 }
 
 type authTestResponse struct {
-	envelope
+	slackwire.Envelope
 	TeamID string `json:"team_id"`
 	Team   string `json:"team"`
 	URL    string `json:"url"`
@@ -27,7 +28,7 @@ type authTestResponse struct {
 // before it stores anything. Of opts, only WithAPIURL matters.
 func AuthTest(ctx context.Context, creds keyring.InternalApp, opts ...Option) (Identity, error) {
 	var resp authTestResponse
-	if err := New(domain.TeamID{}, creds, opts...).call(ctx, "auth.test", nil, &resp); err != nil {
+	if err := New(domain.TeamID{}, creds, opts...).Call(ctx, "auth.test", nil, &resp); err != nil {
 		return Identity{}, err
 	}
 	team, err := domain.ParseTeamID(resp.TeamID)
