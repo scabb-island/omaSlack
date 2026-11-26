@@ -1,0 +1,95 @@
+[
+  {
+    "name": "every workspace in team ID order",
+    "result": [
+      {
+        "team": "T0ACME",
+        "name": "Acme",
+        "provider": "desktop-session",
+        "capabilities": [
+          "realtime",
+          "search",
+          "files",
+          "presenceWrite",
+          "typing",
+          "customEmoji",
+          "sections"
+        ],
+        "state": "connected"
+      },
+      {
+        "team": "T0BETA",
+        "name": "Beta",
+        "provider": "internal-app",
+        "capabilities": [
+          "realtime",
+          "files"
+        ],
+        "state": "connected"
+      },
+      {
+        "team": "T0EXPIRED",
+        "name": "Expired",
+        "provider": "desktop-session",
+        "capabilities": [
+          "realtime",
+          "search",
+          "files",
+          "presenceWrite",
+          "typing",
+          "customEmoji",
+          "sections"
+        ],
+        "state": "connected"
+      }
+    ]
+  },
+  {
+    "name": "unknown fields are ignored",
+    "params": {
+      "future": true
+    },
+    "result": [
+      {
+        "team": "T0ACME",
+        "name": "Acme",
+        "provider": "desktop-session",
+        "capabilities": [
+          "realtime",
+          "search",
+          "files",
+          "presenceWrite",
+          "typing",
+          "customEmoji",
+          "sections"
+        ],
+        "state": "connected"
+      },
+      {
+        "team": "T0BETA",
+        "name": "Beta",
+        "provider": "internal-app",
+        "capabilities": [
+          "realtime",
+          "files"
+        ],
+        "state": "connected"
+      },
+      {
+        "team": "T0EXPIRED",
+        "name": "Expired",
+        "provider": "desktop-session",
+        "capabilities": [
+          "realtime",
+          "search",
+          "files",
+          "presenceWrite",
+          "typing",
+          "customEmoji",
+          "sections"
+        ],
+        "state": "connected"
+      }
+    ]
+  }
+]

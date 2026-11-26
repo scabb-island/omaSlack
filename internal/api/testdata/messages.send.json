@@ -1,0 +1,135 @@
+[
+  {
+    "name": "to the channel",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "text": "ship it"
+    },
+    "calls": [
+      "T0ACME Send C0GENERAL thread=- \"ship it\""
+    ],
+    "result": {
+      "ts": "1700000900.000000",
+      "author": "U0ME",
+      "text": "ship it"
+    }
+  },
+  {
+    "name": "into a thread",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "threadTS": "1700000200.000000",
+      "text": "agreed"
+    },
+    "calls": [
+      "T0ACME Send C0GENERAL thread=1700000200.000000 \"agreed\""
+    ],
+    "result": {
+      "ts": "1700000900.000000",
+      "threadTS": "1700000200.000000",
+      "author": "U0ME",
+      "text": "agreed"
+    }
+  },
+  {
+    "name": "non-ASCII text passes through",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "text": "¡listo! 🚀"
+    },
+    "calls": [
+      "T0ACME Send C0GENERAL thread=- \"¡listo! 🚀\""
+    ],
+    "result": {
+      "ts": "1700000900.000000",
+      "author": "U0ME",
+      "text": "¡listo! 🚀"
+    }
+  },
+  {
+    "name": "empty text",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "text": ""
+    },
+    "error": {
+      "code": -32602,
+      "message": "text: must not be empty"
+    }
+  },
+  {
+    "name": "missing text",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL"
+    },
+    "error": {
+      "code": -32602,
+      "message": "text: missing"
+    }
+  },
+  {
+    "name": "credentials expired",
+    "params": {
+      "team": "T0EXPIRED",
+      "conv": "C0GENERAL",
+      "text": "ship it"
+    },
+    "calls": [
+      "T0EXPIRED Send C0GENERAL thread=- \"ship it\""
+    ],
+    "error": {
+      "code": -32003,
+      "message": "auth_expired"
+    }
+  },
+  {
+    "name": "missing team",
+    "params": {
+      "conv": "C0GENERAL",
+      "text": "x"
+    },
+    "error": {
+      "code": -32602,
+      "message": "team: missing"
+    }
+  },
+  {
+    "name": "bad team ID",
+    "params": {
+      "team": "acme",
+      "conv": "C0GENERAL",
+      "text": "x"
+    },
+    "error": {
+      "code": -32602,
+      "message": "team: invalid Slack ID: \"acme\" is not a team ID"
+    }
+  },
+  {
+    "name": "unknown workspace",
+    "params": {
+      "team": "T0NOPE",
+      "conv": "C0GENERAL",
+      "text": "x"
+    },
+    "error": {
+      "code": -32602,
+      "message": "unknown workspace"
+    }
+  },
+  {
+    "name": "params that are not an object",
+    "params": [
+      1
+    ],
+    "error": {
+      "code": -32602,
+      "message": "params must be an object"
+    }
+  }
+]

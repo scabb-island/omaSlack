@@ -1,0 +1,27 @@
+[
+  {
+    "name": "removes it",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "ts": "1700000300.000000",
+      "emoji": "thumbsup"
+    },
+    "calls": [
+      "T0ACME React C0GENERAL 1700000300.000000 thumbsup add=false"
+    ],
+    "result": null
+  },
+  {
+    "name": "missing ts",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "emoji": "thumbsup"
+    },
+    "error": {
+      "code": -32602,
+      "message": "ts: missing"
+    }
+  }
+]

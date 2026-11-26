@@ -1,0 +1,134 @@
+[
+  {
+    "name": "newest page with reactions and the draft",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL"
+    },
+    "calls": [
+      "T0ACME OpenConversation C0GENERAL"
+    ],
+    "result": {
+      "messages": [
+        {
+          "ts": "1700000300.000000",
+          "author": "U0ANA",
+          "text": "latest",
+          "edited": "1700000310.000000",
+          "reactions": [
+            {
+              "emoji": "thumbsup",
+              "users": [
+                "U0ANA",
+                "U0BOB"
+              ]
+            }
+          ]
+        },
+        {
+          "ts": "1700000200.000000",
+          "threadTS": "1700000200.000000",
+          "author": "U0BOB",
+          "text": "thread root"
+        },
+        {
+          "ts": "1700000100.000000",
+          "author": "U0ANA",
+          "text": "hello"
+        }
+      ],
+      "draft": "half a thought"
+    }
+  },
+  {
+    "name": "credentials expired",
+    "params": {
+      "team": "T0EXPIRED",
+      "conv": "C0GENERAL"
+    },
+    "calls": [
+      "T0EXPIRED OpenConversation C0GENERAL"
+    ],
+    "error": {
+      "code": -32003,
+      "message": "auth_expired"
+    }
+  },
+  {
+    "name": "missing conv",
+    "params": {
+      "team": "T0ACME"
+    },
+    "error": {
+      "code": -32602,
+      "message": "conv: missing"
+    }
+  },
+  {
+    "name": "bad conv ID",
+    "params": {
+      "team": "T0ACME",
+      "conv": "general"
+    },
+    "error": {
+      "code": -32602,
+      "message": "conv: invalid Slack ID: \"general\" is not a conversation ID"
+    }
+  },
+  {
+    "name": "missing team",
+    "params": {
+      "conv": "C0GENERAL"
+    },
+    "error": {
+      "code": -32602,
+      "message": "team: missing"
+    }
+  },
+  {
+    "name": "bad team ID",
+    "params": {
+      "team": "acme",
+      "conv": "C0GENERAL"
+    },
+    "error": {
+      "code": -32602,
+      "message": "team: invalid Slack ID: \"acme\" is not a team ID"
+    }
+  },
+  {
+    "name": "unknown workspace",
+    "params": {
+      "team": "T0NOPE",
+      "conv": "C0GENERAL"
+    },
+    "error": {
+      "code": -32602,
+      "message": "unknown workspace"
+    }
+  },
+  {
+    "name": "params that are not an object",
+    "params": [
+      1
+    ],
+    "error": {
+      "code": -32602,
+      "message": "params must be an object"
+    }
+  },
+  {
+    "name": "cache unreadable: internal error, text hidden",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0BROKEN"
+    },
+    "calls": [
+      "T0ACME OpenConversation C0BROKEN"
+    ],
+    "error": {
+      "code": -32603,
+      "message": "internal error"
+    }
+  }
+]

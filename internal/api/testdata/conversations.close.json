@@ -1,0 +1,48 @@
+[
+  {
+    "name": "closes it in the engine",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL"
+    },
+    "calls": [
+      "T0ACME CloseConversation C0GENERAL"
+    ],
+    "result": null
+  },
+  {
+    "name": "credentials expired",
+    "params": {
+      "team": "T0EXPIRED",
+      "conv": "C0GENERAL"
+    },
+    "calls": [
+      "T0EXPIRED CloseConversation C0GENERAL"
+    ],
+    "error": {
+      "code": -32003,
+      "message": "auth_expired"
+    }
+  },
+  {
+    "name": "missing conv",
+    "params": {
+      "team": "T0ACME"
+    },
+    "error": {
+      "code": -32602,
+      "message": "conv: missing"
+    }
+  },
+  {
+    "name": "bad conv ID",
+    "params": {
+      "team": "T0ACME",
+      "conv": "general"
+    },
+    "error": {
+      "code": -32602,
+      "message": "conv: invalid Slack ID: \"general\" is not a conversation ID"
+    }
+  }
+]

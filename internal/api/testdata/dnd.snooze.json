@@ -1,0 +1,59 @@
+[
+  {
+    "name": "snoozes",
+    "params": {
+      "team": "T0ACME",
+      "minutes": 30
+    },
+    "calls": [
+      "T0ACME SnoozeDND 30"
+    ],
+    "result": null
+  },
+  {
+    "name": "zero minutes",
+    "params": {
+      "team": "T0ACME",
+      "minutes": 0
+    },
+    "error": {
+      "code": -32602,
+      "message": "minutes: must be at least 1"
+    }
+  },
+  {
+    "name": "minutes as a string",
+    "params": {
+      "team": "T0ACME",
+      "minutes": "30"
+    },
+    "error": {
+      "code": -32602,
+      "message": "minutes: must be an integer"
+    }
+  },
+  {
+    "name": "missing minutes",
+    "params": {
+      "team": "T0ACME"
+    },
+    "error": {
+      "code": -32602,
+      "message": "minutes: missing"
+    }
+  },
+  {
+    "name": "credentials expired",
+    "params": {
+      "team": "T0EXPIRED",
+      "minutes": 30
+    },
+    "calls": [
+      "T0EXPIRED SnoozeDND 30"
+    ],
+    "error": {
+      "code": -32003,
+      "message": "auth_expired"
+    }
+  }
+]

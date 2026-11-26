@@ -1,0 +1,252 @@
+[
+  {
+    "name": "too few cached: loads older once and reads again",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL"
+    },
+    "calls": [
+      "T0ACME LoadOlder C0GENERAL"
+    ],
+    "result": [
+      {
+        "ts": "1700000300.000000",
+        "author": "U0ANA",
+        "text": "latest",
+        "edited": "1700000310.000000",
+        "reactions": [
+          {
+            "emoji": "thumbsup",
+            "users": [
+              "U0ANA",
+              "U0BOB"
+            ]
+          }
+        ]
+      },
+      {
+        "ts": "1700000200.000000",
+        "threadTS": "1700000200.000000",
+        "author": "U0BOB",
+        "text": "thread root"
+      },
+      {
+        "ts": "1700000100.000000",
+        "author": "U0ANA",
+        "text": "hello"
+      },
+      {
+        "ts": "1700000020.000000",
+        "author": "U0ANA",
+        "text": "older two"
+      },
+      {
+        "ts": "1700000010.000000",
+        "author": "U0BOB",
+        "text": "older one"
+      }
+    ]
+  },
+  {
+    "name": "enough cached before ts: no load",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "before": "1700000300.000000",
+      "limit": 1
+    },
+    "result": [
+      {
+        "ts": "1700000200.000000",
+        "threadTS": "1700000200.000000",
+        "author": "U0BOB",
+        "text": "thread root"
+      }
+    ]
+  },
+  {
+    "name": "enough cached from the newest: no load",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "limit": 2
+    },
+    "result": [
+      {
+        "ts": "1700000300.000000",
+        "author": "U0ANA",
+        "text": "latest",
+        "edited": "1700000310.000000",
+        "reactions": [
+          {
+            "emoji": "thumbsup",
+            "users": [
+              "U0ANA",
+              "U0BOB"
+            ]
+          }
+        ]
+      },
+      {
+        "ts": "1700000200.000000",
+        "threadTS": "1700000200.000000",
+        "author": "U0BOB",
+        "text": "thread root"
+      }
+    ]
+  },
+  {
+    "name": "nothing older in Slack: an empty list",
+    "params": {
+      "team": "T0BETA",
+      "conv": "C0ALERTS"
+    },
+    "calls": [
+      "T0BETA LoadOlder C0ALERTS"
+    ],
+    "result": []
+  },
+  {
+    "name": "limit above the cap is capped",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "limit": 1000
+    },
+    "calls": [
+      "T0ACME LoadOlder C0GENERAL"
+    ],
+    "result": [
+      {
+        "ts": "1700000300.000000",
+        "author": "U0ANA",
+        "text": "latest",
+        "edited": "1700000310.000000",
+        "reactions": [
+          {
+            "emoji": "thumbsup",
+            "users": [
+              "U0ANA",
+              "U0BOB"
+            ]
+          }
+        ]
+      },
+      {
+        "ts": "1700000200.000000",
+        "threadTS": "1700000200.000000",
+        "author": "U0BOB",
+        "text": "thread root"
+      },
+      {
+        "ts": "1700000100.000000",
+        "author": "U0ANA",
+        "text": "hello"
+      },
+      {
+        "ts": "1700000020.000000",
+        "author": "U0ANA",
+        "text": "older two"
+      },
+      {
+        "ts": "1700000010.000000",
+        "author": "U0BOB",
+        "text": "older one"
+      }
+    ]
+  },
+  {
+    "name": "limit zero",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "limit": 0
+    },
+    "error": {
+      "code": -32602,
+      "message": "limit: must be at least 1"
+    }
+  },
+  {
+    "name": "limit that is not an integer",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "limit": 1.5
+    },
+    "error": {
+      "code": -32602,
+      "message": "limit: must be an integer"
+    }
+  },
+  {
+    "name": "limit that is a string",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "limit": "10"
+    },
+    "error": {
+      "code": -32602,
+      "message": "limit: must be an integer"
+    }
+  },
+  {
+    "name": "bad before",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0GENERAL",
+      "before": "yesterday"
+    },
+    "error": {
+      "code": -32602,
+      "message": "before: invalid Slack timestamp: \"yesterday\""
+    }
+  },
+  {
+    "name": "credentials expired",
+    "params": {
+      "team": "T0EXPIRED",
+      "conv": "C0GENERAL"
+    },
+    "calls": [
+      "T0EXPIRED LoadOlder C0GENERAL"
+    ],
+    "error": {
+      "code": -32003,
+      "message": "auth_expired"
+    }
+  },
+  {
+    "name": "missing conv",
+    "params": {
+      "team": "T0ACME"
+    },
+    "error": {
+      "code": -32602,
+      "message": "conv: missing"
+    }
+  },
+  {
+    "name": "bad conv ID",
+    "params": {
+      "team": "T0ACME",
+      "conv": "general"
+    },
+    "error": {
+      "code": -32602,
+      "message": "conv: invalid Slack ID: \"general\" is not a conversation ID"
+    }
+  },
+  {
+    "name": "cache unreadable: internal error, text hidden",
+    "params": {
+      "team": "T0ACME",
+      "conv": "C0BROKEN"
+    },
+    "error": {
+      "code": -32603,
+      "message": "internal error"
+    }
+  }
+]
