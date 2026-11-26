@@ -3,14 +3,17 @@ module gitlab.com/scabb-island/omaslack
 go 1.26.0
 
 require (
+	github.com/godbus/dbus/v5 v5.1.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/slack-go/slack v0.23.0
+	github.com/syndtr/goleveldb v1.0.0
 	golang.org/x/sys v0.47.0
 	modernc.org/sqlite v1.58.0
 )
 
 require (
 	github.com/dustin/go-humanize v1.1.0 // indirect
+	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect
