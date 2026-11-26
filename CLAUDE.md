@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-omaslack is an "Omarchy Way" Slack client with a UI (a QML plugin for Omarchy's Quattro shell) and a TUI (Go/bubbletea) on one shared daemon. M0 (skeleton and CI) is done and spike M4.1 is resolved. The next milestone is M1 (providers and sync). Every subcommand except `version` still returns "not implemented" (exit 3) and names the milestone it lands in.
+omaslack is an "Omarchy Way" Slack client with a UI (a QML plugin for Omarchy's Quattro shell) and a TUI (Go/bubbletea) on one shared daemon. M0 is done and spike M4.1 is resolved. M1 is in progress: the domain model, both providers' building blocks (`internal/provider/internalapp`, `internal/provider/desktopsession/auth`), the keyring, the SQLite store and the rate budget are in, plus the RPC server foundation from M2. Next: the agreed follow-ups (tasks 1.10–1.15), then the sync engine (1.7). Every subcommand except `version` still returns "not implemented" (exit 3) and names the milestone it lands in.
 
 - Feasibility report: `docs/feasibility.md`. Spike results: `docs/spikes/`
 - Context, stack and conventions: `openspec/project.md`

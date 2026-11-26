@@ -8,19 +8,26 @@
 
 ## M1 — Connection and sync
 - [x] 1.1 `Provider` interface + `Capabilities` + normalized domain events (`internal/domain`, `internal/provider`)
-- [ ] 1.2 `desktop-session`: port the desktop session reader (cookies, leveldb, Secret Service) and the browser cURL login
+- [x] 1.2 `desktop-session`: port the desktop session reader (cookies, leveldb, Secret Service) and the browser cURL login (`internal/provider/desktopsession/auth`)
 - [ ] 1.3 `desktop-session`: real-time WebSocket with reconnection and backoff (1–30 s)
-- [ ] 1.4 `internal-app`: Web API with xoxp, Socket Mode with xapp and an example app manifest
-- [ ] 1.5 Keyring (Secret Service) with a 0600 fallback and a warning
-- [ ] 1.6 SQLite Store (WAL) with versioned migrations
-- [ ] 1.7 Sync: startup, per-conversation backfill when opened and reconciliation on reconnect
-- [ ] 1.8 `RateBudget` with priorities and `Retry-After` handling
+- [x] 1.4 `internal-app`: Web API with xoxp, Socket Mode with xapp and an example app manifest (`internal/provider/internalapp`, `docs/slack-app-manifest.yml`)
+- [x] 1.5 Keyring (Secret Service) with a 0600 fallback and a warning (`internal/keyring`)
+- [x] 1.6 SQLite Store (WAL) with versioned migrations (`internal/store/sqlite`)
+- [ ] 1.7 Sync: startup, per-conversation backfill when opened and reconciliation on reconnect. The internal-app provider gets no real-time read markers, presence or typing (RTM-only), so the sync reconciles read markers by polling
+- [x] 1.8 `RateBudget` with priorities and `Retry-After` handling (`internal/ratebudget`)
 - [ ] 1.9 Tests with recorded events for both providers
+- [ ] 1.10 Store: add `Replies`, and make `Messages` return top-level messages and thread roots only (before 1.7)
+- [ ] 1.11 Domain: a bot author on `domain.Message`, so providers stop dropping `bot_message` messages (before 1.7)
+- [ ] 1.12 Internal-app manifest: request the full scope set the declared capabilities need (`search:read`, `files:read`, `files:write`, `users:write`, `emoji:read`)
+- [ ] 1.13 RateBudget: a 429 also drains the accumulated burst, so calls do not burst again the moment the penalty ends
+- [ ] 1.14 Desktop login: list desktop workspaces without a token as "needs sign-in" instead of skipping them
+- [ ] 1.15 `omaslack auth add|list|remove` CLI, including the terminal paste reader ported from slk
+- Deferred: honoring a deliberate "mark unread" from another Slack client (needs an explicit signal on `ReadChanged`)
 
 ## M2 — Daemon API
-- [ ] 2.1 0600 socket + `SO_PEERCRED` check + JSON-RPC 2.0 over NDJSON
-- [ ] 2.2 `hello` and protocol version negotiation
-- [ ] 2.3 v1 methods (see design.md) with golden tests
+- [x] 2.1 0600 socket + `SO_PEERCRED` check + JSON-RPC 2.0 over NDJSON (`internal/rpc`)
+- [x] 2.2 `hello` and protocol version negotiation
+- [ ] 2.3 v1 methods (see design.md) with golden tests, plus a cap on concurrent calls per connection
 - [ ] 2.4 `events.subscribe` with topics and `unread.summary` coalescing
 - [ ] 2.5 `omaslack.service` systemd unit and `omaslack ctl` (including `--stream`)
 

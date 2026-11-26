@@ -14,6 +14,13 @@ The protocol SHALL be JSON-RPC 2.0 with one JSON object per line (NDJSON). Error
 - **WHEN** a client sends `{"jsonrpc":"2.0","id":1,"method":"foo.bar"}`
 - **THEN** the daemon answers with error `-32601 Method not found` and the connection stays open
 
+### Requirement: No batch requests
+The daemon SHALL reject JSON-RPC batch requests (a JSON array on one line) with error `-32600` and keep the connection open. Clients send one request per line.
+
+#### Scenario: A client sends a batch
+- **WHEN** a client sends `[{"jsonrpc":"2.0","id":1,"method":"workspaces.list"}]`
+- **THEN** the daemon answers with error `-32600 Invalid Request` and the connection stays open
+
 ### Requirement: Handshake and protocol version
 Every client SHALL start with `hello{client, protocol}`. The daemon SHALL answer with its protocol version, daemon version, workspaces and capabilities. If the major protocol version does not match, it SHALL answer `-32001` and close the connection.
 
