@@ -45,11 +45,11 @@ func (p *Provider) Connect(ctx context.Context) (<-chan domain.Event, error) {
 
 func (p *Provider) run(ctx context.Context, out chan<- domain.Event) {
 	defer close(out)
-	p.emit(ctx, out, p.state(domain.Connecting))
+	provider.Emit(ctx, out, p.state(domain.Connecting))
 	conn, err := p.open(ctx)
 	if err != nil {
 		p.log.Warn("desktop-session: cannot open the socket", "team", p.team, "err", err)
-		p.emit(ctx, out, p.state(finalState(err)))
+		provider.Emit(ctx, out, p.state(finalState(err)))
 		return
 	}
 	defer conn.Close()
@@ -58,7 +58,7 @@ func (p *Provider) run(ctx context.Context, out chan<- domain.Event) {
 	defer stop()
 	err = p.read(ctx, conn, out)
 	p.log.Info("desktop-session: socket closed", "team", p.team, "err", err)
-	p.emit(ctx, out, p.state(domain.Disconnected))
+	provider.Emit(ctx, out, p.state(domain.Disconnected))
 }
 
 // open checks the session and dials the socket with the same cookie and
@@ -117,23 +117,8 @@ func (p *Provider) read(ctx context.Context, conn *websocket.Conn, out chan<- do
 			p.log.Warn("desktop-session: dropped a frame", "team", p.team, "err", err)
 		}
 		for _, ev := range evs {
-			p.emit(ctx, out, ev)
+			provider.Emit(ctx, out, ev)
 		}
-	}
-}
-
-// emit hands ev to the consumer unless ctx has ended. The check comes
-// first because a select with both cases ready picks one at random. An
-// event already waiting in the select when ctx ends can still go through:
-// the guarantee is that the channel closes, not that nothing in flight
-// arrives (see provider.Provider.Connect).
-func (p *Provider) emit(ctx context.Context, out chan<- domain.Event, ev domain.Event) {
-	if ctx.Err() != nil {
-		return
-	}
-	select {
-	case out <- ev:
-	case <-ctx.Done():
 	}
 }
 
