@@ -73,6 +73,11 @@ type Engine struct {
 	stopped    chan struct{} // closed when Run stops serving ops
 	expired    chan struct{} // closed when Slack rejected the credentials
 	expireOnce sync.Once
+	wg         sync.WaitGroup // every goroutine Run started
+
+	// wasUp is whether a stream ever reported connected. Only the connect
+	// loop's goroutine touches it.
+	wasUp bool
 }
 
 // New builds an engine from cfg.
@@ -94,15 +99,14 @@ func New(cfg Config) *Engine {
 func (e *Engine) Run(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	var wg sync.WaitGroup
 	result := make(chan error, 1)
-	wg.Go(func() {
+	e.wg.Go(func() {
 		defer cancel()
 		result <- e.connectLoop(ctx)
 	})
 	e.w.serve(ctx, e.ops)
 	close(e.stopped)
-	wg.Wait()
+	e.wg.Wait()
 	return <-result
 }
 
@@ -202,9 +206,21 @@ func (e *Engine) handle(ctx context.Context, ev domain.Event) (up bool, err erro
 	case cc.State == domain.AuthExpired:
 		e.expire(ctx)
 		return false, errAuthExpired
+	case cc.State == domain.Connected:
+		e.connected(ctx)
+		return true, nil
 	default:
-		return cc.State == domain.Connected, nil
+		return false, nil
 	}
+}
+
+// connected starts catching up after every connection but the first:
+// before that there was no outage to miss anything in.
+func (e *Engine) connected(ctx context.Context) {
+	if e.wasUp {
+		e.wg.Go(func() { e.reconcile(ctx) })
+	}
+	e.wasUp = true
 }
 
 // fatal sorts an error from a provider call: rejected credentials and an

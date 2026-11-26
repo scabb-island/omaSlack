@@ -32,6 +32,8 @@ var (
 	zeroTS domain.TS
 	team   = must(domain.ParseTeamID("T01"))
 	convA  = must(domain.ParseConversationID("CAAA"))
+	convB  = must(domain.ParseConversationID("CBBB"))
+	dm     = must(domain.ParseConversationID("DDDD"))
 	ts1    = must(domain.ParseTS("1700000001.000000"))
 	ts2    = must(domain.ParseTS("1700000002.000000"))
 	ts3    = must(domain.ParseTS("1700000003.000000"))

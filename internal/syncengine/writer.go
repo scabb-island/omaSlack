@@ -20,7 +20,8 @@ type writer struct {
 	page  int // rows per Store read
 
 	status status
-	open   map[domain.ConversationID]int // how many clients have it open
+	open   map[domain.ConversationID]int  // how many clients have it open
+	active map[domain.ConversationID]bool // had message activity since startup
 }
 
 // op is one unit of work on the writer's goroutine.
@@ -41,6 +42,7 @@ func newWriter(cfg Config) *writer {
 		page:   cfg.PageSize,
 		status: status{link: domain.Disconnected},
 		open:   make(map[domain.ConversationID]int),
+		active: make(map[domain.ConversationID]bool),
 	}
 }
 
@@ -73,6 +75,9 @@ func (w *writer) apply(ctx context.Context, ev domain.Event) error {
 	}
 	if err := w.store.Apply(ctx, ev); err != nil {
 		return err
+	}
+	if conv, ok := activityIn(ev); ok {
+		w.active[conv] = true
 	}
 	w.pub.Publish(ev)
 	return nil
@@ -151,7 +156,11 @@ func catchUpOp(conv domain.ConversationID, fetched []domain.Message) op {
 // openOp counts one client more (delta 1) or fewer (delta -1) with conv
 // open; a conversation nobody has open is forgotten.
 func openOp(conv domain.ConversationID, delta int) op {
-	return func(context.Context, *writer) error {
+	return func(_ context.Context, w *writer) error {
+		w.open[conv] += delta
+		if w.open[conv] <= 0 {
+			delete(w.open, conv)
+		}
 		return nil
 	}
 }
