@@ -43,4 +43,10 @@ type Provider interface {
 
 	// MarkRead moves the user's read marker in conv to upTo.
 	MarkRead(ctx context.Context, conv domain.ConversationID, upTo domain.TS) error
+
+	// Conversations lists the conversations the user is a member of, with
+	// their latest message, read marker and unread mentions when the
+	// provider knows them. The sync engine uses it to find what needs a
+	// catch-up after an outage and to seed unread counts on a cold start.
+	Conversations(ctx context.Context) ([]domain.Conversation, error)
 }

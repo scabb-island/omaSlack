@@ -64,6 +64,20 @@ func (s *Store) Messages(ctx context.Context, conv domain.ConversationID, before
 		conv.String(), optTS(before), limit)
 }
 
+// Oldest returns the oldest top-level message or thread root of conv that
+// is not deleted, the same set Messages pages through.
+func (s *Store) Oldest(ctx context.Context, conv domain.ConversationID) (domain.TS, error) {
+	var ts string
+	err := s.db.QueryRowContext(ctx, `
+		SELECT COALESCE(MIN(ts), '') FROM messages
+		WHERE conv_id = ?1 AND deleted = 0 AND (thread_ts = '' OR thread_ts = ts)`,
+		conv.String()).Scan(&ts)
+	if err != nil {
+		return domain.TS{}, fmt.Errorf("store/sqlite: read oldest message: %w", err)
+	}
+	return parseOpt(ts, domain.ParseTS)
+}
+
 // Replies returns the replies of the thread rooted at thread in conv,
 // oldest first, without the root. Deleted replies are left out.
 func (s *Store) Replies(ctx context.Context, conv domain.ConversationID, thread domain.TS) ([]domain.Message, error) {

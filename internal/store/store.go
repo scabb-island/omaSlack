@@ -38,6 +38,10 @@ type Store interface {
 	// newest". Thread replies are not included: they come from Replies.
 	Messages(ctx context.Context, conv domain.ConversationID, before domain.TS, limit int) ([]domain.Message, error)
 
+	// Oldest returns the timestamp of the oldest message Messages would
+	// return for conv (zero when there is none): where "load older" continues.
+	Oldest(ctx context.Context, conv domain.ConversationID) (domain.TS, error)
+
 	// Replies returns the replies of the thread rooted at thread, oldest
 	// first, without the root.
 	Replies(ctx context.Context, conv domain.ConversationID, thread domain.TS) ([]domain.Message, error)

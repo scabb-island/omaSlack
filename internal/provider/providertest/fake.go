@@ -18,12 +18,13 @@ import (
 // The method names a Fake records and fails by: the Slack Web API methods
 // the real providers call, plus "connect" for the real-time stream.
 const (
-	MethodConnect    = "connect"
-	MethodHistory    = "conversations.history"
-	MethodReplies    = "conversations.replies"
-	MethodPost       = "chat.postMessage"
-	MethodMarkRead   = "conversations.mark"
-	MethodReadMarker = "conversations.info"
+	MethodConnect       = "connect"
+	MethodHistory       = "conversations.history"
+	MethodReplies       = "conversations.replies"
+	MethodPost          = "chat.postMessage"
+	MethodMarkRead      = "conversations.mark"
+	MethodReadMarker    = "conversations.info"
+	MethodConversations = "users.conversations"
 )
 
 // Session scripts one Connect call.
@@ -60,6 +61,7 @@ type Fake struct {
 	history  map[domain.ConversationID][]domain.Message // newest first
 	replies  map[threadKey][]domain.Message
 	lastRead map[domain.ConversationID]domain.TS
+	convs    []domain.Conversation
 	fails    map[string][]error
 	calls    []Call
 }
@@ -108,6 +110,13 @@ func (f *Fake) SetLastRead(conv domain.ConversationID, ts domain.TS) {
 	f.lastRead[conv] = ts
 }
 
+// SetConversations scripts the list Conversations returns.
+func (f *Fake) SetConversations(convs ...domain.Conversation) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.convs = slices.Clone(convs)
+}
+
 // Fail makes the next calls of method return errs, one per call, before
 // the method works again.
 func (f *Fake) Fail(method string, errs ...error) {
@@ -147,6 +156,15 @@ func (f *Fake) History(_ context.Context, conv domain.ConversationID, before dom
 		return !before.IsZero() && !m.TS.Before(before)
 	})
 	return older[:min(limit, len(older))], nil
+}
+
+func (f *Fake) Conversations(context.Context) ([]domain.Conversation, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if err := f.record(Call{Method: MethodConversations}); err != nil {
+		return nil, err
+	}
+	return slices.Clone(f.convs), nil
 }
 
 func (f *Fake) Replies(_ context.Context, conv domain.ConversationID, thread domain.TS) ([]domain.Message, error) {

@@ -48,7 +48,7 @@ type Config struct {
 	Log      *slog.Logger     // default: discard
 
 	// ReadPollInterval is how often read markers are polled when the
-	// provider implements ReadMarkerReader; zero means one minute.
+	// provider implements provider.ReadMarkerReader; zero means one minute.
 	ReadPollInterval time.Duration
 }
 
@@ -108,7 +108,7 @@ func (e *Engine) Run(ctx context.Context) error {
 		defer cancel()
 		result <- e.connectLoop(ctx)
 	})
-	if _, ok := e.cfg.Provider.(ReadMarkerReader); ok {
+	if _, ok := e.cfg.Provider.(provider.ReadMarkerReader); ok {
 		e.wg.Go(func() { e.pollReads(ctx) })
 	}
 	e.w.serve(ctx, e.ops)

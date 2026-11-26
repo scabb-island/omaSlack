@@ -9,19 +9,25 @@
 ## M1 — Connection and sync
 - [x] 1.1 `Provider` interface + `Capabilities` + normalized domain events (`internal/domain`, `internal/provider`)
 - [x] 1.2 `desktop-session`: port the desktop session reader (cookies, leveldb, Secret Service) and the browser cURL login (`internal/provider/desktopsession/auth`)
-- [ ] 1.3 `desktop-session`: real-time WebSocket with reconnection and backoff (1–30 s)
+- [x] 1.3 `desktop-session`: real-time WebSocket with reconnection and backoff (1–30 s)
 - [x] 1.4 `internal-app`: Web API with xoxp, Socket Mode with xapp and an example app manifest (`internal/provider/internalapp`, `docs/slack-app-manifest.yml`)
 - [x] 1.5 Keyring (Secret Service) with a 0600 fallback and a warning (`internal/keyring`)
 - [x] 1.6 SQLite Store (WAL) with versioned migrations (`internal/store/sqlite`)
-- [ ] 1.7 Sync: startup, per-conversation backfill when opened and reconciliation on reconnect. The internal-app provider gets no real-time read markers, presence or typing (RTM-only), so the sync reconciles read markers by polling
+- [x] 1.7 Sync: startup, per-conversation backfill when opened and reconciliation on reconnect. The internal-app provider gets no real-time read markers, presence or typing (RTM-only), so the sync reconciles read markers by polling
 - [x] 1.8 `RateBudget` with priorities and `Retry-After` handling (`internal/ratebudget`)
-- [ ] 1.9 Tests with recorded events for both providers
-- [ ] 1.10 Store: add `Replies`, and make `Messages` return top-level messages and thread roots only (before 1.7)
-- [ ] 1.11 Domain: a bot author on `domain.Message`, so providers stop dropping `bot_message` messages (before 1.7)
-- [ ] 1.12 Internal-app manifest: request the full scope set the declared capabilities need (`search:read`, `files:read`, `files:write`, `users:write`, `emoji:read`)
-- [ ] 1.13 RateBudget: a 429 also drains the accumulated burst, so calls do not burst again the moment the penalty ends
-- [ ] 1.14 Desktop login: list desktop workspaces without a token as "needs sign-in" instead of skipping them
-- [ ] 1.15 `omaslack auth add|list|remove` CLI, including the terminal paste reader ported from slk
+- [x] 1.9 Tests with recorded events for both providers
+- [x] 1.10 Store: add `Replies`, and make `Messages` return top-level messages and thread roots only (before 1.7)
+- [x] 1.11 Domain: a bot author on `domain.Message`, so providers stop dropping `bot_message` messages (before 1.7)
+- [x] 1.12 Internal-app manifest: request the full scope set the declared capabilities need (`search:read`, `files:read`, `files:write`, `users:write`, `emoji:read`)
+- [x] 1.13 RateBudget: a 429 also drains the accumulated burst, so calls do not burst again the moment the penalty ends
+- [x] 1.14 Desktop login: list desktop workspaces without a token as "needs sign-in" instead of skipping them
+- [x] 1.15 `omaslack auth add|list|remove` CLI, including the terminal paste reader ported from slk
+- [ ] 1.16 `Provider.Conversations` in both providers; the sync engine uses it to catch up every conversation with unread messages or mentions after an outage and to seed unread counts on a cold start
+- [ ] 1.17 internal-app implements `provider.ReadMarkerReader` with `conversations.info`
+- [ ] 1.18 desktop-session implements `provider.PresenceSubscriber` and `provider.TypingSender` over the web client socket
+- [ ] 1.19 Tolerant reaction mapping: accept reactions without `item.type` (as slk does) and log unexpected item types
+- [ ] 1.20 The sync engine's `LoadOlder` continues from `Store.Oldest` instead of a client-supplied cursor
+- [ ] 1.21 `auth add`: picking a workspace that needs sign-in goes straight to the browser paste flow
 - Deferred: honoring a deliberate "mark unread" from another Slack client (needs an explicit signal on `ReadChanged`)
 
 ## M2 — Daemon API
