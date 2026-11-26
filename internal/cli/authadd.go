@@ -165,13 +165,13 @@ func (a adder) desktopSession(browser bool) ([]newWorkspace, error) {
 }
 
 // pickDesktop lists the desktop app's workspaces and adds the ones the
-// user picks.
+// user picks. One that needs sign-in is added from a browser session.
 func (a adder) pickDesktop(listed []auth.Workspace) ([]newWorkspace, error) {
 	fmt.Fprintln(a.env.Stdout, "Workspaces in the Slack desktop app:")
 	for i, w := range listed {
 		line := fmt.Sprintf("  %d. %s (%s)", i+1, w.Name, w.Team)
 		if w.NeedsSignIn() {
-			line += ": needs sign-in"
+			line += ": needs sign-in (pick it to paste a browser session)"
 		}
 		fmt.Fprintln(a.env.Stdout, line)
 	}
@@ -188,9 +188,29 @@ func (a adder) pickDesktop(listed []auth.Workspace) ([]newWorkspace, error) {
 	}
 	added := make([]newWorkspace, len(picked))
 	for i, w := range picked {
-		added[i] = newWorkspace{team: w.Team, name: w.Name, creds: w.Credentials}
+		if added[i], err = a.fromDesktop(w); err != nil {
+			return nil, err
+		}
 	}
 	return added, nil
+}
+
+// fromDesktop is a picked workspace ready to store: with the desktop app's
+// credentials, or, when it needs sign-in, with a browser session pasted
+// for it, which must belong to that workspace.
+func (a adder) fromDesktop(w auth.Workspace) (newWorkspace, error) {
+	if !w.NeedsSignIn() {
+		return newWorkspace{team: w.Team, name: w.Name, creds: w.Credentials}, nil
+	}
+	fmt.Fprintf(a.env.Stdout, "%s (%s) needs sign-in. ", w.Name, w.Team)
+	pasted, err := a.pasteSession()
+	if err != nil {
+		return newWorkspace{}, fmt.Errorf("%s (%s) needs sign-in: %w", w.Name, w.Team, err)
+	}
+	if pasted.team != w.Team {
+		return newWorkspace{}, fmt.Errorf("the pasted session is for %s (%s), not %s (%s)", pasted.name, pasted.team, w.Name, w.Team)
+	}
+	return pasted, nil
 }
 
 // pick returns the workspaces an answer names: numbers separated by
@@ -210,17 +230,13 @@ func pick(listed []auth.Workspace, answer string) ([]auth.Workspace, error) {
 	return picked, nil
 }
 
-// pickOne returns the signed-in workspace numbered n in the list.
+// pickOne returns the workspace numbered n in the list.
 func pickOne(listed []auth.Workspace, n string) (auth.Workspace, error) {
 	i, err := strconv.Atoi(n)
 	if err != nil || i < 1 || i > len(listed) {
 		return auth.Workspace{}, fmt.Errorf("no workspace %q", n)
 	}
-	w := listed[i-1]
-	if w.NeedsSignIn() {
-		return auth.Workspace{}, fmt.Errorf("%s (%s) needs sign-in: sign in to it in the Slack desktop app, or add it with --browser", w.Name, w.Team)
-	}
-	return w, nil
+	return listed[i-1], nil
 }
 
 func signedIn(listed []auth.Workspace) ([]auth.Workspace, error) {
@@ -231,29 +247,38 @@ func signedIn(listed []auth.Workspace) ([]auth.Workspace, error) {
 		}
 	}
 	if len(out) == 0 {
-		return nil, errors.New("no workspace to add: every one needs sign-in")
+		return nil, errors.New("no workspace to add: every one needs sign-in; pick one by number to paste a browser session for it")
 	}
 	return out, nil
 }
 
-// browserSession reads a browser's "Copy as cURL" (or a token and then a
-// cookie) and asks Slack which workspace it belongs to.
+// browserSession adds the workspace of a browser session.
 func (a adder) browserSession() ([]newWorkspace, error) {
+	w, err := a.pasteSession()
+	if err != nil {
+		return nil, err
+	}
+	return []newWorkspace{w}, nil
+}
+
+// pasteSession reads a browser's "Copy as cURL" (or a token and then a
+// cookie) and asks Slack which workspace it belongs to.
+func (a adder) pasteSession() (newWorkspace, error) {
 	fmt.Fprint(a.env.Stdout, browserSteps)
 	paste, err := a.con.AskPaste("cURL command or xoxc- token: ")
 	if err != nil {
-		return nil, err
+		return newWorkspace{}, err
 	}
 	if _, err := auth.ParseCurl(paste); errors.Is(err, auth.ErrNoCookie) {
 		cookie, err := a.con.AskPaste("d cookie (DevTools > Application > Cookies, xoxd-...): ")
 		if err != nil {
-			return nil, err
+			return newWorkspace{}, err
 		}
 		paste += "\n" + cookie
 	}
 	w, err := auth.FromCurl(a.ctx, paste, desktopsession.AuthTest(a.env.SlackAPIURL))
 	if err != nil {
-		return nil, err
+		return newWorkspace{}, err
 	}
-	return []newWorkspace{{team: w.Team, name: w.Name, creds: w.Credentials}}, nil
+	return newWorkspace{team: w.Team, name: w.Name, creds: w.Credentials}, nil
 }
