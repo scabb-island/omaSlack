@@ -144,9 +144,40 @@ func TestDesktopWorkspacesJoinsTheAppsState(t *testing.T) {
 		{Team: mustTeam(t, "T0ALPHA"), Name: "Alpha", URL: "https://alpha.slack.com/", Credentials: creds("xoxc-alpha")},
 		{Team: mustTeam(t, "T0BETA1"), Name: "Beta", URL: "https://beta.slack.com/", Credentials: creds("xoxc-beta")},
 		{Team: mustTeam(t, "E0GRID1"), Name: "Grid", URL: "https://grid.enterprise.slack.com/", Credentials: creds("xoxc-grid")},
+		{Team: mustTeam(t, "T0NOTOKEN"), Name: "No token", URL: "https://notoken.slack.com/"},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("Workspaces =\n%v\nwant\n%v", got, want)
+	}
+	for _, w := range got {
+		if w.NeedsSignIn() != (w.Name == "No token") {
+			t.Errorf("%s: NeedsSignIn = %v", w.Name, w.NeedsSignIn())
+		}
+	}
+}
+
+// A workspace the app lists but holds no token for (signed out, or never
+// opened on this machine) comes back without credentials, so the CLI can
+// say it needs sign-in. With no token at all the cookie is not needed.
+func TestDesktopWorkspacesWithoutTokensNeedSignIn(t *testing.T) {
+	for name, mutate := range map[string]func(*desktopFixture){
+		"no Local Storage": func(f *desktopFixture) { f.tokens = nil },
+		"no tokens":        func(f *desktopFixture) { f.tokens = []byte{0x01, '{', '}'} },
+	} {
+		t.Run(name, func(t *testing.T) {
+			f := newDesktopFixture(t)
+			mutate(f)
+			f.cookie = cookieRow{}
+			got, err := f.build(t).Workspaces(context.Background())
+			if err != nil || len(got) != 4 {
+				t.Fatalf("Workspaces = %v, %v; want the 4 listed ones", got, err)
+			}
+			for _, w := range got {
+				if !w.NeedsSignIn() || w.Credentials != (keyring.DesktopSession{}) {
+					t.Errorf("%s: NeedsSignIn = %v, credentials %v", w.Name, w.NeedsSignIn(), w.Credentials)
+				}
+			}
+		})
 	}
 }
 
@@ -211,8 +242,6 @@ func TestDesktopWorkspacesFailures(t *testing.T) {
 		{"no workspace list", func(f *desktopFixture) { f.rootState = "" }, ErrNotSignedIn},
 		{"malformed workspace list", func(f *desktopFixture) { f.rootState = "{" }, ErrNotSignedIn},
 		{"no workspaces", func(f *desktopFixture) { f.rootState = `{"workspaces":{}}` }, ErrNotSignedIn},
-		{"no Local Storage", func(f *desktopFixture) { f.tokens = nil }, ErrNotSignedIn},
-		{"no tokens", func(f *desktopFixture) { f.tokens = []byte{0x01, '{', '}'} }, ErrNotSignedIn},
 		{"no cookie database", func(f *desktopFixture) { f.cookie = cookieRow{} }, ErrCookieDBMissing},
 		{"no d cookie", func(f *desktopFixture) { f.cookie.name = "x" }, ErrCookieDBMissing},
 		{"cookie of another host", func(f *desktopFixture) { f.cookie.host = ".example.com" }, ErrCookieDBMissing},

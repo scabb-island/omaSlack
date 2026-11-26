@@ -29,11 +29,12 @@ type localConfig struct {
 
 // readTokens returns each team's xoxc token from the desktop app's Local
 // Storage. The LevelDB is read from a copy (see withCopies); its directory
-// is flat, so copying its regular files is enough.
+// is flat, so copying its regular files is enough. No Local Storage means
+// no tokens.
 func readTokens(dir string) (map[domain.TeamID]string, error) {
 	entries, err := os.ReadDir(dir)
 	if errors.Is(err, fs.ErrNotExist) {
-		return nil, ErrNotSignedIn
+		return nil, nil
 	}
 	if err != nil {
 		return nil, err
