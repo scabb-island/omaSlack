@@ -264,3 +264,26 @@ func TestReadMarkersServeTheScriptedMarker(t *testing.T) {
 	}
 	var _ provider.Provider = r // still a full provider
 }
+
+func TestConversationsReturnTheScriptedList(t *testing.T) {
+	f := providertest.New(team, domain.Capabilities{})
+	want := []domain.Conversation{
+		{ID: conv, Kind: domain.Channel, Name: "general", Latest: ts2, LastRead: ts1},
+	}
+	f.SetConversations(want...)
+
+	got, err := f.Conversations(context.Background())
+	if err != nil || !slices.Equal(got, want) {
+		t.Fatalf("Conversations() = %v, %v; want %v", got, err, want)
+	}
+	if calls := f.Calls(); !slices.Equal(calls, []providertest.Call{{Method: providertest.MethodConversations}}) {
+		t.Errorf("calls = %v", calls)
+	}
+
+	f.Fail(providertest.MethodConversations, errBoom)
+	if _, err := f.Conversations(context.Background()); !errors.Is(err, errBoom) {
+		t.Errorf("a scripted failure was not returned: %v", err)
+	}
+}
+
+var errBoom = errors.New("boom")
