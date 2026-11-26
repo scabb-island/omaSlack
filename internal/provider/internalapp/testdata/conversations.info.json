@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "channel": {
+    "id": "C0001",
+    "name": "general",
+    "is_channel": true,
+    "is_private": false,
+    "is_member": true,
+    "last_read": "1700000500.000500",
+    "unread_count": 2,
+    "unread_count_display": 1,
+    "created": 1600000000
+  }
+}
