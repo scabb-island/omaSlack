@@ -7,6 +7,7 @@ package dbustest
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -43,30 +44,35 @@ func StartBus(t *testing.T) string {
 	if err != nil {
 		t.Skip("dbus-daemon not installed")
 	}
+	addr, err := startDaemon(t, daemon)
+	if err != nil {
+		t.Fatalf("start dbus-daemon: %v", err)
+	}
+	return addr
+}
+
+// startDaemon runs daemon with the private bus config until the test ends
+// and returns the address it prints once its socket is bound.
+func startDaemon(t *testing.T, daemon string) (string, error) {
 	config := filepath.Join(t.TempDir(), "bus.conf")
 	if err := os.WriteFile(config, []byte(busConfig), 0o600); err != nil {
-		t.Fatal(err)
+		return "", err
 	}
 	cmd := exec.CommandContext(t.Context(), daemon, "--config-file="+config, "--nofork", "--nopidfile", "--print-address") //nolint:gosec // the daemon comes from PATH, as in any test
 	cmd.Cancel = func() error { return cmd.Process.Signal(syscall.SIGTERM) }
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		t.Fatal(err)
+	pipe, err := cmd.StdoutPipe()
+	if err == nil {
+		err = cmd.Start()
 	}
-	if err := cmd.Start(); err != nil {
-		t.Fatalf("start dbus-daemon: %v", err)
+	if err != nil {
+		return "", err
 	}
 	// t.Context is cancelled just before cleanups run, which sends SIGTERM
 	// (not a kill: the daemon unlinks its socket only on a clean exit); this
 	// cleanup reaps it.
 	t.Cleanup(func() { _ = cmd.Wait() })
-
-	// Printed once the socket is bound, so a connect after this succeeds.
-	addr, err := bufio.NewReader(stdout).ReadString('\n')
-	if err != nil {
-		t.Fatalf("dbus-daemon printed no address: %v", err)
-	}
-	return strings.TrimSpace(addr)
+	addr, err := bufio.NewReader(pipe).ReadString('\n')
+	return strings.TrimSpace(addr), err
 }
 
 // Connect opens a private connection to the bus at addr, closed when the
@@ -86,19 +92,26 @@ func Connect(t *testing.T, addr string) *dbus.Conn {
 func Serve(t *testing.T, addr, name string, objects ...Object) *dbus.Conn {
 	t.Helper()
 	conn := Connect(t, addr)
+	if err := serve(conn, name, objects...); err != nil {
+		t.Fatal(err)
+	}
+	return conn
+}
+
+func serve(conn *dbus.Conn, name string, objects ...Object) error {
 	for _, o := range objects {
 		if err := conn.Export(o.Value, o.Path, o.Interface); err != nil {
-			t.Fatalf("export %s: %v", o.Interface, err)
+			return fmt.Errorf("export %s: %w", o.Interface, err)
 		}
 	}
 	reply, err := conn.RequestName(name, dbus.NameFlagDoNotQueue)
+	if err == nil && reply != dbus.RequestNameReplyPrimaryOwner {
+		err = fmt.Errorf("reply %v, want primary owner", reply)
+	}
 	if err != nil {
-		t.Fatalf("request name %s: %v", name, err)
+		return fmt.Errorf("request name %s: %w", name, err)
 	}
-	if reply != dbus.RequestNameReplyPrimaryOwner {
-		t.Fatalf("request name %s: reply %v, want primary owner", name, reply)
-	}
-	return conn
+	return nil
 }
 
 // Object is one exported D-Bus object: the methods of Value, served at Path

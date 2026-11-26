@@ -93,7 +93,8 @@ func (s *SecretService) Calls() []string {
 	return append([]string(nil), s.calls...)
 }
 
-// Items returns every stored item's attributes, for assertions.
+// Items returns every stored item's attributes, ordered by their
+// key=value form, for assertions.
 func (s *SecretService) Items() []map[string]string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -101,6 +102,7 @@ func (s *SecretService) Items() []map[string]string {
 	for _, it := range s.items {
 		out = append(out, maps.Clone(it.attrs))
 	}
+	slices.SortFunc(out, func(a, b map[string]string) int { return strings.Compare(formatAttrs(a), formatAttrs(b)) })
 	return out
 }
 
