@@ -1,0 +1,44 @@
+# Example manifest for the omaslack internal-app provider.
+#
+# It creates an internal (not distributed) Slack app that acts as you:
+# Socket Mode delivers events over a WebSocket, so no public URL is needed,
+# and every scope is a user scope, so messages are read and sent as you.
+# How to use it: docs/internal-app-setup.md.
+#
+# The scopes are the minimum for what the provider calls today:
+#   conversations.history, conversations.replies  -> *:history
+#   chat.postMessage                              -> chat:write
+#   conversations.mark                            -> *:write
+#   reaction_added / reaction_removed events      -> reactions:read
+# Socket Mode itself needs an app-level token with connections:write,
+# which is created separately (it is not part of a manifest).
+display_information:
+  name: omaslack
+  description: Personal Slack client for Omarchy, used through the omaslack daemon.
+oauth_config:
+  scopes:
+    user:
+      - channels:history
+      - groups:history
+      - im:history
+      - mpim:history
+      - chat:write
+      - channels:write
+      - groups:write
+      - im:write
+      - mpim:write
+      - reactions:read
+settings:
+  event_subscriptions:
+    user_events:
+      - message.channels
+      - message.groups
+      - message.im
+      - message.mpim
+      - reaction_added
+      - reaction_removed
+  interactivity:
+    is_enabled: false
+  org_deploy_enabled: false
+  socket_mode_enabled: true
+  token_rotation_enabled: false

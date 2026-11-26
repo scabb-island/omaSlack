@@ -1,0 +1,19 @@
+{
+  "team_id": "T0001",
+  "api_app_id": "A0001",
+  "event": {
+    "type": "message",
+    "subtype": "thread_broadcast",
+    "channel": "C0001",
+    "user": "U0002",
+    "text": "also sent to the channel",
+    "ts": "1700000650.000650",
+    "thread_ts": "1700000100.000100",
+    "root": { "type": "message", "user": "U0001", "text": "thread root", "ts": "1700000100.000100" },
+    "event_ts": "1700000650.000650",
+    "channel_type": "channel"
+  },
+  "type": "event_callback",
+  "event_id": "Ev0002",
+  "event_time": 1700000650
+}
