@@ -9,6 +9,7 @@ import (
 	"github.com/slack-go/slack/socketmode"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
+	"gitlab.com/scabb-island/omaslack/internal/provider/slackwire"
 )
 
 // connectionStates maps the Socket Mode client's own events to connection
@@ -110,7 +111,7 @@ func (p *Provider) domainEvent(evt socketmode.Event) domain.Event {
 // err: AuthExpired when Slack rejected the credentials.
 func finalState(err error) domain.ConnectionState {
 	var slackErr slack.SlackErrorResponse
-	if errors.As(err, &slackErr) && isAuthError(slackErr.Err) {
+	if errors.As(err, &slackErr) && slackwire.IsAuthError(slackErr.Err) {
 		return domain.AuthExpired
 	}
 	return domain.Disconnected
