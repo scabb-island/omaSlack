@@ -43,6 +43,22 @@ func TestUsageListsEverySubcommand(t *testing.T) {
 	}
 }
 
+func TestUsageMarksOnlyPlaceholders(t *testing.T) {
+	_, out, _ := run("help")
+	lines := map[string]string{}
+	for _, l := range strings.Split(out, "\n") {
+		if f := strings.Fields(l); len(f) > 0 {
+			lines[f[0]] = l
+		}
+	}
+	if !strings.HasSuffix(lines["tui"], "(not implemented yet, M3)") {
+		t.Errorf("tui line does not say it is pending: %q", lines["tui"])
+	}
+	if strings.Contains(lines["version"], "not implemented") {
+		t.Errorf("version line claims it is pending: %q", lines["version"])
+	}
+}
+
 func TestVersion(t *testing.T) {
 	for _, arg := range []string{"version", "--version", "-v"} {
 		code, out, _ := run(arg)

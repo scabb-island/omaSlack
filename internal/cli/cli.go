@@ -9,7 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"sort"
+	"maps"
+	"slices"
 	"strings"
 
 	"gitlab.com/scabb-island/omaslack/internal/version"
@@ -92,11 +93,7 @@ func runVersion(env Env, args []string) error {
 
 func usage(w io.Writer) {
 	cmds := commands()
-	names := make([]string, 0, len(cmds))
-	for n := range cmds {
-		names = append(names, n)
-	}
-	sort.Strings(names)
+	names := slices.Sorted(maps.Keys(cmds))
 
 	var b strings.Builder
 	b.WriteString("Usage: omaslack <command> [arguments]\n\nCommands:\n")

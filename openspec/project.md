@@ -52,7 +52,11 @@ Non-negotiable design rule: **every messaging capability must be usable from bot
 ## Domain Context
 - **Workspace (team):** a Slack organization. A user may have several active.
 - **Conversation:** a public or private channel, a DM (`im`) or a group DM (`mpim`).
-- **Thread:** replies to a root message (`thread_ts`).
+- **Thread:** replies to a root message (`thread_ts`). A thread root is not a reply.
+- **TS (timestamp):** `"<seconds>.<six digits>"`. Slack uses it as the message ID inside a conversation, so it must round-trip exactly and order correctly (`domain.TS`).
+- **Team, user and conversation IDs:** `T…`/`E…`, `U…`/`W…` and `C…`/`G…`/`D…`. They are parsed once where outside data enters (`domain.Parse*ID`); a failed parse never yields a usable value.
+- **Capability:** an optional feature a provider declares (`realtime`, `search`, `files`, `presenceWrite`, `typing`, `customEmoji`, `sections`). Clients hide what the workspace's provider lacks.
+- **Domain event:** a normalized change (`message.created`, `read.changed`, `connection.state`, …) emitted by providers and consumed by the sync engine. Its topic is the name clients subscribe to.
 - **xoxc/xoxd:** the token and cookie of the desktop app or browser session, used by the `desktop-session` provider.
 - **xoxp:** a Slack app user token, used by the `internal-app` provider.
 - **Internal app:** an app created and installed only in its own workspace. The 2025 rate limits for non-Marketplace apps, which cap `conversations.history` at 1 call per minute, do not apply to it.
