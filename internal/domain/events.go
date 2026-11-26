@@ -111,29 +111,53 @@ type ConnectionChanged struct {
 	State ConnectionState
 }
 
-func (MessageCreated) Topic() string    { return "message.created" }
-func (MessageUpdated) Topic() string    { return "message.updated" }
-func (MessageDeleted) Topic() string    { return "message.deleted" }
-func (ReactionChanged) Topic() string   { return "reaction.changed" }
-func (ReadChanged) Topic() string       { return "read.changed" }
-func (PresenceChanged) Topic() string   { return "presence.changed" }
-func (UserTyping) Topic() string        { return "typing" }
-func (ConnectionChanged) Topic() string { return "connection.state" }
+// ConversationUpdated: a conversation's entry in the list changed (its
+// latest message, read marker or unread mentions). Conversation carries the
+// whole entry as the daemon now knows it.
+type ConversationUpdated struct {
+	Team         TeamID
+	Conversation Conversation
+}
 
-func (e MessageCreated) TeamID() TeamID    { return e.Team }
-func (e MessageUpdated) TeamID() TeamID    { return e.Team }
-func (e MessageDeleted) TeamID() TeamID    { return e.Team }
-func (e ReactionChanged) TeamID() TeamID   { return e.Team }
-func (e ReadChanged) TeamID() TeamID       { return e.Team }
-func (e PresenceChanged) TeamID() TeamID   { return e.Team }
-func (e UserTyping) TeamID() TeamID        { return e.Team }
-func (e ConnectionChanged) TeamID() TeamID { return e.Team }
+// DraftChanged: a client saved the unsent draft of a conversation, or of
+// the thread rooted at Thread when it is not zero. An empty Text means the
+// draft was deleted.
+type DraftChanged struct {
+	Team         TeamID
+	Conversation ConversationID
+	Thread       TS
+	Text         string
+}
 
-func (MessageCreated) sealed()    {}
-func (MessageUpdated) sealed()    {}
-func (MessageDeleted) sealed()    {}
-func (ReactionChanged) sealed()   {}
-func (ReadChanged) sealed()       {}
-func (PresenceChanged) sealed()   {}
-func (UserTyping) sealed()        {}
-func (ConnectionChanged) sealed() {}
+func (MessageCreated) Topic() string      { return "message.created" }
+func (MessageUpdated) Topic() string      { return "message.updated" }
+func (MessageDeleted) Topic() string      { return "message.deleted" }
+func (ReactionChanged) Topic() string     { return "reaction.changed" }
+func (ReadChanged) Topic() string         { return "read.changed" }
+func (PresenceChanged) Topic() string     { return "presence.changed" }
+func (UserTyping) Topic() string          { return "typing" }
+func (ConnectionChanged) Topic() string   { return "connection.state" }
+func (ConversationUpdated) Topic() string { return "conversation.updated" }
+func (DraftChanged) Topic() string        { return "draft.changed" }
+
+func (e MessageCreated) TeamID() TeamID      { return e.Team }
+func (e MessageUpdated) TeamID() TeamID      { return e.Team }
+func (e MessageDeleted) TeamID() TeamID      { return e.Team }
+func (e ReactionChanged) TeamID() TeamID     { return e.Team }
+func (e ReadChanged) TeamID() TeamID         { return e.Team }
+func (e PresenceChanged) TeamID() TeamID     { return e.Team }
+func (e UserTyping) TeamID() TeamID          { return e.Team }
+func (e ConnectionChanged) TeamID() TeamID   { return e.Team }
+func (e ConversationUpdated) TeamID() TeamID { return e.Team }
+func (e DraftChanged) TeamID() TeamID        { return e.Team }
+
+func (MessageCreated) sealed()      {}
+func (MessageUpdated) sealed()      {}
+func (MessageDeleted) sealed()      {}
+func (ReactionChanged) sealed()     {}
+func (ReadChanged) sealed()         {}
+func (PresenceChanged) sealed()     {}
+func (UserTyping) sealed()          {}
+func (ConnectionChanged) sealed()   {}
+func (ConversationUpdated) sealed() {}
+func (DraftChanged) sealed()        {}

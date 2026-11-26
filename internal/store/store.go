@@ -52,6 +52,20 @@ type Store interface {
 	// LastRead returns the read marker of conv (zero if never read).
 	LastRead(ctx context.Context, conv domain.ConversationID) (domain.TS, error)
 
+	// PutConversations records the provider's conversation list (task
+	// 2.7): kind, name, latest message and unread mentions of each entry.
+	// It replaces the previous list, so a conversation the user left
+	// disappears. Read markers in the list go through the same
+	// forward-only rule as ReadChanged.
+	PutConversations(ctx context.Context, list []domain.Conversation) error
+
+	// Conversations returns the stored list. Each entry's LastRead is the
+	// stored read marker, and its Latest is the newer of the list's and
+	// the newest stored top-level message, so messages that arrived since
+	// the last list count as unread. Mentions drop to zero once the read
+	// marker reaches Latest.
+	Conversations(ctx context.Context) ([]domain.Conversation, error)
+
 	// Draft returns the unsent draft of conv, or of the thread rooted at
 	// thread when thread is not zero. No draft is the empty string.
 	Draft(ctx context.Context, conv domain.ConversationID, thread domain.TS) (string, error)

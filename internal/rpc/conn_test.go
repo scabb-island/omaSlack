@@ -74,3 +74,24 @@ func TestNoConnOutsideAHandler(t *testing.T) {
 		t.Fatal("found a connection in a bare context")
 	}
 }
+
+func TestCloseEndsTheConnectionFromTheDaemonSide(t *testing.T) {
+	conns := make(chan *Conn, 1)
+	h := Router{"grab": HandlerFunc(func(ctx context.Context, _ string, _ json.RawMessage) (any, error) {
+		conn, _ := ConnFromContext(ctx)
+		conns <- conn
+		return nil, nil
+	})}
+	c := connect(t, serve(t, NewServer(h, Options{})))
+	c.hello()
+	c.call(1, "grab", "")
+	conn := <-conns
+
+	if err := conn.Close(); err != nil {
+		t.Fatal(err)
+	}
+	<-conn.Done()
+	if _, err := c.c.Read(make([]byte, 1)); err == nil {
+		t.Fatal("the client can still read after Close")
+	}
+}
