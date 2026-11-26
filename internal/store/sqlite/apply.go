@@ -32,10 +32,7 @@ func (s *Store) Apply(ctx context.Context, ev domain.Event) error {
 }
 
 func (s *Store) writeMessage(ctx context.Context, conv domain.ConversationID, m domain.Message) error {
-	if err := putMessage(ctx, s.db, conv, m); err != nil {
-		return fmt.Errorf("store/sqlite: write message: %w", err)
-	}
-	return nil
+	return s.inTx(ctx, "write message", func(tx *sql.Tx) error { return putMessage(ctx, tx, conv, m) })
 }
 
 // deleteMessage turns the message into a tombstone, creating one if the

@@ -35,10 +35,18 @@ ON CONFLICT (conv_id, ts) DO UPDATE SET
     edited_ts = excluded.edited_ts
 WHERE excluded.edited_ts >= messages.edited_ts`
 
+// putMessage stores m and, when this version replaced the stored one
+// and carries files, its files. Run it in a transaction.
 func putMessage(ctx context.Context, ex execer, conv domain.ConversationID, m domain.Message) error {
-	_, err := ex.ExecContext(ctx, upsertMessage,
+	res, err := ex.ExecContext(ctx, upsertMessage,
 		conv.String(), m.TS.String(), optTS(m.ThreadTS), m.Author.String(), m.Text, optTS(m.Edited))
-	return err
+	if err != nil || len(m.Files) == 0 {
+		return err
+	}
+	if n, err := res.RowsAffected(); err != nil || n == 0 {
+		return err
+	}
+	return putFiles(ctx, ex, conv, m.TS, m.Files)
 }
 
 // PutHistory stores a page of messages in one transaction, so a crash
@@ -58,7 +66,7 @@ func (s *Store) PutHistory(ctx context.Context, conv domain.ConversationID, msgs
 // older than before (all of them when before is zero), newest first.
 // Thread replies and deleted messages are left out.
 func (s *Store) Messages(ctx context.Context, conv domain.ConversationID, before domain.TS, limit int) ([]domain.Message, error) {
-	return s.queryMessages(ctx, `
+	return s.queryMessages(ctx, conv, `
 		SELECT ts, thread_ts, author, text, edited_ts FROM messages
 		WHERE conv_id = ?1 AND deleted = 0 AND (?2 = '' OR ts < ?2)
 		  AND (thread_ts = '' OR thread_ts = ts)
@@ -84,15 +92,25 @@ func (s *Store) Oldest(ctx context.Context, conv domain.ConversationID) (domain.
 // Replies returns the replies of the thread rooted at thread in conv,
 // oldest first, without the root. Deleted replies are left out.
 func (s *Store) Replies(ctx context.Context, conv domain.ConversationID, thread domain.TS) ([]domain.Message, error) {
-	return s.queryMessages(ctx, `
+	return s.queryMessages(ctx, conv, `
 		SELECT ts, thread_ts, author, text, edited_ts FROM messages
 		WHERE conv_id = ?1 AND thread_ts = ?2 AND ts <> ?2 AND deleted = 0
 		ORDER BY ts ASC`,
 		conv.String(), thread.String())
 }
 
-// queryMessages runs a messages query and parses every row it returns.
-func (s *Store) queryMessages(ctx context.Context, query string, args ...any) ([]domain.Message, error) {
+// queryMessages runs a query for messages of conv, parses every row it
+// returns and adds each message's files.
+func (s *Store) queryMessages(ctx context.Context, conv domain.ConversationID, query string, args ...any) ([]domain.Message, error) {
+	msgs, err := s.scanMessages(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	return s.withFiles(ctx, conv, msgs)
+}
+
+// scanMessages runs a messages query and parses every row it returns.
+func (s *Store) scanMessages(ctx context.Context, query string, args ...any) ([]domain.Message, error) {
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("store/sqlite: read messages: %w", err)

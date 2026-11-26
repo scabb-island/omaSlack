@@ -6,6 +6,7 @@ package store
 
 import (
 	"context"
+	"errors"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 )
@@ -16,6 +17,9 @@ type Reaction struct {
 	Emoji string
 	Users []domain.UserID
 }
+
+// ErrUnknownFile reports a file no stored message carries.
+var ErrUnknownFile = errors.New("store: unknown file")
 
 // Store is one workspace's cache. The sync engine is its only writer;
 // RPC handlers only read. Implementations must be safe for concurrent use.
@@ -31,6 +35,12 @@ type Store interface {
 	Apply(ctx context.Context, ev domain.Event) error
 
 	// PutHistory stores a page of messages fetched from the provider.
+	//
+	// Messages, Replies and PutHistory carry each message's files. A
+	// version of a message that carries no files keeps the stored ones
+	// (an edit's result may leave them out); one that carries files
+	// replaces them, under the same rule as the rest of the message: never
+	// with an older version.
 	PutHistory(ctx context.Context, conv domain.ConversationID, msgs []domain.Message) error
 
 	// Messages returns up to limit top-level messages and thread roots of
@@ -45,6 +55,10 @@ type Store interface {
 	// Replies returns the replies of the thread rooted at thread, oldest
 	// first, without the root.
 	Replies(ctx context.Context, conv domain.ConversationID, thread domain.TS) ([]domain.Message, error)
+
+	// File returns a file some stored message carries, with its download
+	// URL; ErrUnknownFile when none does.
+	File(ctx context.Context, id domain.FileID) (domain.File, error)
 
 	// Reactions returns the reactions on one message.
 	Reactions(ctx context.Context, conv domain.ConversationID, ts domain.TS) ([]Reaction, error)
