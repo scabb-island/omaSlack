@@ -21,11 +21,12 @@ None offers a **shared engine** that feeds both a full native UI and a TUI with 
 - **ADDED** `notifications-presence`: desktop notifications, rules, DND and presence.
 - **ADDED** `tui-client`: a terminal client with vim-like modes, the Omarchy theme and live reload.
 - **ADDED** `gui-client`: a QML plugin with a Service, a BarWidget, a quick-view Panel and a full window.
-- **ADDED** `omarchy-integration`: manifest, theme template and hook, keyboard shortcuts, launcher entry, AUR and marketplace publication.
+- **ADDED** `omarchy-integration`: manifest, theme template and hook, keyboard shortcuts, launcher entry and marketplace publication.
+- **ADDED** `aur-packaging`: the `omaslack-bin` AUR package, compliant with the Arch and AUR guidelines and published only from tagged releases. The Omarchy plugin requires it and offers to install it.
 
 ## Impact
 
-- **Affected specs:** the 8 capabilities above. All are new.
+- **Affected specs:** the 9 capabilities above. All are new.
 - **Code:** a new project. The `omaslack` repo (Go binary) and the `plugin/` directory (Omarchy plugin), published as a separate repo or as a subdirectory with `manifestPath`.
 - **Users:** they choose a provider when running `omaslack auth add`. The `desktop-session` provider shows a terms-of-service warning that must be accepted.
 - **Main risks:** Slack changing the unofficial protocol, changes in Omarchy's plugin API and the lack of plugin sandboxing. Details in `docs/feasibility.md` and `design.md`.
