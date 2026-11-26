@@ -7,7 +7,7 @@
 - [x] 0.4 `plugin/` directory with a minimal `manifest.json` that passes `omarchy plugin validate`
 
 ## M1 — Connection and sync
-- [ ] 1.1 `Provider` interface + `Capabilities` + normalized domain events
+- [x] 1.1 `Provider` interface + `Capabilities` + normalized domain events (`internal/domain`, `internal/provider`)
 - [ ] 1.2 `desktop-session`: port the desktop session reader (cookies, leveldb, Secret Service) and the browser cURL login
 - [ ] 1.3 `desktop-session`: real-time WebSocket with reconnection and backoff (1–30 s)
 - [ ] 1.4 `internal-app`: Web API with xoxp, Socket Mode with xapp and an example app manifest
