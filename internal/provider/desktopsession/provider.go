@@ -21,7 +21,8 @@ import (
 )
 
 // webAPI is embedded under an unexported name, so Provider gets its
-// History, Replies, Post and MarkRead without exposing the field.
+// History, Replies, Post, MarkRead and the writes (webapi.go)
+// without exposing the field.
 type webAPI = slackwire.WebAPI
 
 // Provider is the desktop-session connection to one workspace. Create it
@@ -79,7 +80,7 @@ func New(team domain.TeamID, creds keyring.DesktopSession, opts ...Option) *Prov
 	for _, opt := range opts {
 		opt(p)
 	}
-	p.webAPI = slackwire.NewWebAPI(p.apiURL, p.http, p.sign, p.log.With("provider", "desktop-session", "team", team))
+	p.webAPI = slackwire.NewWebAPI(p.apiURL, p.http, p.sign, capabilities, p.log.With("provider", "desktop-session", "team", team))
 	return p
 }
 
