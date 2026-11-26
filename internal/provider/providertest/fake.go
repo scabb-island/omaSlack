@@ -62,6 +62,7 @@ type Fake struct {
 	replies  map[threadKey][]domain.Message
 	lastRead map[domain.ConversationID]domain.TS
 	convs    []domain.Conversation
+	states   map[domain.ConversationID]domain.Conversation
 	fails    map[string][]error
 	calls    []Call
 }
@@ -206,6 +207,40 @@ func (r *ReadMarkerFake) LastRead(_ context.Context, conv domain.ConversationID)
 		return domain.TS{}, err
 	}
 	return r.lastRead[conv], nil
+}
+
+// WithConversationState returns the same fake with LastRead and
+// ConversationState, standing in for a provider whose list carries no
+// read state (internal-app).
+func (f *Fake) WithConversationState() *StateFake { return &StateFake{f.WithReadMarkers()} }
+
+// StateFake is a Fake that can also read a conversation's state.
+type StateFake struct{ *ReadMarkerFake }
+
+// SetState sets the entry ConversationState serves for c.ID.
+func (f *Fake) SetState(c domain.Conversation) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.states == nil {
+		f.states = make(map[domain.ConversationID]domain.Conversation)
+	}
+	f.states[c.ID] = c
+}
+
+// ConversationState returns the entry set with SetState, or one with
+// only the ID. It is recorded as MethodReadMarker, the Slack method
+// behind both.
+func (s *StateFake) ConversationState(_ context.Context, conv domain.ConversationID) (domain.Conversation, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.record(Call{Method: MethodReadMarker, Conv: conv}); err != nil {
+		return domain.Conversation{}, err
+	}
+	c, ok := s.states[conv]
+	if !ok {
+		c.ID = conv
+	}
+	return c, nil
 }
 
 // nextSession pops the next scripted session, or an idle one.

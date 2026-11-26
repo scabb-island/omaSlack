@@ -43,7 +43,7 @@ func (e *Engine) LoadOlder(ctx context.Context, conv domain.ConversationID) (int
 	if err != nil {
 		return 0, err
 	}
-	page, err := e.history(ctx, conv, before, ratebudget.Interactive)
+	page, err := e.history(ctx, conv, before, e.cfg.PageSize, ratebudget.Interactive)
 	if err != nil {
 		return 0, err
 	}
@@ -74,7 +74,7 @@ func (e *Engine) catchUp(ctx context.Context, conv domain.ConversationID, p rate
 		return err
 	}
 	fetched, err := pageBack(func(before domain.TS) ([]domain.Message, error) {
-		return e.history(ctx, conv, before, p)
+		return e.history(ctx, conv, before, e.cfg.PageSize, p)
 	}, func(page []domain.Message) bool {
 		return bridged(page, newest, e.cfg.PageSize)
 	})
@@ -94,11 +94,12 @@ func (e *Engine) newestStored(ctx context.Context, conv domain.ConversationID) (
 	return msgs[0].TS, nil
 }
 
-func (e *Engine) history(ctx context.Context, conv domain.ConversationID, before domain.TS, p ratebudget.Priority) ([]domain.Message, error) {
+// history fetches up to limit of conv's messages older than before.
+func (e *Engine) history(ctx context.Context, conv domain.ConversationID, before domain.TS, limit int, p ratebudget.Priority) ([]domain.Message, error) {
 	var page []domain.Message
 	err := e.call(ctx, methodHistory, p, func(ctx context.Context) error {
 		var err error
-		page, err = e.cfg.Provider.History(ctx, conv, before, e.cfg.PageSize)
+		page, err = e.cfg.Provider.History(ctx, conv, before, limit)
 		return err
 	})
 	return page, err

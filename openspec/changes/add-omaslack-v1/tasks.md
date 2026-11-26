@@ -44,6 +44,7 @@
 - [x] 2.7 Store keeps the conversation list (kind, name, latest, mentions); the sync engine stores it and runs every client action (send, edit, delete, react, mark read, drafts) as the single writer
 - [x] 2.8 `omaslack daemon`: one engine per signed-in workspace from the keyring, the hub and the methods on the socket, hello with workspaces and capabilities
 - [x] 2.9 `files.upload` and `files.fetch`
+- [x] 2.10 Read-state fill for a provider whose list lacks it (internal-app): `conversations.info` per conversation (plus a one-message `conversations.history` when it names no latest message), at background priority, DMs first, dormant group DMs skipped, one pass at a time and at most every 30 minutes
 - [x] 2.11 Per-subscriber queues coalesce state events by key, and the slow-subscriber bound counts only message, reaction and focus events, so a reconcile burst on a large workspace no longer disconnects a client that reads (`internal/events`)
 - Deferred:
   - Realtime mention counting (mentions refresh with the conversation list and the read-marker poll).

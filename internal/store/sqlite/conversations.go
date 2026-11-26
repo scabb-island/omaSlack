@@ -26,6 +26,19 @@ func (s *Store) PutConversations(ctx context.Context, list []domain.Conversation
 	})
 }
 
+// UpdateConversation replaces c's entry in one transaction, when the
+// stored list has it.
+func (s *Store) UpdateConversation(ctx context.Context, c domain.Conversation) error {
+	return s.inTx(ctx, "update a conversation", func(tx *sql.Tx) error {
+		var listed bool
+		if err := tx.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM conversations WHERE conv_id = ?)`,
+			c.ID.String()).Scan(&listed); err != nil || !listed {
+			return err
+		}
+		return putConversation(ctx, tx, c)
+	})
+}
+
 // putConversation stores one entry; a later duplicate in the same list
 // wins.
 func putConversation(ctx context.Context, ex execer, c domain.Conversation) error {

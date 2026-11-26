@@ -31,6 +31,11 @@ type writer struct {
 	// views is each list entry as clients were last told of it, nil until
 	// read from the Store (see views.go).
 	views map[domain.ConversationID]domain.Conversation
+
+	// keepsKnown is set when the provider's list has no read state and
+	// the engine fills it in (readstate.go): a new list then keeps the
+	// latest messages and mentions the fill learned.
+	keepsKnown bool
 }
 
 // op is one unit of work on the writer's goroutine.

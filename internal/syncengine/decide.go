@@ -107,3 +107,49 @@ func bridged(page []domain.Message, newestStored domain.TS, limit int) bool {
 	oldest := page[len(page)-1].TS
 	return len(page) < limit || newestStored.IsZero() || !newestStored.Before(oldest)
 }
+
+// fillPlan is what a read-state pass asks about, in order: of list's
+// entries with no latest message, the direct messages first, then the
+// channels, public or private, then the group DMs that are busy (known
+// to have messages, or active or open since startup). Other group DMs
+// are skipped: a workspace can have hundreds, nearly all dormant, and at
+// Slack's tier 3 each costs over a second. One that becomes busy is
+// filled in by the next pass.
+func fillPlan(list []domain.Conversation, busy func(domain.ConversationID) bool) []domain.Conversation {
+	var plan []domain.Conversation
+	for _, c := range list {
+		if c.Latest.IsZero() && (c.Kind != domain.GroupMessage || busy(c.ID)) {
+			plan = append(plan, c)
+		}
+	}
+	slices.SortStableFunc(plan, func(a, b domain.Conversation) int {
+		return cmp.Compare(fillRank(a.Kind), fillRank(b.Kind))
+	})
+	return plan
+}
+
+// fillRank places a kind of conversation in fillPlan's order.
+func fillRank(k domain.ConversationKind) int {
+	switch k {
+	case domain.DirectMessage:
+		return 0
+	case domain.GroupMessage:
+		return 2
+	default:
+		return 1
+	}
+}
+
+// keepKnown is list with every entry that has no latest message given
+// the latest message and mentions known (what clients were last told),
+// so a new list from a provider without read state does not undo what
+// the fill learned.
+func keepKnown(list []domain.Conversation, known map[domain.ConversationID]domain.Conversation) []domain.Conversation {
+	out := slices.Clone(list)
+	for i, c := range out {
+		if k, ok := known[c.ID]; ok && c.Latest.IsZero() {
+			out[i].Latest, out[i].Mentions = k.Latest, k.Mentions
+		}
+	}
+	return out
+}

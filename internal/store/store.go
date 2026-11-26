@@ -73,6 +73,13 @@ type Store interface {
 	// forward-only rule as ReadChanged.
 	PutConversations(ctx context.Context, list []domain.Conversation) error
 
+	// UpdateConversation replaces one entry of the stored list with c
+	// (kind, name, latest message and unread mentions), for read state
+	// learned one conversation at a time. A conversation not in the list
+	// is left out: the list decides which ones the user is in. Its read
+	// marker follows the same forward-only rule.
+	UpdateConversation(ctx context.Context, c domain.Conversation) error
+
 	// Conversations returns the stored list. Each entry's LastRead is the
 	// stored read marker, and its Latest is the newer of the list's and
 	// the newest stored top-level message, so messages that arrived since

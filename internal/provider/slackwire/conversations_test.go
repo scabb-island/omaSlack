@@ -42,6 +42,22 @@ func TestConversationsParseWithTheirKind(t *testing.T) {
 		// Slack's "never read" marker is the zero timestamp.
 		"never read": {`{"id":"D0001","is_im":true,"last_read":"0000000000.000000"}`,
 			domain.Conversation{ID: conv("D0001"), Kind: domain.DirectMessage}},
+		// conversations.info sends the latest message as an object.
+		"with its latest message": {`{"id":"D0001","is_im":true,"latest":{"type":"message","ts":"1700000200.000200","text":"hi"}}`,
+			domain.Conversation{ID: conv("D0001"), Kind: domain.DirectMessage, Latest: must(t, domain.ParseTS, "1700000200.000200")}},
+		"with its latest as a bare ts": {`{"id":"C0001","name":"general","latest":"1700000200.000200"}`,
+			domain.Conversation{ID: conv("C0001"), Kind: domain.Channel, Name: "general", Latest: must(t, domain.ParseTS, "1700000200.000200")}},
+		"with no latest message": {`{"id":"D0001","is_im":true,"latest":null}`,
+			domain.Conversation{ID: conv("D0001"), Kind: domain.DirectMessage}},
+		// Every unread message in a DM or group DM is for the user, as
+		// Slack's own badge counts them.
+		"DM with unread messages": {`{"id":"D0001","is_im":true,"unread_count":3,"unread_count_display":2}`,
+			domain.Conversation{ID: conv("D0001"), Kind: domain.DirectMessage, Mentions: 2}},
+		"group DM with unread messages": {`{"id":"G0002","is_mpim":true,"is_private":true,"unread_count_display":1}`,
+			domain.Conversation{ID: conv("G0002"), Kind: domain.GroupMessage, Mentions: 1}},
+		// In a channel, unread messages are not mentions.
+		"channel with unread messages": {`{"id":"C0001","name":"general","unread_count_display":5}`,
+			domain.Conversation{ID: conv("C0001"), Kind: domain.Channel, Name: "general"}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			got, err := decodeConversation(t, tc.json).Parse()
@@ -62,6 +78,8 @@ func TestConversationsWithABadFieldAreRejected(t *testing.T) {
 	}{
 		"bad id":        {`{"id":"U0001","is_im":true}`, domain.ErrInvalidID},
 		"bad last_read": {`{"id":"C0001","last_read":"yesterday"}`, domain.ErrInvalidTS},
+		"bad latest":    {`{"id":"C0001","latest":{"ts":"soon"}}`, domain.ErrInvalidTS},
+		"odd latest":    {`{"id":"C0001","latest":42}`, errOddLatest},
 	} {
 		t.Run(name, func(t *testing.T) {
 			got, err := decodeConversation(t, tc.json).Parse()

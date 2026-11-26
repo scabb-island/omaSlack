@@ -1,0 +1,21 @@
+{
+  "ok": true,
+  "channel": {
+    "id": "D0001",
+    "created": 1600000300,
+    "is_im": true,
+    "is_org_shared": false,
+    "user": "U0002",
+    "last_read": "1700000500.000500",
+    "latest": {
+      "type": "message",
+      "user": "U0002",
+      "text": "are you there?",
+      "ts": "1700000700.000700"
+    },
+    "unread_count": 2,
+    "unread_count_display": 2,
+    "is_open": true,
+    "priority": 0
+  }
+}
