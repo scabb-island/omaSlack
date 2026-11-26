@@ -52,6 +52,8 @@ type Actions interface {
 	SetPresence(ctx context.Context, away bool) error
 	SnoozeDND(ctx context.Context, minutes int) error
 	EndDND(ctx context.Context) error
+	UploadFiles(ctx context.Context, conv domain.ConversationID, thread domain.TS, paths []string, caption string) ([]domain.File, error)
+	FetchFile(ctx context.Context, id domain.FileID) (string, error)
 }
 
 // The real implementations satisfy the contracts.
@@ -103,6 +105,8 @@ type Focuser interface {
 //	messages.delete{team, conv, ts}                    → null
 //	reactions.add{team, conv, ts, emoji}               → null
 //	reactions.remove{team, conv, ts, emoji}            → null
+//	files.upload{team, conv, threadTS?, paths, caption?} → {files: []wire.File}
+//	files.fetch{team, fileId}                          → {localPath}
 //	drafts.get{team, conv, threadTS?}                  → {text}
 //	drafts.set{team, conv, threadTS?, text}            → null
 //	search.messages{team, query, limit?}               → []wire.SearchHit
@@ -124,6 +128,10 @@ type Focuser interface {
 //   - text: required; empty is -32602 except in drafts.set, where it
 //     clears the draft. query and q must not be empty. emoji is a name;
 //     colons around it (":tada:") are dropped. minutes is at least 1.
+//   - paths: a non-empty array of absolute paths on the daemon's machine
+//     (the daemon runs as the same user, but not in the client's working
+//     directory). caption is optional text. fileId is a Slack file ID
+//     (F...), from the files of a message.
 //
 // Behavior:
 //   - messages.history reads the cache; when it holds fewer than limit
@@ -133,11 +141,20 @@ type Focuser interface {
 //     returns the newest HistoryLimit messages and the draft.
 //   - messages.replies opens the thread in the engine, then reads the
 //     cache.
-//   - search.messages needs domain.Search and presence.set needs
-//     domain.PresenceWrite; without it they answer -32002 and the engine
-//     is not called.
-//
-// files.upload and files.fetch arrive with task 2.9.
+//   - search.messages needs domain.Search, presence.set needs
+//     domain.PresenceWrite, and files.upload and files.fetch need
+//     domain.Files; without it they answer -32002 and the engine is not
+//     called.
+//   - files.upload shares the files as one message (with caption as its
+//     text) and answers with the files as Slack stored them. The message
+//     itself arrives as a message.created event, carrying the same files.
+//   - files.fetch downloads a file of a cached message into the daemon's
+//     cache, once, and answers with its path there. The path is only
+//     valid on this machine; clients open or copy it, never send it on.
+//   - A file the request cannot use is -32602 with what is wrong: an
+//     unknown file, a file Slack offers no download for, a file over the
+//     size limit, an upload path that does not exist, cannot be read or
+//     is not a regular file.
 func Methods(dir Directory, focus Focuser) rpc.Router {
 	methods := map[string]method{
 		"workspaces.list":        workspacesList(dir),
@@ -152,6 +169,8 @@ func Methods(dir Directory, focus Focuser) rpc.Router {
 		"messages.delete":        messagesDelete,
 		"reactions.add":          react(true),
 		"reactions.remove":       react(false),
+		"files.upload":           filesUpload,
+		"files.fetch":            filesFetch,
 		"drafts.get":             draftsGet,
 		"drafts.set":             draftsSet,
 		"search.messages":        searchMessages,

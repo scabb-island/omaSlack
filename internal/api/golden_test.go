@@ -27,7 +27,7 @@ var update = flag.Bool("update", false, "rewrite the golden files in testdata/")
 //
 //   - T0ACME (desktop-session) can do everything and has history,
 //     a thread, reactions and drafts in C0GENERAL.
-//   - T0BETA (internal-app) lacks search and presenceWrite.
+//   - T0BETA (internal-app) lacks search, presenceWrite and files.
 //   - T0EXPIRED's credentials were rejected: every engine action fails
 //     with provider.ErrAuthExpired.
 type fixture struct {
@@ -40,7 +40,7 @@ func newFixture() *fixture {
 	f := &fixture{engines: map[string]*fakeEngine{}, focus: &fakeFocus{}}
 	all := domain.NewCapabilities(domain.AllCapabilities()...)
 	f.add("T0ACME", "Acme", "desktop-session", all, acmeStore(), acmeOlder(), nil)
-	f.add("T0BETA", "Beta", "internal-app", domain.NewCapabilities(domain.Realtime, domain.Files), betaStore(), nil, nil)
+	f.add("T0BETA", "Beta", "internal-app", domain.NewCapabilities(domain.Realtime), betaStore(), nil, nil)
 	f.add("T0EXPIRED", "Expired", "desktop-session", all, newFakeStore(), nil, errExpired)
 	return f
 }
@@ -66,7 +66,9 @@ func acmeStore() *fakeStore {
 		domain.Message{TS: root, ThreadTS: root, Author: author("U0BOB"), Text: "thread root"},
 		domain.Message{TS: ts("1700000210.000000"), ThreadTS: root, Author: author("U0ANA"), Text: "first reply"},
 		domain.Message{TS: ts("1700000220.000000"), ThreadTS: root, Author: author("U0BOB"), Text: "second reply"},
-		domain.Message{TS: ts("1700000300.000000"), Author: author("U0ANA"), Text: "latest", Edited: ts("1700000310.000000")},
+		domain.Message{TS: ts("1700000300.000000"), Author: author("U0ANA"), Text: "latest", Edited: ts("1700000310.000000"),
+			Files: []domain.File{{ID: fileID("F0REPORT"), Name: "report.pdf", Title: "Q3 report", MIMEType: "application/pdf", Size: 2048,
+				DownloadURL: "https://files.slack.com/must-not-leak"}}},
 	)
 	s.reactions[key(general, ts("1700000300.000000"))] = []store.Reaction{{Emoji: "thumbsup", Users: []domain.UserID{user("U0ANA"), user("U0BOB")}}}
 	s.reactions[key(general, ts("1700000210.000000"))] = []store.Reaction{{Emoji: "eyes", Users: []domain.UserID{user("U0BOB")}}}
@@ -170,6 +172,7 @@ func methodNames() []string {
 		"conversations.list", "conversations.open", "conversations.close", "conversations.markRead",
 		"messages.history", "messages.replies", "messages.send", "messages.edit", "messages.delete",
 		"reactions.add", "reactions.remove",
+		"files.upload", "files.fetch",
 		"drafts.get", "drafts.set",
 		"search.messages", "users.search",
 		"presence.set", "dnd.snooze", "dnd.end",

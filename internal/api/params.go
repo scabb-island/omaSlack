@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -129,6 +130,23 @@ func (p *params) conv() domain.ConversationID {
 func (p *params) ts(name string) domain.TS { return parsed(p, name, domain.ParseTS) }
 
 func (p *params) optTS(name string) domain.TS { return optParsed(p, name, domain.ParseTS) }
+
+// paths is a required, non-empty array of absolute paths.
+func (p *params) paths() []string {
+	var paths []string
+	switch {
+	case !p.decode("paths", "an array of strings", &paths):
+		p.fail("paths", "missing")
+	case len(paths) == 0:
+		p.fail("paths", "must not be empty")
+	}
+	for _, path := range paths {
+		if !filepath.IsAbs(path) {
+			p.fail("paths", "%q is not an absolute path", path)
+		}
+	}
+	return paths
+}
 
 // limit is member "limit": def when absent, at least 1, and capped at
 // most (a larger value is lowered, not refused).

@@ -22,6 +22,15 @@
               "U0BOB"
             ]
           }
+        ],
+        "files": [
+          {
+            "id": "F0REPORT",
+            "name": "report.pdf",
+            "title": "Q3 report",
+            "mimetype": "application/pdf",
+            "size": 2048
+          }
         ]
       },
       {
@@ -85,6 +94,15 @@
               "U0BOB"
             ]
           }
+        ],
+        "files": [
+          {
+            "id": "F0REPORT",
+            "name": "report.pdf",
+            "title": "Q3 report",
+            "mimetype": "application/pdf",
+            "size": 2048
+          }
         ]
       },
       {
@@ -129,6 +147,15 @@
               "U0ANA",
               "U0BOB"
             ]
+          }
+        ],
+        "files": [
+          {
+            "id": "F0REPORT",
+            "name": "report.pdf",
+            "title": "Q3 report",
+            "mimetype": "application/pdf",
+            "size": 2048
           }
         ]
       },
