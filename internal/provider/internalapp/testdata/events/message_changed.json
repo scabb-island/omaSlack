@@ -1,0 +1,31 @@
+{
+  "team_id": "T0001",
+  "api_app_id": "A0001",
+  "event": {
+    "type": "message",
+    "subtype": "message_changed",
+    "message": {
+      "type": "message",
+      "user": "U0002",
+      "text": "hello, edited",
+      "edited": { "user": "U0002", "ts": "1700000700.000000" },
+      "ts": "1700000600.000600",
+      "source_team": "T0001",
+      "user_team": "T0001"
+    },
+    "previous_message": {
+      "type": "message",
+      "user": "U0002",
+      "text": "hello <@U0001>",
+      "ts": "1700000600.000600"
+    },
+    "channel": "C0001",
+    "hidden": true,
+    "ts": "1700000700.000700",
+    "event_ts": "1700000700.000700",
+    "channel_type": "channel"
+  },
+  "type": "event_callback",
+  "event_id": "Ev0003",
+  "event_time": 1700000700
+}
