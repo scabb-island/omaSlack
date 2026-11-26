@@ -10,7 +10,8 @@ import (
 
 // Events API → domain events.
 //
-// Mapped: message (no subtype, thread_broadcast, file_share, me_message) →
+// Mapped: message (no subtype, thread_broadcast, file_share, me_message,
+// bot_message) →
 // MessageCreated; message_changed → MessageUpdated; message_deleted →
 // MessageDeleted; reaction_added and reaction_removed on messages →
 // ReactionChanged.
@@ -23,7 +24,7 @@ import (
 //   - PresenceChanged: presence_change is RTM-only; apps must poll
 //     users.getPresence.
 //
-// Ignored: every other message subtype (channel_join, bot_message, …),
+// Ignored: every other message subtype (channel_join, channel_topic, …),
 // reactions on files, and event types this package does not subscribe to.
 
 // eventHead is what every event shares: enough to pick its mapper before
@@ -65,6 +66,7 @@ var eventMappers = map[string]eventMapper{
 	"message/thread_broadcast": messageCreated,
 	"message/file_share":       messageCreated,
 	"message/me_message":       messageCreated,
+	"message/bot_message":      messageCreated,
 	"message/message_changed":  messageUpdated,
 	"message/message_deleted":  messageDeleted,
 	"reaction_added":           reactionChanged(true),

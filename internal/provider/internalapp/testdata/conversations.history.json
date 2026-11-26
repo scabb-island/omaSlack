@@ -7,7 +7,10 @@
       "text": "edited reply",
       "ts": "1700000300.000300",
       "thread_ts": "1700000100.000100",
-      "edited": { "user": "U0002", "ts": "1700000400.000000" }
+      "edited": {
+        "user": "U0002",
+        "ts": "1700000400.000000"
+      }
     },
     {
       "type": "message",
@@ -23,9 +26,16 @@
       "ts": "1700000100.000100",
       "thread_ts": "1700000100.000100",
       "reply_count": 1
+    },
+    {
+      "type": "message",
+      "text": "no author at all",
+      "ts": "1700000050.000050"
     }
   ],
   "has_more": true,
   "pin_count": 0,
-  "response_metadata": { "next_cursor": "bmV4dF90czoxNzAwMDAwMDAw" }
+  "response_metadata": {
+    "next_cursor": "bmV4dF90czoxNzAwMDAwMDAw"
+  }
 }

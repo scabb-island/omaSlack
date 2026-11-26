@@ -4,7 +4,7 @@ package domain
 type Message struct {
 	TS       TS
 	ThreadTS TS // zero when the message is not part of a thread
-	Author   UserID
+	Author   Author
 	Text     string // Slack mrkdwn, as received
 	Edited   TS     // zero when never edited
 }

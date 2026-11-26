@@ -36,8 +36,8 @@ func TestRepliesFollowsEveryPageAndLeavesOutTheRoot(t *testing.T) {
 	}
 
 	want := []domain.Message{
-		{TS: mustTS(t, "1700000200.000200"), ThreadTS: root, Author: mustUser(t, "U0002"), Text: "first reply"},
-		{TS: mustTS(t, "1700000300.000300"), ThreadTS: root, Author: mustUser(t, "U0002"), Text: "second reply"},
+		{TS: mustTS(t, "1700000200.000200"), ThreadTS: root, Author: mustAuthor(t, "U0002"), Text: "first reply"},
+		{TS: mustTS(t, "1700000300.000300"), ThreadTS: root, Author: mustAuthor(t, "U0002"), Text: "second reply"},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("Replies() =\n%+v\nwant\n%+v", got, want)
@@ -75,7 +75,7 @@ func TestPostReturnsTheMessageAsSlackStoredIt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := domain.Message{TS: mustTS(t, "1700000500.000500"), ThreadTS: thread, Author: mustUser(t, "U0001"), Text: "hi there"}
+	want := domain.Message{TS: mustTS(t, "1700000500.000500"), ThreadTS: thread, Author: mustAuthor(t, "U0001"), Text: "hi there"}
 	if got != want {
 		t.Fatalf("Post() = %+v, want %+v", got, want)
 	}

@@ -89,7 +89,7 @@ type messageRow struct {
 func (r messageRow) parse() (domain.Message, error) {
 	ts, errTS := domain.ParseTS(r.ts)
 	thread, errThread := parseOpt(r.threadTS, domain.ParseTS)
-	author, errAuthor := parseOpt(r.author, domain.ParseUserID)
+	author, errAuthor := parseOpt(r.author, domain.ParseAuthor)
 	edited, errEdited := parseOpt(r.editedTS, domain.ParseTS)
 	if err := errors.Join(errTS, errThread, errAuthor, errEdited); err != nil {
 		return domain.Message{}, fmt.Errorf("store/sqlite: corrupt message %q: %w", r.ts, err)

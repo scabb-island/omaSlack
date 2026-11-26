@@ -13,7 +13,7 @@ import (
 // msg builds a plain message by user U01 with the given timestamp.
 func msg(t *testing.T, at, text string) domain.Message {
 	t.Helper()
-	return domain.Message{TS: ts(t, at), Author: user(t, "U01"), Text: text}
+	return domain.Message{TS: ts(t, at), Author: author(t, "U01"), Text: text}
 }
 
 func mustPutHistory(t *testing.T, s store.Store, c string, msgs ...domain.Message) {
@@ -61,7 +61,7 @@ func TestMessagesRoundTripEveryField(t *testing.T) {
 	full := domain.Message{
 		TS:       ts(t, "1700000002.000200"),
 		ThreadTS: ts(t, "1700000001.000100"),
-		Author:   user(t, "W02"),
+		Author:   author(t, "W02"),
 		Text:     "héllo 👋 *bold*", // non-ASCII on purpose: text must round-trip byte for byte
 		Edited:   ts(t, "1700000003.000300"),
 	}
@@ -145,5 +145,19 @@ func TestCorruptRowsAreReportedNotTrusted(t *testing.T) {
 				t.Errorf("Messages accepted a corrupt %s", name)
 			}
 		})
+	}
+}
+
+func TestBotAuthorsRoundTrip(t *testing.T) {
+	s := openStore(t)
+	bot := domain.Message{TS: ts(t, "1700000001.000100"), Author: author(t, "B01"), Text: "deploy finished"}
+	mustPutHistory(t, s, "C01", bot)
+
+	got := messages(t, s, "C01", zeroTS, 10)
+	if len(got) != 1 || !reflect.DeepEqual(got[0], bot) {
+		t.Fatalf("Messages = %+v, want [%+v]", got, bot)
+	}
+	if _, ok := got[0].Author.Bot(); !ok {
+		t.Error("the author came back as something other than a bot")
 	}
 }
