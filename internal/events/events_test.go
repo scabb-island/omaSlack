@@ -135,7 +135,10 @@ func TestABurstReachesEveryMessageSubscriberAndIsCoalescedForTheSummary(t *testi
 
 func TestSummaryIsNotSentForEventsThatCannotChangeIt(t *testing.T) {
 	var calls atomic.Int64
-	summary := func(context.Context) (wire.Summary, error) { calls.Add(1); return wire.Summary{}, nil }
+	// Every computation differs, so none is held back as unchanged.
+	summary := func(context.Context) (wire.Summary, error) {
+		return wire.Summary{Total: wire.Counts{DMs: int(calls.Add(1))}}, nil
+	}
 	clock := newFakeClock()
 	h := New(Options{Summary: summary, After: clock.after})
 	c := connect(t, serveHub(t, h))
@@ -316,5 +319,35 @@ func TestAClientThatStopsReadingIsDisconnectedAndOthersKeepGettingEvents(t *test
 	}
 	if !strings.Contains(logs.String(), "slow subscriber") {
 		t.Errorf("log = %q, want the disconnection", logs.String())
+	}
+}
+
+// A change that leaves the counts as they were sends nothing: a busy
+// workspace otherwise repeats the same summary every interval.
+func TestAnUnchangedSummaryIsNotSentAgain(t *testing.T) {
+	var unread atomic.Int64
+	summary := func(context.Context) (wire.Summary, error) {
+		return wire.Summary{Total: wire.Counts{DMs: int(unread.Load())}}, nil
+	}
+	clock := newFakeClock()
+	h := New(Options{Summary: summary, After: clock.after})
+	c := connect(t, serveHub(t, h))
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() { _ = h.Run(ctx) }()
+	c.subscribe(`["unread.summary","typing"]`)
+	c.next() // the current summary
+
+	h.Publish(created(t, 1)) // the counts did not change
+	clock.fire(t)
+	h.Publish(typing(t))
+	if n := c.next(); n.Method != "typing" {
+		t.Fatalf("got %s %s, want typing: the unchanged summary was sent again", n.Method, n.Params)
+	}
+
+	unread.Add(1)
+	h.Publish(created(t, 2))
+	if n := c.next(); n.Method != TopicUnreadSummary || !strings.Contains(string(n.Params), `"dms":1`) {
+		t.Fatalf("got %s %s, want the changed summary", n.Method, n.Params)
 	}
 }
