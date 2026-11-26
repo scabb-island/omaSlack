@@ -294,12 +294,13 @@ func TestASocketThatNeverAppearsIsUnavailable(t *testing.T) {
 }
 
 func TestOtherDialErrorsDoNotStartTheDaemon(t *testing.T) {
-	dir := t.TempDir()
-	if err := os.Chmod(dir, 0); err != nil { // the socket cannot be reached: EACCES
+	// A path through a regular file fails with ENOTDIR, even for root (CI
+	// runs as root, which ignores directory permissions).
+	file := filepath.Join(t.TempDir(), "file")
+	if err := os.WriteFile(file, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
-	_, err := Dial(context.Background(), Options{Path: filepath.Join(dir, "omaslack.sock"), Client: "test", Run: noStart(t)})
+	_, err := Dial(context.Background(), Options{Path: filepath.Join(file, "omaslack.sock"), Client: "test", Run: noStart(t)})
 	if !errors.Is(err, ErrUnavailable) {
 		t.Fatalf("err = %v, want ErrUnavailable", err)
 	}
