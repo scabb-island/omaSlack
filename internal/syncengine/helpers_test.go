@@ -228,6 +228,12 @@ func newRig(t *testing.T) *rig {
 // fake when p is nil.
 func newRigWith(t *testing.T, wrap func(*providertest.Fake) provider.Provider) *rig {
 	t.Helper()
+	return newRigFrom(t, wrap, func(s store.Store) store.Store { return s })
+}
+
+// newRigFrom also lets the test stand between the engine and the store.
+func newRigFrom(t *testing.T, wrap func(*providertest.Fake) provider.Provider, wrapStore func(store.Store) store.Store) *rig {
+	t.Helper()
 	st, err := sqlite.Open(context.Background(), filepath.Join(t.TempDir(), "cache.db"))
 	if err != nil {
 		t.Fatal(err)
@@ -246,7 +252,7 @@ func newRigWith(t *testing.T, wrap func(*providertest.Fake) provider.Provider) *
 	}
 	r.engine = syncengine.New(syncengine.Config{
 		Provider:  p,
-		Store:     st,
+		Store:     wrapStore(st),
 		Budget:    r.budget,
 		Publisher: r.pub,
 		Clock:     r.clock,
