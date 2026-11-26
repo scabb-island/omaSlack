@@ -3,12 +3,16 @@
 package auth
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"errors"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"unicode/utf16"
 
@@ -39,6 +43,8 @@ type desktopFixture struct {
 	rootState string
 	tokens    []byte // localConfig_v2 value, tag byte included; nil for no LevelDB
 	cookie    cookieRow
+	others    []cookieRow // the session's other cookies
+	logs      bytes.Buffer
 }
 
 type cookieRow struct {
@@ -69,9 +75,12 @@ func (f *desktopFixture) build(t *testing.T) Desktop {
 		writeLevelDB(t, filepath.Join(f.dir, "Local Storage", "leveldb"), f.tokens)
 	}
 	if f.cookie.name != "" {
-		writeCookieDB(t, filepath.Join(f.dir, "Cookies"), f.cookie)
+		writeCookieDB(t, filepath.Join(f.dir, "Cookies"), append([]cookieRow{f.cookie}, f.others...)...)
 	}
-	return Desktop{Dir: f.dir, Passwords: &passwords{keys: []string{"keyring-key"}}}
+	return Desktop{
+		Dir: f.dir, Passwords: &passwords{keys: []string{"keyring-key"}},
+		Log: slog.New(slog.NewTextHandler(&f.logs, nil)),
+	}
 }
 
 func writeTestFile(t *testing.T, path, content string) {
@@ -101,7 +110,7 @@ func writeLevelDB(t *testing.T, dir string, localConfigValue []byte) {
 	}
 }
 
-func writeCookieDB(t *testing.T, path string, row cookieRow) {
+func writeCookieDB(t *testing.T, path string, rows ...cookieRow) {
 	t.Helper()
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
@@ -117,8 +126,10 @@ func writeCookieDB(t *testing.T, path string, row cookieRow) {
 			t.Fatal(err)
 		}
 	}
-	if _, err := db.ExecContext(t.Context(), `INSERT INTO cookies VALUES (?, ?, ?, ?)`, row.host, row.name, row.value, row.encrypted); err != nil {
-		t.Fatal(err)
+	for _, row := range rows {
+		if _, err := db.ExecContext(t.Context(), `INSERT INTO cookies VALUES (?, ?, ?, ?)`, row.host, row.name, row.value, row.encrypted); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
@@ -137,13 +148,22 @@ func TestDesktopWorkspacesJoinsTheAppsState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Workspaces: %v", err)
 	}
-	creds := func(token string) keyring.DesktopSession {
-		return keyring.DesktopSession{Token: token, Cookie: "xoxd-desktop"}
+	creds := func(token, url string) keyring.DesktopSession {
+		return keyring.DesktopSession{Token: token, Cookie: "xoxd-desktop", Cookies: "d=xoxd-desktop", WorkspaceURL: url}
 	}
 	want := []Workspace{
-		{Team: mustTeam(t, "T0ALPHA"), Name: "Alpha", URL: "https://alpha.slack.com/", Credentials: creds("xoxc-alpha")},
-		{Team: mustTeam(t, "T0BETA1"), Name: "Beta", URL: "https://beta.slack.com/", Credentials: creds("xoxc-beta")},
-		{Team: mustTeam(t, "E0GRID1"), Name: "Grid", URL: "https://grid.enterprise.slack.com/", Credentials: creds("xoxc-grid")},
+		{
+			Team: mustTeam(t, "T0ALPHA"), Name: "Alpha", URL: "https://alpha.slack.com/",
+			Credentials: creds("xoxc-alpha", "https://alpha.slack.com/"),
+		},
+		{
+			Team: mustTeam(t, "T0BETA1"), Name: "Beta", URL: "https://beta.slack.com/",
+			Credentials: creds("xoxc-beta", "https://beta.slack.com/"),
+		},
+		{
+			Team: mustTeam(t, "E0GRID1"), Name: "Grid", URL: "https://grid.enterprise.slack.com/",
+			Credentials: creds("xoxc-grid", "https://grid.enterprise.slack.com/"),
+		},
 		{Team: mustTeam(t, "T0NOTOKEN"), Name: "No token", URL: "https://notoken.slack.com/"},
 	}
 	if !reflect.DeepEqual(got, want) {
@@ -333,4 +353,58 @@ func TestFindDesktopDir(t *testing.T) {
 	if _, err := FindDesktopDir(); !errors.Is(err, ErrDesktopNotFound) {
 		t.Errorf("FindDesktopDir over a file: %v, want ErrDesktopNotFound", err)
 	}
+}
+
+// Some workspaces reject the d cookie alone (GitLab issue #1), so every
+// cookie the app holds for the workspace's address goes with it: those
+// for .slack.com and those for its own host. One that cannot be decrypted
+// is skipped and named in the log, without its value; the keyring is asked
+// for its key once.
+func TestDesktopWorkspacesKeepEverySessionCookie(t *testing.T) {
+	f := newDesktopFixture(t)
+	f.others = []cookieRow{
+		{host: ".slack.com", name: "b", value: "b-plain"},
+		{host: ".slack.com", name: "x", encrypted: encryptCookie(t, "v11", []byte("x-from-keyring"), "keyring-key")},
+		{host: ".slack.com", name: "lc", encrypted: encryptCookie(t, "v11", []byte("lc-from-keyring"), "keyring-key")},
+		{host: "alpha.slack.com", name: "own", encrypted: encryptCookie(t, "v10", alphaHashed(), "peanuts")},
+		{host: "beta.slack.com", name: "other", value: "beta-only"},
+		{host: "slack.com", name: "root", value: "slack-com-only"},
+		{host: ".example.com", name: "z", value: "elsewhere"},
+		{host: ".slack.com", name: "broken", encrypted: []byte("v10abc")},
+	}
+	d := f.build(t)
+	got, err := d.Workspaces(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	cookies := map[string]string{}
+	for _, w := range got {
+		cookies[w.Name] = w.Credentials.Cookies
+	}
+	want := map[string]string{
+		"Alpha":    "d=xoxd-desktop; b=b-plain; lc=lc-from-keyring; x=x-from-keyring; own=alpha-own",
+		"Beta":     "d=xoxd-desktop; b=b-plain; lc=lc-from-keyring; x=x-from-keyring; other=beta-only",
+		"Grid":     "d=xoxd-desktop; b=b-plain; lc=lc-from-keyring; x=x-from-keyring",
+		"No token": "",
+	}
+	if !reflect.DeepEqual(cookies, want) {
+		t.Errorf("cookies =\n%v\nwant\n%v", cookies, want)
+	}
+	if asked := d.Passwords.(*passwords).calls; asked != 1 {
+		t.Errorf("the keyring was asked %d times, want once", asked)
+	}
+	logs := f.logs.String()
+	if !strings.Contains(logs, "broken") || !strings.Contains(logs, "d-s") {
+		t.Errorf("logs = %q, want the undecryptable cookies named", logs)
+	}
+	if strings.Contains(logs, "v10abc") {
+		t.Errorf("logs = %q carry a cookie value", logs)
+	}
+}
+
+// alphaHashed is a cookie value for alpha.slack.com behind the hash of
+// its host, as Chromium 130 and later store it.
+func alphaHashed() []byte {
+	sum := sha256.Sum256([]byte("alpha.slack.com"))
+	return append(sum[:], "alpha-own"...)
 }

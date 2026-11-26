@@ -42,29 +42,60 @@ const (
 		"-Body \"token=xoxc-9999-8888-aa&_x_reason=x\"\n"
 )
 
+// ParseCurl keeps every cookie of the session, not only d (some
+// workspaces reject the d cookie alone), and the workspace's own domain
+// the request went to.
 func TestParseCurl(t *testing.T) {
+	const acme = "https://acme.slack.com/"
 	for _, tt := range []struct {
-		name, paste, token, cookie string
+		name, paste, token, cookie, cookies, workspace string
 	}{
-		{"chrome", chromeCurl, "xoxc-1111-2222-3333-abcdef", "xoxd-AbC%2Fdef%2BGhi%3D%3D"},
-		{"firefox, d-s before d", firefoxCurl, "xoxc-9999-8888-aa", "xoxd-ZZZ%2F%3D"},
-		{"chrome cmd", cmdCurl, "xoxc-1111-2222-3333-abcdef", "xoxd-AbC%2Fdef%2BGhi%3D%3D"},
-		{"chrome powershell", powershellCurl, "xoxc-9999-8888-aa", "xoxd-AbC%2Fdef"},
-		{"powershell, cookie in the headers", powershellHeadersCurl, "xoxc-9999-8888-aa", "xoxd-ZZZ%2F%3D"},
-		{"a cookie named xd before d", `-b 'xd=xoxd-WRONG; d=xoxd-RIGHT' token=xoxc-1`, "xoxc-1", "xoxd-RIGHT"},
-		{"a cookie named x-d before d", `-b 'x-d=xoxd-WRONG; d=xoxd-RIGHT' token=xoxc-1`, "xoxc-1", "xoxd-RIGHT"},
-		{"token, then the cookie decoded on its own line", "xoxc-1-2\nxoxd-AbC/def+Ghi==\n", "xoxc-1-2", "xoxd-AbC%2Fdef%2BGhi%3D%3D"},
-		{"token, then the cookie, CRLF", "xoxc-1-2\r\n  xoxd-Q%2F\r\n", "xoxc-1-2", "xoxd-Q%2F"},
-		{"bare cookie with its trailing semicolon", "xoxc-1\nxoxd-Q%2F;\n", "xoxc-1", "xoxd-Q%2F"},
-		{"cookie first in the header", `-H 'cookie: d=xoxd-A1; b=2' token=xoxc-1-2`, "xoxc-1-2", "xoxd-A1"},
-		{"cookie with its name", "xoxc-1\nd=xoxd-Q\n", "xoxc-1", "xoxd-Q"},
+		{
+			"chrome", chromeCurl, "xoxc-1111-2222-3333-abcdef", "xoxd-AbC%2Fdef%2BGhi%3D%3D",
+			"b=abc123; d=xoxd-AbC%2Fdef%2BGhi%3D%3D; d-s=1700000000; lc=1700000000", acme,
+		},
+		{
+			"firefox, d-s before d", firefoxCurl, "xoxc-9999-8888-aa", "xoxd-ZZZ%2F%3D",
+			"d-s=17; d=xoxd-ZZZ%2F%3D; b=x", acme,
+		},
+		{
+			"chrome cmd", cmdCurl, "xoxc-1111-2222-3333-abcdef", "xoxd-AbC%2Fdef%2BGhi%3D%3D",
+			"b=abc123; d=xoxd-AbC%2Fdef%2BGhi%3D%3D; d-s=1700000000", acme,
+		},
+		{"chrome powershell", powershellCurl, "xoxc-9999-8888-aa", "xoxd-AbC%2Fdef", "b=abc123; d=xoxd-AbC%2Fdef", acme},
+		{
+			"powershell, cookie in the headers", powershellHeadersCurl, "xoxc-9999-8888-aa", "xoxd-ZZZ%2F%3D",
+			"b=x; d=xoxd-ZZZ%2F%3D; d-s=17", acme,
+		},
+		{
+			"a cookie named xd before d", `-b 'xd=xoxd-WRONG; d=xoxd-RIGHT' token=xoxc-1`, "xoxc-1", "xoxd-RIGHT",
+			"xd=xoxd-WRONG; d=xoxd-RIGHT", "",
+		},
+		{
+			"a cookie named x-d before d", `--cookie "x-d=xoxd-WRONG; d=xoxd-RIGHT" token=xoxc-1`, "xoxc-1", "xoxd-RIGHT",
+			"x-d=xoxd-WRONG; d=xoxd-RIGHT", "",
+		},
+		{"token, then the cookie decoded on its own line", "xoxc-1-2\nxoxd-AbC/def+Ghi==\n", "xoxc-1-2", "xoxd-AbC%2Fdef%2BGhi%3D%3D", "", ""},
+		{"token, then the cookie, CRLF", "xoxc-1-2\r\n  xoxd-Q%2F\r\n", "xoxc-1-2", "xoxd-Q%2F", "", ""},
+		{"bare cookie with its trailing semicolon", "xoxc-1\nxoxd-Q%2F;\n", "xoxc-1", "xoxd-Q%2F", "", ""},
+		{"cookie first in the header", `-H 'cookie: d=xoxd-A1; b=2' token=xoxc-1-2`, "xoxc-1-2", "xoxd-A1", "d=xoxd-A1; b=2", ""},
+		{"cookie with its name", "xoxc-1\nd=xoxd-Q\n", "xoxc-1", "xoxd-Q", "", ""},
+		{
+			"a cookie header without d, then d on its own line", "-b 'b=1; x=2' token=xoxc-1\nxoxd-Q\n", "xoxc-1", "xoxd-Q",
+			"b=1; x=2; d=xoxd-Q", "",
+		},
+		{
+			"malformed pairs are dropped", "-b 'b=1; ; novalue; d=xoxd-Q' token=xoxc-1", "xoxc-1", "xoxd-Q",
+			"b=1; d=xoxd-Q", "",
+		},
 	} {
 		got, err := ParseCurl(tt.paste)
-		want := keyring.DesktopSession{Token: tt.token, Cookie: tt.cookie}
+		want := keyring.DesktopSession{Token: tt.token, Cookie: tt.cookie, Cookies: tt.cookies, WorkspaceURL: tt.workspace}
 		if err != nil || got != want {
 			t.Errorf("%s: ParseCurl = %#v, %v; want %#v", tt.name, got, err, want)
-			if got.Token != tt.token || got.Cookie != tt.cookie {
-				t.Errorf("%s: token %t, cookie %t", tt.name, got.Token == tt.token, got.Cookie == tt.cookie)
+			if got.Token != tt.token || got.Cookie != tt.cookie || got.Cookies != tt.cookies {
+				t.Errorf("%s: token %t, cookie %t, cookies %t", tt.name,
+					got.Token == tt.token, got.Cookie == tt.cookie, got.Cookies == tt.cookies)
 			}
 		}
 	}
@@ -88,19 +119,26 @@ func TestParseCurlNamesWhatIsMissing(t *testing.T) {
 	}
 }
 
+// The workspace URL Slack's auth.test answers is the one stored, even
+// when the request was copied from another of the workspace's hosts.
 func TestFromCurlAsksSlackWhoTheSessionIs(t *testing.T) {
 	var asked keyring.DesktopSession
 	authTest := func(_ context.Context, creds keyring.DesktopSession) (Identity, error) {
 		asked = creds
-		return Identity{TeamID: "T0123", Team: "Acme", URL: "https://acme.slack.com/"}, nil
+		return Identity{TeamID: "T0123", Team: "Acme", URL: "https://acme-corp.slack.com/"}, nil
 	}
 	got, err := FromCurl(context.Background(), firefoxCurl, authTest)
 	if err != nil {
 		t.Fatalf("FromCurl: %v", err)
 	}
-	creds := keyring.DesktopSession{Token: "xoxc-9999-8888-aa", Cookie: "xoxd-ZZZ%2F%3D"}
+	creds := keyring.DesktopSession{
+		Token: "xoxc-9999-8888-aa", Cookie: "xoxd-ZZZ%2F%3D", Cookies: "d-s=17; d=xoxd-ZZZ%2F%3D; b=x",
+		WorkspaceURL: "https://acme.slack.com/",
+	}
 	team, _ := domain.ParseTeamID("T0123")
-	want := Workspace{Team: team, Name: "Acme", URL: "https://acme.slack.com/", Credentials: creds}
+	stored := creds
+	stored.WorkspaceURL = "https://acme-corp.slack.com/"
+	want := Workspace{Team: team, Name: "Acme", URL: "https://acme-corp.slack.com/", Credentials: stored}
 	if got != want || asked != creds {
 		t.Errorf("FromCurl = %v after asking with %v; want %v", got, asked, want)
 	}

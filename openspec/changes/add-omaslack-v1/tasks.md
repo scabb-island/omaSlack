@@ -28,7 +28,7 @@
 - [x] 1.19 Tolerant reaction mapping: accept reactions without `item.type` (as slk does) and log unexpected item types
 - [x] 1.20 The sync engine's `LoadOlder` continues from `Store.Oldest` instead of a client-supplied cursor
 - [x] 1.21 `auth add`: picking a workspace that needs sign-in goes straight to the browser paste flow
-- [x] 1.22 desktop-session: when only `client.counts` fails (Enterprise Grid), return the conversation list without read state
+- [x] 1.22 desktop-session: when only `client.counts` fails (workspaces where `client.counts` is refused), return the conversation list without read state
 - [x] 1.23 desktop-session: remember the presence subscription and send it again on every socket that opens
 - [x] 1.24 Sync engine: log the conversation list failing and recovering when the state changes
 - [x] 1.25 `auth add`: check desktop app credentials with `auth.test` before storing them, explain a session Slack rejects (point to `internal-app`), and require an interactive terminal
@@ -46,6 +46,8 @@
 - [x] 2.9 `files.upload` and `files.fetch`
 - [x] 2.10 Read-state fill for a provider whose list lacks it (internal-app): `conversations.info` per conversation (plus a one-message `conversations.history` when it names no latest message), at background priority, DMs first, dormant group DMs skipped, one pass at a time and at most every 30 minutes
 - [x] 2.11 Per-subscriber queues coalesce state events by key, and the slow-subscriber bound counts only message, reaction and focus events, so a reconcile burst on a large workspace no longer disconnects a client that reads (`internal/events`)
+- [x] 2.12 desktop-session sends every session cookie (from a pasted cURL or the desktop app's Cookies database), not only `d`, and calls the Web API on the workspace's own domain; `auth add` stores the `auth.test` URL with the credentials of both providers (internal-app keeps calling `slack.com`), and entries stored before keep working with `d` alone
+- [x] 2.13 Daemon fixes from a live run: a coalesced `unread.summary` is only sent when it differs from the last one that subscriber got, and the sync engine's log lines name the team once
 - Deferred:
   - Realtime mention counting (mentions refresh with the conversation list and the read-marker poll).
   - Unread thread counts (need thread read markers).

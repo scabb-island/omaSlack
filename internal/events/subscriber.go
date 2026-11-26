@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"reflect"
 	"slices"
 
 	"gitlab.com/scabb-island/omaslack/internal/rpc"
@@ -27,6 +28,9 @@ type peer interface {
 type subscriber struct {
 	topics map[string]bool // guarded by Hub.mu
 	queue  *queue
+	// summary is the last unread summary queued for it, guarded by
+	// Hub.mu: a coalesced one equal to it is not sent again.
+	summary any
 }
 
 type subscribeParams struct {
@@ -170,13 +174,22 @@ func (h *Hub) wants(topic string) bool {
 }
 
 // sendSummary sends the current summary to every unread.summary
-// subscriber, computing it only when there is one.
+// subscriber that has not been sent it already, computing it only when
+// there is one.
 func (h *Hub) sendSummary(ctx context.Context) {
 	if !h.wants(TopicUnreadSummary) {
 		return
 	}
-	if sum, ok := h.summary(ctx); ok {
-		h.fanOut(TopicUnreadSummary, summaryKey, func() any { return sum })
+	sum, ok := h.summary(ctx)
+	if !ok {
+		return
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for p, s := range h.subs {
+		if s.topics[TopicUnreadSummary] && h.live(p) && !reflect.DeepEqual(s.summary, sum) {
+			h.enqueueSummary(p, s, sum)
+		}
 	}
 }
 
@@ -190,7 +203,14 @@ func (h *Hub) sendSummaryTo(ctx context.Context, p peer) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if s, ok := h.subs[p]; ok {
-		h.enqueue(p, s, note{method: TopicUnreadSummary, params: sum, key: summaryKey})
+		h.enqueueSummary(p, s, sum)
+	}
+}
+
+// enqueueSummary queues sum for s and remembers it. Callers hold h.mu.
+func (h *Hub) enqueueSummary(p peer, s *subscriber, sum any) {
+	if h.enqueue(p, s, note{method: TopicUnreadSummary, params: sum, key: summaryKey}) {
+		s.summary = sum
 	}
 }
 

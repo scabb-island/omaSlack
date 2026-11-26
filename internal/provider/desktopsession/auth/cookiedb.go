@@ -8,41 +8,121 @@ import (
 	"errors"
 	"io"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 
 	_ "modernc.org/sqlite" // the desktop app's Cookies database
 )
 
-const cookieQuery = `SELECT value, encrypted_value FROM cookies WHERE host_key = '.slack.com' AND name = 'd'`
+// cookieQuery reads every cookie of Slack's domains, in a stable order.
+// Which of them a workspace gets is decided by appliesTo.
+const cookieQuery = `SELECT host_key, name, value, encrypted_value FROM cookies
+	WHERE host_key = 'slack.com' OR host_key LIKE '%.slack.com' ORDER BY host_key, name`
 
-// readCookie returns the desktop app's "d" cookie from its Cookies
-// database: the plaintext value when Chromium stored one, otherwise the
-// encrypted value decrypted with a key from src.
-func readCookie(ctx context.Context, path string, src PasswordSource) (string, error) {
-	var (
-		plain string
-		enc   []byte
-	)
+// dCookieHost is where the desktop app keeps the d cookie.
+const dCookieHost = ".slack.com"
+
+// storedCookie is one cookie row of the desktop app, still encrypted when
+// Chromium stored no plaintext value.
+type storedCookie struct {
+	host, name, plain string
+	enc               []byte
+}
+
+// jar is the desktop app's Slack cookies, decrypted: the d cookie and
+// every other one with the host it belongs to.
+type jar struct {
+	d      string
+	others []storedCookie // plain holds the decrypted value
+}
+
+// readCookies reads the desktop app's Slack cookies from its Cookies
+// database and decrypts them with keys from src, asked for once. The d
+// cookie must be there and decrypt; any other that does not decrypt is
+// skipped and named in log, never with its value.
+func readCookies(ctx context.Context, path string, src PasswordSource, log *slog.Logger) (jar, error) {
+	rows, err := queryCookies(ctx, path)
+	if err != nil {
+		return jar{}, err
+	}
+	dec := newDecrypter(src)
+	var j jar
+	for _, c := range rows {
+		value, err := dec.value(ctx, c)
+		switch {
+		case c.host == dCookieHost && c.name == "d":
+			if err != nil {
+				return jar{}, err
+			}
+			j.d = value
+		case err != nil:
+			log.Warn("desktop app: skipped a cookie that cannot be decrypted", "name", c.name, "host", c.host)
+		default:
+			c.plain = value
+			j.others = append(j.others, c)
+		}
+	}
+	if j.d == "" {
+		// A database without the d cookie: installed, never signed in.
+		return jar{}, ErrCookieDBMissing
+	}
+	return j, nil
+}
+
+// queryCookies returns the Slack rows of the Cookies database at path,
+// read from a temporary copy.
+func queryCookies(ctx context.Context, path string) ([]storedCookie, error) {
+	var out []storedCookie
 	err := withCopies(filepath.Dir(path), []string{filepath.Base(path)}, func(dir string) error {
 		db, err := sql.Open("sqlite", filepath.Join(dir, filepath.Base(path)))
 		if err != nil {
 			return err
 		}
 		defer db.Close()
-		return db.QueryRowContext(ctx, cookieQuery).Scan(&plain, &enc)
+		rows, err := db.QueryContext(ctx, cookieQuery)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var c storedCookie
+			if err := rows.Scan(&c.host, &c.name, &c.plain, &c.enc); err != nil {
+				return err
+			}
+			out = append(out, c)
+		}
+		return rows.Err()
 	})
-	switch {
-	case errors.Is(err, fs.ErrNotExist), errors.Is(err, sql.ErrNoRows):
-		// No database, or one without the cookie: installed, never signed in.
-		return "", ErrCookieDBMissing
-	case err != nil:
-		return "", err
-	case plain != "":
-		return plain, nil
-	default:
-		return decryptCookie(ctx, enc, src)
+	if errors.Is(err, fs.ErrNotExist) {
+		// No database: installed, never signed in.
+		return nil, ErrCookieDBMissing
 	}
+	return out, err
+}
+
+// header is the Cookie header for the workspace at host: the d cookie, then
+// every other cookie a browser would send there, in the database's order.
+func (j jar) header(host string) string {
+	cookies := make([]cookie, 0, len(j.others)+1)
+	cookies = append(cookies, cookie{"d", j.d})
+	for _, c := range j.others {
+		if appliesTo(c.host, host) && (cookie{c.name, c.plain}).valid() {
+			cookies = append(cookies, cookie{c.name, c.plain})
+		}
+	}
+	return cookieHeader(cookies, j.d)
+}
+
+// appliesTo reports whether a cookie stored for hostKey goes with a
+// request to host: a domain cookie (".slack.com") to the domain and every
+// host under it, a host-only one to its host alone.
+func appliesTo(hostKey, host string) bool {
+	if domain, ok := strings.CutPrefix(hostKey, "."); ok {
+		return host == domain || strings.HasSuffix(host, hostKey)
+	}
+	return host == hostKey
 }
 
 // withCopies copies the named files of dir into a fresh temporary

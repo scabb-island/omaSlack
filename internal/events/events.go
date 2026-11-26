@@ -31,8 +31,9 @@
 //     counts (message.created, message.deleted, read.changed,
 //     conversation.updated, connection.state) the hub recomputes the
 //     summary with Options.Summary and sends it at most once per
-//     Options.Interval. A new subscriber to unread.summary gets the current
-//     one at once.
+//     Options.Interval, and only to subscribers it differs for: a summary
+//     equal to the last one a subscriber was sent is not sent again. A new
+//     subscriber to unread.summary gets the current one at once.
 //   - ui.focus is not a domain event: Focus sends it to the ui.focus
 //     subscribers.
 package events

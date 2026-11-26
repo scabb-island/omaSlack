@@ -26,7 +26,7 @@ import (
 // Downloads GET the file's url_private_download with the provider's own
 // credentials. The files host reads no form, so a token a Signer puts in
 // the form (the desktop-session xoxc token) goes in the Authorization
-// header instead, next to every header the Signer sets (its d cookie).
+// header instead, next to every header the Signer sets (its cookies).
 // Credentials only go to Slack's own hosts over HTTPS, or to the Web
 // API's host.
 

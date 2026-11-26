@@ -11,6 +11,7 @@ import (
 	"crypto/sha1" //nolint:gosec // Chromium derives the cookie key with PBKDF2-SHA1
 	"crypto/sha256"
 	"fmt"
+	"strings"
 )
 
 // PasswordSource yields every candidate for the desktop app's "Slack Safe
@@ -25,39 +26,68 @@ type PasswordSource interface {
 // keyring: v10 cookies need no lookup.
 const v10Password = "peanuts"
 
-// decryptCookie decrypts a Chromium cookie value on Linux: "v10" with the
-// fixed key, "v11" with a key from the keyring. Each candidate must yield
+// decryptCookie decrypts one .slack.com cookie value; see decrypter.
+func decryptCookie(ctx context.Context, enc []byte, src PasswordSource) (string, error) {
+	return newDecrypter(src).decrypt(ctx, enc, dCookieHost)
+}
+
+// decrypter decrypts the Chromium cookie values of one profile on Linux:
+// "v10" with the fixed key, "v11" with a key from the keyring, which it
+// asks src for once, at the first v11 value. Each candidate must yield
 // plausible cookie text; padding alone lets a wrong key through about one
 // time in sixteen.
-func decryptCookie(ctx context.Context, enc []byte, src PasswordSource) (string, error) {
+type decrypter struct {
+	src        PasswordSource
+	asked      bool
+	candidates [][]byte
+	err        error
+}
+
+func newDecrypter(src PasswordSource) *decrypter { return &decrypter{src: src} }
+
+// value is c's value: its plaintext when Chromium stored one, otherwise
+// its encrypted value decrypted.
+func (d *decrypter) value(ctx context.Context, c storedCookie) (string, error) {
+	if c.plain != "" {
+		return c.plain, nil
+	}
+	return d.decrypt(ctx, c.enc, c.host)
+}
+
+// decrypt decrypts enc, a value stored for host.
+func (d *decrypter) decrypt(ctx context.Context, enc []byte, host string) (string, error) {
 	if body, ok := bytes.CutPrefix(enc, []byte("v10")); ok {
-		return decryptWith(body, []byte(v10Password))
+		return decryptWith(body, []byte(v10Password), host)
 	}
 	body, ok := bytes.CutPrefix(enc, []byte("v11"))
 	if !ok {
 		return "", fmt.Errorf("%w: unknown encryption version", ErrDecryptFailed)
 	}
-	candidates, err := src.Passwords(ctx)
-	if err != nil {
-		return "", err
+	if !d.asked {
+		d.asked = true
+		d.candidates, d.err = d.src.Passwords(ctx)
 	}
-	return firstDecryption(body, candidates)
+	if d.err != nil {
+		return "", d.err
+	}
+	return firstDecryption(body, d.candidates, host)
 }
 
-func firstDecryption(body []byte, candidates [][]byte) (string, error) {
+func firstDecryption(body []byte, candidates [][]byte, host string) (string, error) {
 	err := ErrSecretNotFound
 	for _, password := range candidates {
 		var cookie string
-		if cookie, err = decryptWith(body, password); err == nil {
+		if cookie, err = decryptWith(body, password, host); err == nil {
 			return cookie, nil
 		}
 	}
 	return "", err
 }
 
-// decryptWith decrypts body with a PBKDF2-SHA1 key (salt "saltysalt", one
-// iteration, 16 bytes) and a 16-space IV, then checks the result.
-func decryptWith(body, password []byte) (string, error) {
+// decryptWith decrypts body, a value stored for host, with a PBKDF2-SHA1
+// key (salt "saltysalt", one iteration, 16 bytes) and a 16-space IV, then
+// checks the result.
+func decryptWith(body, password []byte, host string) (string, error) {
 	if len(body) == 0 || len(body)%aes.BlockSize != 0 {
 		return "", fmt.Errorf("%w: bad ciphertext length %d", ErrDecryptFailed, len(body))
 	}
@@ -73,7 +103,7 @@ func decryptWith(body, password []byte) (string, error) {
 	if n > aes.BlockSize {
 		return "", fmt.Errorf("%w: bad padding", ErrDecryptFailed)
 	}
-	return checked(removeDomainHash(out[:len(out)-n]))
+	return checked(removeDomainHash(out[:len(out)-n], host))
 }
 
 // cookieKey is Chromium's AES-128 key: PBKDF2-HMAC-SHA1 of password with
@@ -87,12 +117,12 @@ func cookieKey(password []byte) []byte {
 	return mac.Sum(nil)[:16]
 }
 
-// Chromium 130 and later prefix the value with SHA-256 of the cookie's
-// host. The query reads host ".slack.com"; both spellings are seen.
-var domainHashes = [][32]byte{sha256.Sum256([]byte(".slack.com")), sha256.Sum256([]byte("slack.com"))}
-
-func removeDomainHash(value []byte) []byte {
-	for _, h := range domainHashes {
+// removeDomainHash strips the SHA-256 of the cookie's host that Chromium
+// 130 and later put before the value. Both spellings of the host, with
+// and without its leading dot, are seen.
+func removeDomainHash(value []byte, host string) []byte {
+	bare := strings.TrimPrefix(host, ".")
+	for _, h := range [][32]byte{sha256.Sum256([]byte("." + bare)), sha256.Sum256([]byte(bare))} {
 		if rest, ok := bytes.CutPrefix(value, h[:]); ok {
 			return rest
 		}

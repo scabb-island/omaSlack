@@ -3,13 +3,18 @@ package desktopsession
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
+	"net/url"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
+	"gitlab.com/scabb-island/omaslack/internal/keyring"
 	"gitlab.com/scabb-island/omaslack/internal/provider"
+	"gitlab.com/scabb-island/omaslack/internal/provider/slackwire"
 )
 
 func TestWebAPICallsCarryTheTokenInTheFormAndTheCookie(t *testing.T) {
@@ -35,8 +40,8 @@ func TestWebAPICallsCarryTheTokenInTheFormAndTheCookie(t *testing.T) {
 	if req.Form["token"][0] != testToken || req.Form["channel"][0] != "C0001" {
 		t.Errorf("form = %v, want the xoxc token and the channel", req.Form)
 	}
-	if req.Cookie != testCookie {
-		t.Errorf("d cookie = %q, want %q", req.Cookie, testCookie)
+	if req.Cookies != testCookies {
+		t.Errorf("cookies = %q, want every cookie of the session", req.Cookies)
 	}
 	if auth := req.Header.Get("Authorization"); auth != "" {
 		t.Errorf("Authorization = %q; the web client sends none", auth)
@@ -75,5 +80,57 @@ func TestRejectedCredentialsAndRateLimitsAreTyped(t *testing.T) {
 	var limited *provider.RateLimitedError
 	if !errors.As(err, &limited) || limited.RetryAfter != 7*time.Second {
 		t.Errorf("Post() err = %v, want a 7s RateLimitedError", err)
+	}
+}
+
+// An entry stored before the whole cookie set was kept sends the d cookie
+// alone, as before.
+func TestAnEntryWithoutTheCookieSetSendsTheDCookieAlone(t *testing.T) {
+	f := newFakeSlack(t, map[string]http.HandlerFunc{"/api/auth.test": jsonBody(http.StatusOK, authOK)})
+	p := New(parse(t, domain.ParseTeamID, "T0001"), keyring.DesktopSession{Token: testToken, Cookie: testCookie},
+		WithAPIURL(f.srv.URL+"/api/"))
+	if _, err := AuthTest(f.srv.URL+"/api/")(context.Background(), keyring.DesktopSession{Token: testToken, Cookie: testCookie}); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.Call(context.Background(), "auth.test", url.Values{}, &slackwire.Envelope{}); err != nil {
+		t.Fatal(err)
+	}
+	for _, req := range f.requests() {
+		if req.Cookies != "d="+testCookie {
+			t.Errorf("%s: cookies = %q, want the d cookie alone", req.Path, req.Cookies)
+		}
+	}
+}
+
+// recorder answers every request with ok and keeps the URLs it was sent.
+type recorder struct{ urls []string }
+
+func (r *recorder) RoundTrip(req *http.Request) (*http.Response, error) {
+	r.urls = append(r.urls, req.URL.String())
+	return &http.Response{
+		StatusCode: http.StatusOK, Header: http.Header{"Content-Type": {"application/json"}},
+		Body: io.NopCloser(strings.NewReader(authOK)), Request: req,
+	}, nil
+}
+
+// The web client calls the Web API on the workspace's own domain; a
+// stored URL that is not a Slack workspace's never receives anything.
+func TestCallsGoToTheWorkspacesOwnDomain(t *testing.T) {
+	for workspace, want := range map[string]string{
+		"https://acme.slack.com/":   "https://acme.slack.com/api/auth.test",
+		"https://acme.example.com/": "https://slack.com/api/auth.test",
+		"http://acme.slack.com/":    "https://slack.com/api/auth.test",
+		"":                          "https://slack.com/api/auth.test",
+	} {
+		rec := &recorder{}
+		creds := testCreds()
+		creds.WorkspaceURL = workspace
+		p := New(parse(t, domain.ParseTeamID, "T0001"), creds, WithHTTPClient(&http.Client{Transport: rec}))
+		if err := p.Call(context.Background(), "auth.test", url.Values{}, &slackwire.Envelope{}); err != nil {
+			t.Fatalf("%q: %v", workspace, err)
+		}
+		if len(rec.urls) != 1 || rec.urls[0] != want {
+			t.Errorf("workspace %q: requests = %v, want %s", workspace, rec.urls, want)
+		}
 	}
 }

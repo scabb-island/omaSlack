@@ -89,8 +89,8 @@ func TestConversationsFailWhenEitherCallFails(t *testing.T) {
 	}
 }
 
-// Enterprise Grid member workspaces refuse client.counts (team_is_restricted
-// and similar). The list is still useful without read state, so only
+// Some workspaces refuse client.counts (team_is_restricted and similar).
+// The list is still useful without read state, so only
 // rejected credentials and rate limits keep failing it.
 func TestConversationsFallBackToTheListWhenOnlyClientCountsFails(t *testing.T) {
 	f := newFakeSlack(t, map[string]http.HandlerFunc{

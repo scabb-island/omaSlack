@@ -170,10 +170,18 @@ func wantIn(t *testing.T, where, text string, parts ...string) {
 	}
 }
 
+// What auth add stores: the session with the workspace URL auth.test
+// answered and, from a cURL, every cookie it carried.
 var (
-	alphaCreds   = keyring.DesktopSession{Token: "xoxc-alpha", Cookie: "xoxd-desktop"}
-	betaCreds    = keyring.DesktopSession{Token: "xoxc-beta", Cookie: "xoxd-desktop"}
-	browserCreds = keyring.DesktopSession{Token: browserToken, Cookie: browserCookie}
+	alphaCreds   = keyring.DesktopSession{Token: "xoxc-alpha", Cookie: "xoxd-desktop", WorkspaceURL: "https://alpha.slack.com/"}
+	betaCreds    = keyring.DesktopSession{Token: "xoxc-beta", Cookie: "xoxd-desktop", WorkspaceURL: "https://beta.slack.com/"}
+	browserCreds = keyring.DesktopSession{
+		Token: browserToken, Cookie: browserCookie, Cookies: "b=abc; d=" + browserCookie + "; d-s=17",
+		WorkspaceURL: "https://browser.slack.com/",
+	}
+	// browserBareCreds is a token and a d cookie pasted apart: d alone.
+	browserBareCreds = keyring.DesktopSession{Token: browserToken, Cookie: browserCookie, WorkspaceURL: "https://browser.slack.com/"}
+	acmeCreds        = keyring.InternalApp{UserToken: userToken, AppToken: appToken, WorkspaceURL: "https://acme.slack.com/"}
 )
 
 func TestAuthAddDesktopDeclinedStoresNothing(t *testing.T) {
@@ -378,7 +386,7 @@ func TestAuthAddBrowserAsksForTheCookieApart(t *testing.T) {
 		t.Fatalf("exit code = %d, stderr %q", code, errOut)
 	}
 	wantIn(t, "stdout", out, "d cookie")
-	f.wantStored(map[string]keyring.Credentials{"T0BRWSR": browserCreds})
+	f.wantStored(map[string]keyring.Credentials{"T0BRWSR": browserBareCreds})
 }
 
 func TestAuthAddBrowserFailures(t *testing.T) {
@@ -432,7 +440,7 @@ func TestAuthAddInternalApp(t *testing.T) {
 		t.Fatalf("exit code = %d, stderr %q", code, errOut)
 	}
 	wantIn(t, "stdout", out, "xoxp-", "xapp-", "Added Acme (T0ACME1)", "internal-app")
-	f.wantStored(map[string]keyring.Credentials{"T0ACME1": keyring.InternalApp{UserToken: userToken, AppToken: appToken}})
+	f.wantStored(map[string]keyring.Credentials{"T0ACME1": acmeCreds})
 }
 
 func TestAuthAddInternalAppFailures(t *testing.T) {

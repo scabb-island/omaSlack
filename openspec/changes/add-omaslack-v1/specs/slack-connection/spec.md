@@ -15,6 +15,14 @@ The daemon SHALL talk to Slack only through the `Provider` interface. v1 SHALL s
 - **WHEN** Slack rejects the desktop-session credentials the CLI has just read from the desktop app or the user has just pasted from a browser
 - **THEN** no credential is stored, and the CLI explains that some workspaces bind sessions to Slack's own client and points the user to the `internal-app` provider and its guide
 
+### Requirement: Desktop session reaches the workspace like the web client
+`omaslack auth add` SHALL store the workspace URL that Slack's `auth.test` returns with the credentials of either provider. The `desktop-session` provider SHALL send every cookie of the session it holds, not only `d`, and SHALL call the Web API on the workspace's own domain when the stored URL is a Slack workspace address over HTTPS (`https://<name>.slack.com/`), and on `https://slack.com/api/` otherwise.
+
+#### Scenario: Desktop session sends the whole session to the workspace's own domain
+- **WHEN** a `desktop-session` workspace was added from the desktop app or a pasted cURL whose session has cookies besides `d`, and `auth.test` answered the workspace URL `https://acme.slack.com/`
+- **THEN** every Web API call, the socket dial and file downloads carry all of those cookies, and Web API calls go to `https://acme.slack.com/api/`
+- **AND** a stored workspace URL that is not `https://*.slack.com/` is ignored, so calls go to `https://slack.com/api/` and no credential is sent elsewhere
+
 ### Requirement: Explicit consent for the unofficial protocol
 The `desktop-session` provider MUST require the user to accept a warning explaining that it uses an unofficial protocol that may violate Slack's terms of service. Without that acceptance, the workspace MUST NOT be registered.
 
