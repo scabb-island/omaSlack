@@ -47,11 +47,18 @@ func (s status) shown() domain.ConnectionState {
 	return s.link
 }
 
-// reconcileSet is every conversation worth catching up after a reconnect:
-// the ones open in a client and the ones with activity since startup, in
-// a stable order.
-func reconcileSet(open map[domain.ConversationID]int, active map[domain.ConversationID]struct{}) []domain.ConversationID {
+// reconcileSet is every conversation worth catching up after a reconnect
+// (spec sync-engine, "Reconciliation after reconnecting"), in a stable
+// order: the ones open in a client, the ones with activity since startup,
+// and the ones list (the provider's conversation list, nil when it could
+// not be read) says are unread or mention the user.
+func reconcileSet(open map[domain.ConversationID]int, active map[domain.ConversationID]struct{}, list []domain.Conversation) []domain.ConversationID {
 	all := slices.AppendSeq(slices.Collect(maps.Keys(open)), maps.Keys(active))
+	for _, c := range list {
+		if c.Unread() || c.Mentions > 0 {
+			all = append(all, c.ID)
+		}
+	}
 	slices.SortFunc(all, func(a, b domain.ConversationID) int {
 		return cmp.Compare(a.String(), b.String())
 	})

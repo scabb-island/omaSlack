@@ -202,6 +202,7 @@ func TestAuthAddDesktopAddsEverySignedInByDefault(t *testing.T) {
 
 func TestAuthAddDesktopRejectsABadPick(t *testing.T) {
 	for pick, says := range map[string]string{
+		// Gone needs sign-in, and the input ends where its paste would be.
 		"3\n":   "Gone (T0GONE1) needs sign-in",
 		"1 3\n": "needs sign-in",
 		"4\n":   `no workspace "4"`,
@@ -227,6 +228,52 @@ func TestAuthAddDesktopWithEveryWorkspaceSignedOut(t *testing.T) {
 	}
 	wantIn(t, "stdout", out, "Gone", "needs sign-in")
 	wantIn(t, "stderr", errOut, "no workspace to add")
+	f.wantStored(nil)
+}
+
+// signedOutBrowser makes the desktop app's signed-out workspace the one
+// the browser session belongs to.
+func (f *authFixture) signedOutBrowser() {
+	f.desktop[2].Team, f.desktop[2].Name = team(f.t, "T0BRWSR"), "Browser"
+}
+
+func TestAuthAddDesktopPickingASignedOutWorkspacePastesABrowserSessionForIt(t *testing.T) {
+	for pick, want := range map[string]map[string]keyring.Credentials{
+		"3\n":   {"T0BRWSR": browserCreds},
+		"1 3\n": {"T0ALPHA": alphaCreds, "T0BRWSR": browserCreds},
+	} {
+		f := newAuthFixture(t)
+		f.signedOutBrowser()
+		code, out, errOut := f.run("yes\n"+pick+browserCurl, "auth", "add", "--provider", "desktop-session")
+		if code != ExitOK {
+			t.Fatalf("%q: exit code = %d, stderr %q", pick, code, errOut)
+		}
+		wantIn(t, "stdout", out, "Browser (T0BRWSR) needs sign-in", "Copy as cURL", "Added Browser (T0BRWSR)")
+		f.wantStored(want)
+	}
+}
+
+func TestAuthAddDesktopASessionForAnotherWorkspaceStoresNothing(t *testing.T) {
+	f := newAuthFixture(t)
+	code, _, errOut := f.run("yes\n1 3\n"+browserCurl, "auth", "add", "--provider", "desktop-session")
+	if code != ExitError {
+		t.Errorf("exit code = %d", code)
+	}
+	wantIn(t, "stderr", errOut, "Browser (T0BRWSR)", "not Gone (T0GONE1)")
+	if f.opened {
+		t.Error("opened the keyring after a session for the wrong workspace")
+	}
+	f.wantStored(nil)
+}
+
+func TestAuthAddDesktopASignedOutPickWithABadPasteStoresNothing(t *testing.T) {
+	f := newAuthFixture(t)
+	f.signedOutBrowser()
+	code, _, errOut := f.run("yes\n1 3\nxoxc-rejected\n"+browserCookie+"\n", "auth", "add", "--provider", "desktop-session")
+	if code != ExitError {
+		t.Errorf("exit code = %d", code)
+	}
+	wantIn(t, "stderr", errOut, "Browser (T0BRWSR) needs sign-in", "invalid_auth")
 	f.wantStored(nil)
 }
 

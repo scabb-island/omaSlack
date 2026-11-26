@@ -33,11 +33,16 @@ func (e *Engine) CloseConversation(ctx context.Context, conv domain.Conversation
 	return e.do(ctx, openOp(conv, -1))
 }
 
-// LoadOlder fetches one page of conv's messages older than before at
-// Interactive priority and stores it. before is the oldest message the
-// client shows, since the Store cannot say which is its oldest. It returns
-// how many messages Slack had; zero means the start of the conversation.
-func (e *Engine) LoadOlder(ctx context.Context, conv domain.ConversationID, before domain.TS) (int, error) {
+// LoadOlder fetches, at Interactive priority, the page of conv's messages
+// just older than the oldest the Store holds (store.Store.Oldest), and
+// stores it. When the Store holds nothing for conv, that is the newest
+// page, as on a first open. It returns how many messages Slack had; zero
+// means the start of the conversation.
+func (e *Engine) LoadOlder(ctx context.Context, conv domain.ConversationID) (int, error) {
+	before, err := e.cfg.Store.Oldest(ctx, conv)
+	if err != nil {
+		return 0, err
+	}
 	page, err := e.history(ctx, conv, before, ratebudget.Interactive)
 	if err != nil {
 		return 0, err

@@ -67,15 +67,35 @@ func TestStatusShowsTheLinkUnlessRateLimited(t *testing.T) {
 	}
 }
 
-func TestReconcileSetIsOpenPlusActiveSortedWithoutDuplicates(t *testing.T) {
-	open := map[domain.ConversationID]int{cB: 1, cD: 2}
-	active := map[domain.ConversationID]struct{}{cD: {}, cA: {}}
-	want := []domain.ConversationID{cA, cB, cD}
-	if got := reconcileSet(open, active); !slices.Equal(got, want) {
-		t.Fatalf("reconcileSet = %v, want %v", got, want)
+func TestReconcileSetIsOpenActiveAndUnreadSortedWithoutDuplicates(t *testing.T) {
+	type (
+		opens   = map[domain.ConversationID]int
+		actives = map[domain.ConversationID]struct{}
+		list    = []domain.Conversation
+	)
+	var zero domain.TS
+	cases := []struct {
+		name   string
+		open   opens
+		active actives
+		list   list
+		want   []domain.ConversationID
+	}{
+		{"nothing", nil, nil, nil, nil},
+		{"open and active, merged", opens{cB: 1, cD: 2}, actives{cD: {}, cA: {}}, nil, []domain.ConversationID{cA, cB, cD}},
+		{"an unread DM nobody touched", nil, nil, list{{ID: cD, Latest: t2, LastRead: t1}}, []domain.ConversationID{cD}},
+		{"never read but has a message", nil, nil, list{{ID: cD, Latest: t1, LastRead: zero}}, []domain.ConversationID{cD}},
+		{"read up to the latest", nil, nil, list{{ID: cA, Latest: t2, LastRead: t2}}, nil},
+		{"marker past the latest", nil, nil, list{{ID: cA, Latest: t1, LastRead: t2}}, nil},
+		{"latest unknown", nil, nil, list{{ID: cA, LastRead: t1}}, nil},
+		{"one mention, read state unknown", nil, nil, list{{ID: cB, Mentions: 1}}, []domain.ConversationID{cB}},
+		{"a mention in a read channel", nil, nil, list{{ID: cB, Latest: t1, LastRead: t1, Mentions: 1}}, []domain.ConversationID{cB}},
+		{"all three sources", opens{cA: 1}, actives{cA: {}}, list{{ID: cA, Mentions: 2}, {ID: cB}, {ID: cD, Latest: t3, LastRead: t1}}, []domain.ConversationID{cA, cD}},
 	}
-	if got := reconcileSet(nil, nil); len(got) != 0 {
-		t.Fatalf("empty reconcileSet = %v", got)
+	for _, c := range cases {
+		if got := reconcileSet(c.open, c.active, c.list); !slices.Equal(got, c.want) {
+			t.Errorf("%s: reconcileSet = %v, want %v", c.name, got, c.want)
+		}
 	}
 }
 
