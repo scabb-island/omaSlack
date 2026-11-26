@@ -1,1 +1,0 @@
-{:version 1 :tested-at "2026-11-26T12:18:09-03:00" :source "cmd/omaslack/main.go" :namespace "gitlab.com/scabb-island/omaslack/cmd/omaslack" :outcomes {} :forms [{:id "defn-/main" :kind "defn-" :file "cmd/omaslack/main.go" :line 11 :end-line 13 :hash "080fb2298cb83c85c0299115474aa6ceb4e1c8ff2a27a5d28441caf182a47dc6" :killed 0 :survived 0 :uncovered 1 :sites 1}]}
