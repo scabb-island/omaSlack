@@ -67,8 +67,10 @@ func decryptWith(body, password []byte) (string, error) {
 	}
 	out := make([]byte, len(body))
 	cipher.NewCBCDecrypter(block, bytes.Repeat([]byte{' '}, aes.BlockSize)).CryptBlocks(out, body)
+	// A zero pad length strips nothing and leaves a NUL, which checked
+	// rejects as unprintable, so only the upper bound needs a check.
 	n := int(out[len(out)-1])
-	if n < 1 || n > aes.BlockSize {
+	if n > aes.BlockSize {
 		return "", fmt.Errorf("%w: bad padding", ErrDecryptFailed)
 	}
 	return checked(removeDomainHash(out[:len(out)-n]))

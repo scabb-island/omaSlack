@@ -57,6 +57,7 @@ func TestGatherReportsTheMostActionableFailure(t *testing.T) {
 		{"not found beats no keyring", []attempt{failed(ErrNoKeyring), failed(ErrSecretNotFound)}, ErrSecretNotFound},
 		{"unexpected beats not found", []attempt{failed(ErrSecretNotFound), failed(boom), failed(ErrNoKeyring)}, boom},
 		{"locked beats everything", []attempt{failed(boom), failed(ErrKeyringLocked), failed(ErrSecretNotFound)}, ErrKeyringLocked},
+		{"of two alike, the first", []attempt{failed(boom), failed(errors.New("later"))}, boom},
 	} {
 		if _, err := gather(context.Background(), tt.attempts); !errors.Is(err, tt.want) {
 			t.Errorf("%s: error = %v, want %v", tt.name, err, tt.want)
@@ -211,6 +212,15 @@ func TestKWalletKeyReadsSlacksEntryWithoutPrompting(t *testing.T) {
 	}
 	if !reflect.DeepEqual(f.calls, want) {
 		t.Errorf("calls = %q\nwant    %q", f.calls, want)
+	}
+}
+
+// Handles start at 0; only a negative one means access was denied.
+func TestKWalletKeyAcceptsHandleZero(t *testing.T) {
+	f := workingKWallet()
+	f.handle = 0
+	if got, err := kwalletKey(context.Background(), f); err != nil || len(got) != 1 {
+		t.Errorf("kwalletKey = %q, %v", got, err)
 	}
 }
 

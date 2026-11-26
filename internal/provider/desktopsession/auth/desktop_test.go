@@ -163,6 +163,9 @@ func TestDesktopWorkspacesWithoutTokensNeedSignIn(t *testing.T) {
 	for name, mutate := range map[string]func(*desktopFixture){
 		"no Local Storage": func(f *desktopFixture) { f.tokens = nil },
 		"no tokens":        func(f *desktopFixture) { f.tokens = []byte{0x01, '{', '}'} },
+		"no usable tokens": func(f *desktopFixture) {
+			f.tokens = append([]byte{0x01}, `{"teams":{"broken":{"token":"xoxc-x"},"T0ALPHA":{"token":""}}}`...)
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			f := newDesktopFixture(t)

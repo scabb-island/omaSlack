@@ -68,7 +68,7 @@ func kwalletPasswords(ctx context.Context, conn *dbus.Conn) ([][]byte, error) {
 // full-screen terminal reads as a hang.
 func kwalletKey(ctx context.Context, c kwalletConn) ([][]byte, error) {
 	wallet, err := openWallet(ctx, c)
-	if err != nil || wallet == "" {
+	if err != nil {
 		return nil, err
 	}
 	handle, err := c.Open(ctx, wallet, kwalletAppID)
