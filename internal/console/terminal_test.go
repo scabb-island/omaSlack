@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -137,5 +138,23 @@ func TestAskPasteOnATerminalIsRawAndDrained(t *testing.T) {
 	}
 	if after := localFlags(t, tty); after != before {
 		t.Errorf("terminal flags %#x after, %#x before", after, before)
+	}
+}
+
+func TestIsTerminal(t *testing.T) {
+	if IsTerminal(strings.NewReader("yes\n")) {
+		t.Error("a strings.Reader is a terminal")
+	}
+	file, err := os.CreateTemp(t.TempDir(), "stdin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	if IsTerminal(file) {
+		t.Error("a regular file is a terminal")
+	}
+	_, tty := openPTY(t)
+	if !IsTerminal(tty) {
+		t.Error("a pseudo-terminal is not a terminal")
 	}
 }

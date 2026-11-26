@@ -19,6 +19,13 @@ type terminal struct {
 	fd int
 }
 
+// IsTerminal reports whether in is a terminal, where a user can answer
+// prompts and type secrets without echo.
+func IsTerminal(in io.Reader) bool {
+	_, ok := terminalOf(in)
+	return ok
+}
+
 // terminalOf returns in as a terminal, when it is one.
 func terminalOf(in io.Reader) (terminal, bool) {
 	f, ok := in.(*os.File)

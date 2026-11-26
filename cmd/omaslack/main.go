@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"gitlab.com/scabb-island/omaslack/internal/cli"
+	"gitlab.com/scabb-island/omaslack/internal/console"
 	"gitlab.com/scabb-island/omaslack/internal/keyring"
 	"gitlab.com/scabb-island/omaslack/internal/provider/desktopsession"
 	"gitlab.com/scabb-island/omaslack/internal/provider/desktopsession/auth"
@@ -17,6 +18,7 @@ func main() {
 		Stdout:            os.Stdout,
 		Stderr:            os.Stderr,
 		Stdin:             os.Stdin,
+		StdinIsTerminal:   console.IsTerminal(os.Stdin),
 		Keyring:           keyring.Open,
 		DesktopWorkspaces: desktopWorkspaces,
 		SlackAPIURL:       desktopsession.DefaultAPIURL,

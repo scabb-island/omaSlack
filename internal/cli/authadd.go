@@ -41,7 +41,11 @@ const browserSteps = `Sign in with a browser session instead:
   3. Paste it below and press Enter. Nothing is shown while you paste.
 `
 
-var errNotAccepted = errors.New("terms not accepted")
+var (
+	errNotAccepted = errors.New("terms not accepted")
+	errNoTerminal  = errors.New("omaslack auth add needs an interactive terminal: " +
+		"run it in a terminal, not with its input piped from a file or a script")
+)
 
 // newWorkspace is a workspace ready to be stored.
 type newWorkspace struct {
@@ -61,6 +65,11 @@ func authAdd(ctx context.Context, env Env, args []string) error {
 	flow, err := parseAdd(args)
 	if err != nil {
 		return err
+	}
+	// Every flow asks for consent or secrets. Without a terminal, an
+	// answer would read as the end of the input: a misleading "no".
+	if !env.StdinIsTerminal {
+		return errNoTerminal
 	}
 	a := adder{ctx: ctx, env: env, con: console.Console{In: env.Stdin, Out: env.Stdout}}
 	added, err := flow(a)

@@ -45,6 +45,7 @@ type authFixture struct {
 	desktop    []auth.Workspace
 	desktopErr error
 	keyringErr error
+	piped      bool // stdin is not a terminal
 	opened     bool
 	slackCalls int
 }
@@ -97,6 +98,9 @@ func (f *authFixture) env(stdin string, out, errOut *bytes.Buffer) Env {
 		Stdout: out,
 		Stderr: errOut,
 		Stdin:  strings.NewReader(stdin),
+		// What the user types comes from a string, read as if typed at a
+		// terminal unless the test says stdin is piped.
+		StdinIsTerminal: !f.piped,
 		Keyring: func(context.Context) (keyring.ClosableStore, error) {
 			f.opened = true
 			return f.store, f.keyringErr
@@ -176,6 +180,28 @@ func TestAuthAddDesktopDeclinedStoresNothing(t *testing.T) {
 		wantIn(t, "stderr", errOut, "not accepted")
 		if f.opened || f.slackCalls != 0 || strings.Contains(out, "Alpha") {
 			t.Errorf("%q: went on after a no (keyring opened %v, %d Slack calls)", answer, f.opened, f.slackCalls)
+		}
+	}
+}
+
+func TestAuthAddWithoutATerminalAsksNothing(t *testing.T) {
+	for _, args := range [][]string{
+		{"--provider", "desktop-session"},
+		{"--provider", "desktop-session", "--browser"},
+		{"--provider", "internal-app"},
+	} {
+		f := newAuthFixture(t)
+		f.piped = true
+		code, out, errOut := f.run("yes\n"+browserCurl, append([]string{"auth", "add"}, args...)...)
+		if code != ExitError {
+			t.Errorf("%v: exit code = %d, want %d", args, code, ExitError)
+		}
+		wantIn(t, "stderr", errOut, "omaslack auth add needs an interactive terminal", "run it in a terminal")
+		if strings.Contains(errOut, "not accepted") || out != "" {
+			t.Errorf("%v: prompted anyway:\nstdout:\n%s\nstderr:\n%s", args, out, errOut)
+		}
+		if f.opened || f.slackCalls != 0 {
+			t.Errorf("%v: went on without a terminal (keyring opened %v, %d Slack calls)", args, f.opened, f.slackCalls)
 		}
 	}
 }

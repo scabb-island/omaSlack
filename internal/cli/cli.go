@@ -42,6 +42,9 @@ type Env struct {
 	// Stdin is what the user types or pastes. When it is a terminal,
 	// secrets are read from it without echo.
 	Stdin io.Reader
+	// StdinIsTerminal says a user is at Stdin to answer prompts
+	// (console.IsTerminal). Commands that prompt refuse to run without one.
+	StdinIsTerminal bool
 	// Keyring opens the credential store (keyring.Open).
 	Keyring func(context.Context) (keyring.ClosableStore, error)
 	// DesktopWorkspaces lists the workspaces of the Slack desktop app.
