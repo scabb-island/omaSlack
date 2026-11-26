@@ -242,3 +242,50 @@ func TestTheListIsReadAlongsideItsWriter(t *testing.T) {
 		t.Errorf("%d conversations, want the last list's %d", got, 1+(rounds-1)%size)
 	}
 }
+
+func TestUpdatingAnEntryChangesOnlyThatEntry(t *testing.T) {
+	s := openStore(t)
+	general := domain.Conversation{ID: conv(t, "C01"), Kind: domain.Channel, Name: "general"}
+	direct := domain.Conversation{ID: conv(t, "D01"), Kind: domain.DirectMessage}
+	mustPutConversations(t, s, general, direct)
+
+	direct.Latest, direct.LastRead, direct.Mentions = ts(t, "1700000003.000000"), ts(t, "1700000002.000000"), 1
+	if err := s.UpdateConversation(context.Background(), direct); err != nil {
+		t.Fatal(err)
+	}
+	expectConversations(t, s, general, direct)
+
+	// Twice is the same as once.
+	if err := s.UpdateConversation(context.Background(), direct); err != nil {
+		t.Fatal(err)
+	}
+	expectConversations(t, s, general, direct)
+}
+
+func TestUpdatingAnEntryMovesItsMarkerForwardOnly(t *testing.T) {
+	s := openStore(t)
+	c := domain.Conversation{ID: conv(t, "C01"), Kind: domain.Channel}
+	mustPutConversations(t, s, c)
+	mustApply(t, s, readTo(t, "C01", "1700000003.000000"))
+
+	c.LastRead = ts(t, "1700000002.000000")
+	if err := s.UpdateConversation(context.Background(), c); err != nil {
+		t.Fatal(err)
+	}
+	if got := lastRead(t, s, "C01"); got != ts(t, "1700000003.000000") {
+		t.Errorf("marker = %v, want the newer one kept", got)
+	}
+}
+
+func TestUpdatingAConversationNotInTheListAddsNothing(t *testing.T) {
+	s := openStore(t)
+	general := domain.Conversation{ID: conv(t, "C01"), Kind: domain.Channel, Name: "general"}
+	mustPutConversations(t, s, general)
+
+	// The user left it after the list was read: the list decides.
+	left := domain.Conversation{ID: conv(t, "C02"), Kind: domain.Channel, Latest: ts(t, "1700000003.000000")}
+	if err := s.UpdateConversation(context.Background(), left); err != nil {
+		t.Fatal(err)
+	}
+	expectConversations(t, s, general)
+}
