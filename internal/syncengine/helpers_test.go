@@ -291,6 +291,9 @@ func newRigFrom(t *testing.T, wrap func(*providertest.Fake) provider.Provider, w
 		Rand:      func() float64 { return 0.5 },
 		PageSize:  pageSize,
 		Log:       slog.New(slog.NewTextHandler(r.logs, nil)),
+
+		MaxDownload: fileLimit,
+		MaxUpload:   fileLimit,
 	})
 	return r
 }

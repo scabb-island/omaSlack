@@ -24,6 +24,7 @@ type writes struct {
 	postAt domain.TS
 	hits   []domain.SearchHit
 	users  []domain.User
+	served map[domain.FileID]string // what DownloadFile serves instead of contentOf
 
 	mu    sync.Mutex
 	calls []string
