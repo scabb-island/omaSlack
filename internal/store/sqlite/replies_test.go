@@ -72,3 +72,35 @@ func TestRepliesSkipDeletedMessages(t *testing.T) {
 	}
 	wantTexts(t, replies(t, s, "C01", "1700000001.000100"), "kept")
 }
+
+func oldest(t *testing.T, s store.Store, c string) domain.TS {
+	t.Helper()
+	got, err := s.Oldest(context.Background(), conv(t, c))
+	if err != nil {
+		t.Fatalf("Oldest: %v", err)
+	}
+	return got
+}
+
+// Oldest is where "load older" continues: the oldest message Messages would
+// return, so replies and deleted messages do not count.
+func TestOldestIsTheOldestTopLevelMessage(t *testing.T) {
+	s := openStore(t)
+	if got := oldest(t, s, "C01"); !got.IsZero() {
+		t.Fatalf("Oldest of an empty conversation = %v, want zero", got)
+	}
+	gone := msg(t, "1700000001.000100", "deleted")
+	mustPutHistory(t, s, "C01",
+		gone,
+		reply(t, "1700000002.000200", "1700000003.000300", "an early reply"),
+		msg(t, "1700000003.000300", "root"),
+		msg(t, "1700000004.000400", "newest"),
+	)
+	mustPutHistory(t, s, "C02", msg(t, "1700000000.000001", "other channel"))
+	if err := s.Apply(context.Background(), domain.MessageDeleted{Conversation: conv(t, "C01"), TS: gone.TS}); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := oldest(t, s, "C01"), ts(t, "1700000003.000300"); got != want {
+		t.Errorf("Oldest = %v, want %v", got, want)
+	}
+}
