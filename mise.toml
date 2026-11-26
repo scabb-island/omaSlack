@@ -2,3 +2,6 @@
 go = "1.26"
 golangci-lint = "2.14.0"
 goreleaser = "2.20.2"
+"pypi:git+https://github.com/unclebob/crapper.git" = "fdd0c01387e4211c74b23c2cdd11c06d90883838"
+"pypi:git+https://github.com/unclebob/dryer.git" = "ad371d460854b937039410d2c3889a4da94a753a"
+"pypi:git+https://github.com/unclebob/mutator.git" = { version = "b1d53b008548b6fba389bbacb331b5d5e26c94ed", uvx_args = "--with git+https://github.com/unclebob/crapper.git@fdd0c01387e4211c74b23c2cdd11c06d90883838" }
