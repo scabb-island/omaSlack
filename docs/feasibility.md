@@ -112,6 +112,26 @@ Whatever a provider does not support is declared in `Capabilities`, and clients 
 | The "Slack" trademark | Own name (omaslack); "Slack" used only to describe interoperability, as slk does |
 | Competition in the marketplace (5 plugins) | Differentiate on UI + TUI, real time and a single state |
 
+### Field report (2026-11-26): a workspace that rejects reused sessions
+
+The first risk above showed up on a real workspace. Slack answered
+`invalid_auth` to every reused session: the xoxc token and d cookie read from
+the signed-in desktop app, a fresh "Copy as cURL" from the browser, and even
+the exact browser request replayed byte for byte (from Go and from the system
+curl, over HTTP/2 and HTTP/1.1). The same request worked inside the browser.
+
+What it means: omaslack parses the credentials correctly; that workspace binds
+its sessions to Slack's own client, through the TLS fingerprint, device-bound
+credentials or a workspace policy (approved clients, session restrictions,
+EMM). No change to how omaslack reads or sends the session can get around
+it, and the `desktop-session` provider cannot serve such workspaces.
+
+Mitigation: the official `internal-app` provider
+([setup guide](internal-app-setup.md)). `omaslack auth add` now checks every
+desktop-session credential with `auth.test` before storing it, the desktop app's
+as well as a pasted one, and when Slack rejects it, it stores nothing and
+explains this case and points to `internal-app`.
+
 ## 7. Estimated effort
 
 **A rough estimate**, for one person with AI assistance, porting pieces of slk. It is not based on measurements.

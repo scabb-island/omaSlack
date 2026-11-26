@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"flag"
@@ -12,6 +13,7 @@ import (
 	"gitlab.com/scabb-island/omaslack/internal/console"
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 	"gitlab.com/scabb-island/omaslack/internal/keyring"
+	"gitlab.com/scabb-island/omaslack/internal/provider"
 	"gitlab.com/scabb-island/omaslack/internal/provider/desktopsession"
 	"gitlab.com/scabb-island/omaslack/internal/provider/desktopsession/auth"
 	"gitlab.com/scabb-island/omaslack/internal/provider/internalapp"
@@ -41,7 +43,28 @@ const browserSteps = `Sign in with a browser session instead:
   3. Paste it below and press Enter. Nothing is shown while you paste.
 `
 
-var errNotAccepted = errors.New("terms not accepted")
+// boundSessionHelp explains a session Slack rejects although it works in
+// Slack's own app or browser, as seen on a real workspace (feasibility.md,
+// field report of 2026-11-26).
+// It is all a freshly pasted session gets: pasting another will not help.
+const boundSessionHelp = `Some workspaces bind sessions to the Slack app or browser (security
+policies, approved clients) and reject them outside its own client, so
+omaslack cannot reuse them. Use the official provider instead:
+  omaslack auth add --provider internal-app
+Set it up as ` + internalAppGuide + ` explains.`
+
+// desktopRejectedHelp is for a session read from the desktop app's files,
+// which may only be stale.
+const desktopRejectedHelp = `If the desktop app's session is just stale, sign in to the app again,
+or paste a browser session:
+  omaslack auth add --provider desktop-session --browser
+` + boundSessionHelp
+
+var (
+	errNotAccepted = errors.New("terms not accepted")
+	errNoTerminal  = errors.New("omaslack auth add needs an interactive terminal: " +
+		"run it in a terminal, not with its input piped from a file or a script")
+)
 
 // newWorkspace is a workspace ready to be stored.
 type newWorkspace struct {
@@ -61,6 +84,11 @@ func authAdd(ctx context.Context, env Env, args []string) error {
 	flow, err := parseAdd(args)
 	if err != nil {
 		return err
+	}
+	// Every flow asks for consent or secrets. Without a terminal, an
+	// answer would read as the end of the input: a misleading "no".
+	if !env.StdinIsTerminal {
+		return errNoTerminal
 	}
 	a := adder{ctx: ctx, env: env, con: console.Console{In: env.Stdin, Out: env.Stdout}}
 	added, err := flow(a)
@@ -196,11 +224,11 @@ func (a adder) pickDesktop(listed []auth.Workspace) ([]newWorkspace, error) {
 }
 
 // fromDesktop is a picked workspace ready to store: with the desktop app's
-// credentials, or, when it needs sign-in, with a browser session pasted
-// for it, which must belong to that workspace.
+// credentials, once Slack accepts them, or, when it needs sign-in, with a
+// browser session pasted for it, which must belong to that workspace.
 func (a adder) fromDesktop(w auth.Workspace) (newWorkspace, error) {
 	if !w.NeedsSignIn() {
-		return newWorkspace{team: w.Team, name: w.Name, creds: w.Credentials}, nil
+		return a.checkDesktop(w)
 	}
 	fmt.Fprintf(a.env.Stdout, "%s (%s) needs sign-in. ", w.Name, w.Team)
 	pasted, err := a.pasteSession()
@@ -211,6 +239,27 @@ func (a adder) fromDesktop(w auth.Workspace) (newWorkspace, error) {
 		return newWorkspace{}, fmt.Errorf("the pasted session is for %s (%s), not %s (%s)", pasted.name, pasted.team, w.Name, w.Team)
 	}
 	return pasted, nil
+}
+
+// checkDesktop asks Slack whether the desktop app's session for w works,
+// as pasteSession does for a browser one: the files on disk can hold a
+// session Slack no longer accepts. Slack's name for the workspace wins
+// over the one the app stored, when Slack gives one.
+func (a adder) checkDesktop(w auth.Workspace) (newWorkspace, error) {
+	id, err := desktopsession.AuthTest(a.env.SlackAPIURL)(a.ctx, w.Credentials)
+	if err != nil {
+		return newWorkspace{}, explainRejected(fmt.Errorf("%s (%s): %w", w.Name, w.Team, err), desktopRejectedHelp)
+	}
+	return newWorkspace{team: w.Team, name: cmp.Or(id.Team, w.Name), creds: w.Credentials}, nil
+}
+
+// explainRejected adds help to an error that says Slack rejected a
+// session just read or pasted, and returns any other error as it is.
+func explainRejected(err error, help string) error {
+	if !errors.Is(err, provider.ErrAuthExpired) {
+		return err
+	}
+	return fmt.Errorf("%w. Nothing was stored.\n%s", err, help)
 }
 
 // pick returns the workspaces an answer names: numbers separated by
@@ -278,7 +327,7 @@ func (a adder) pasteSession() (newWorkspace, error) {
 	}
 	w, err := auth.FromCurl(a.ctx, paste, desktopsession.AuthTest(a.env.SlackAPIURL))
 	if err != nil {
-		return newWorkspace{}, err
+		return newWorkspace{}, explainRejected(err, boundSessionHelp)
 	}
 	return newWorkspace{team: w.Team, name: w.Name, creds: w.Credentials}, nil
 }

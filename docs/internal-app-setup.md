@@ -7,6 +7,10 @@ Socket Mode with an app-level token (`xapp-…`). Use it when the
 `desktop-session` provider is not an option, for example when company policy
 forbids unofficial clients.
 
+If `omaslack auth add --provider desktop-session` reports that Slack rejected a
+session that works in the Slack app or browser, your workspace binds sessions
+to Slack's own client, and this provider is the way to connect it.
+
 ## 1. Create the app from the manifest
 
 1. Open <https://api.slack.com/apps> and choose **Create New App** →
@@ -42,7 +46,6 @@ omaslack auth add --provider internal-app
 
 Paste both tokens when asked. omaslack stores them in the Secret Service (or
 in a 0600 file when there is none) and never returns them over its socket.
-(`auth add` lands in milestone M1; until then it reports "not implemented".)
 
 ## What this provider can and cannot do
 

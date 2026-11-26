@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Interchangeable connection providers
-The daemon SHALL talk to Slack only through the `Provider` interface. v1 SHALL ship two implementations: `desktop-session` and `internal-app`. Each workspace SHALL have exactly one provider assigned.
+The daemon SHALL talk to Slack only through the `Provider` interface. v1 SHALL ship two implementations: `desktop-session` and `internal-app`. Each workspace SHALL have exactly one provider assigned. `omaslack auth add` SHALL check a workspace's credentials with Slack before it stores them.
 
 #### Scenario: Workspace with the internal-app provider
 - **WHEN** the user runs `omaslack auth add --provider internal-app` and enters a valid xoxp user token and xapp app token
@@ -10,6 +10,10 @@ The daemon SHALL talk to Slack only through the `Provider` interface. v1 SHALL s
 #### Scenario: Workspace with the desktop-session provider
 - **WHEN** the user runs `omaslack auth add --provider desktop-session` and the Slack desktop app is signed in
 - **THEN** the CLI lists the workspaces found in the desktop session, the user picks which to add, and each one is registered with `provider = desktop-session`
+
+#### Scenario: Workspace rejects reused sessions
+- **WHEN** Slack rejects the desktop-session credentials the CLI has just read from the desktop app or the user has just pasted from a browser
+- **THEN** no credential is stored, and the CLI explains that some workspaces bind sessions to Slack's own client and points the user to the `internal-app` provider and its guide
 
 ### Requirement: Explicit consent for the unofficial protocol
 The `desktop-session` provider MUST require the user to accept a warning explaining that it uses an unofficial protocol that may violate Slack's terms of service. Without that acceptance, the workspace MUST NOT be registered.
