@@ -14,15 +14,16 @@ import (
 // ProviderFactory builds the provider of team from its stored credentials.
 type ProviderFactory func(team domain.TeamID, creds keyring.Credentials) (provider.Provider, error)
 
-// SlackProviders is the ProviderFactory that reaches Slack: the
-// credentials' kind picks the provider, and both log to log.
-func SlackProviders(log *slog.Logger) ProviderFactory {
+// SlackProviders is the ProviderFactory that reaches Slack's Web API at
+// apiURL (desktopsession.DefaultAPIURL): the credentials' kind picks the
+// provider, and both log to log.
+func SlackProviders(apiURL string, log *slog.Logger) ProviderFactory {
 	return func(team domain.TeamID, creds keyring.Credentials) (provider.Provider, error) {
 		switch c := creds.(type) {
 		case keyring.DesktopSession:
-			return desktopsession.New(team, c, desktopsession.WithLogger(log)), nil
+			return desktopsession.New(team, c, desktopsession.WithAPIURL(apiURL), desktopsession.WithLogger(log)), nil
 		case keyring.InternalApp:
-			return internalapp.New(team, c, internalapp.WithLogger(log)), nil
+			return internalapp.New(team, c, internalapp.WithAPIURL(apiURL), internalapp.WithLogger(log)), nil
 		}
 		return nil, fmt.Errorf("no provider for %s credentials", creds.Provider())
 	}

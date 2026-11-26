@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"maps"
+	"os"
 	"path/filepath"
 	"slices"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -133,7 +135,7 @@ type harness struct {
 	cfg    Config
 	keys   *fakeKeyring
 	provs  *providers
-	reload chan struct{} // what SIGHUP sends
+	reload chan os.Signal
 	cancel context.CancelFunc
 	done   chan error
 }
@@ -141,7 +143,7 @@ type harness struct {
 func newHarness(t *testing.T) *harness {
 	t.Helper()
 	dir := t.TempDir()
-	h := &harness{t: t, keys: newKeyring(), provs: newProviders(), reload: make(chan struct{})}
+	h := &harness{t: t, keys: newKeyring(), provs: newProviders(), reload: make(chan os.Signal)}
 	h.cfg = Config{
 		Paths:       Paths{Socket: filepath.Join(dir, "omaslack.sock"), Data: filepath.Join(dir, "data")},
 		Keyring:     h.keys.open,
@@ -184,7 +186,7 @@ func (h *harness) stop() error {
 func (h *harness) reloadNow() {
 	h.t.Helper()
 	select {
-	case h.reload <- struct{}{}:
+	case h.reload <- syscall.SIGHUP:
 	case <-time.After(5 * time.Second):
 		h.t.Fatal("the daemon did not take the reload")
 	}

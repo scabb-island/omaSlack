@@ -10,7 +10,7 @@ import (
 )
 
 func TestTheCredentialsPickTheProvider(t *testing.T) {
-	build := SlackProviders(slog.New(slog.DiscardHandler))
+	build := SlackProviders(desktopsession.DefaultAPIURL, slog.New(slog.DiscardHandler))
 	team := mustTeam(t, "T0ACME")
 
 	p, err := build(team, keyring.DesktopSession{Token: "xoxc-1", Cookie: "xoxd-1"})

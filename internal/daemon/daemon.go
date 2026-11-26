@@ -15,6 +15,7 @@ import (
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 	"gitlab.com/scabb-island/omaslack/internal/events"
 	"gitlab.com/scabb-island/omaslack/internal/keyring"
+	"gitlab.com/scabb-island/omaslack/internal/provider/desktopsession"
 	"gitlab.com/scabb-island/omaslack/internal/rpc"
 	"gitlab.com/scabb-island/omaslack/internal/store/sqlite"
 	"gitlab.com/scabb-island/omaslack/internal/syncengine"
@@ -35,7 +36,7 @@ type Config struct {
 	// Keyring opens the credential store (keyring.Open).
 	Keyring func(context.Context) (keyring.ClosableStore, error)
 	// NewProvider builds each workspace's provider; default
-	// SlackProviders(Log).
+	// SlackProviders(desktopsession.DefaultAPIURL, Log).
 	NewProvider ProviderFactory
 	// Identify asks Slack who is signed in; default AuthTest.
 	Identify Identifier
@@ -43,15 +44,15 @@ type Config struct {
 	Log *slog.Logger
 	// ShutdownTimeout bounds the shutdown; default DefaultShutdownTimeout.
 	ShutdownTimeout time.Duration
-	// Reload delivers the requests to read the keyring again (SIGHUP);
-	// nil means never.
-	Reload <-chan struct{}
+	// Reload asks to read the keyring again: every signal received on it
+	// (SIGHUP, from signal.Notify) is one reload. Nil means never.
+	Reload <-chan os.Signal
 }
 
 func (c Config) withDefaults() Config {
 	c.Log = cmp.Or(c.Log, slog.New(slog.DiscardHandler))
 	if c.NewProvider == nil {
-		c.NewProvider = SlackProviders(c.Log)
+		c.NewProvider = SlackProviders(desktopsession.DefaultAPIURL, c.Log)
 	}
 	if c.Identify == nil {
 		c.Identify = AuthTest
