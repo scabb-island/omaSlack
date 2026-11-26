@@ -86,7 +86,7 @@ Slack remains the remote source of truth. The Store is a cache that can be rebui
   - `conversations.list{team, filter}`, `conversations.open{team, conv}`, `conversations.close{team, conv}` (the client left it, so the engine stops treating it as open), `conversations.markRead{team, conv, ts}`.
   - `messages.history{team, conv, before?, limit}`, `messages.replies{…, threadTS}`, `messages.send{team, conv, threadTS?, text, files?, broadcast?}`, `messages.edit` and `messages.delete`.
   - `reactions.add` and `reactions.remove`.
-  - `files.upload{team, conv, paths[], caption}` and `files.fetch{team, fileId}` (returns `local_path`).
+  - `files.upload{team, conv, threadTS?, paths[], caption?}` (returns the uploaded files; the message arrives as `message.created`, because `files.completeUploadExternal` does not reliably return its ts) and `files.fetch{team, fileId}` (returns `localPath`, a file in the daemon's cache on this machine).
   - `drafts.get` and `drafts.set`.
   - `search.messages{team, query}`, `users.search{team, q}`.
   - `presence.set{team, auto|away}`, `dnd.snooze{team, minutes}`, `dnd.end`.

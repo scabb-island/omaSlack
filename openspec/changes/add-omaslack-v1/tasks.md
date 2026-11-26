@@ -36,14 +36,19 @@
 ## M2 — Daemon API
 - [x] 2.1 0600 socket + `SO_PEERCRED` check + JSON-RPC 2.0 over NDJSON (`internal/rpc`)
 - [x] 2.2 `hello` and protocol version negotiation
-- [ ] 2.3 v1 methods (see design.md) with golden tests, plus a cap on concurrent calls per connection (`internal/api`, shapes in `internal/wire`)
-- [ ] 2.4 `events.subscribe` with topics and `unread.summary` coalescing (`internal/events`)
-- [ ] 2.5 `omaslack.service` systemd unit and `omaslack ctl` (including `--stream`)
-- [ ] 2.6 Provider writes in both providers, as optional interfaces: edit, delete, reactions, message and user search, presence, DND
-- [ ] 2.7 Store keeps the conversation list (kind, name, latest, mentions); the sync engine stores it and runs every client action (send, edit, delete, react, mark read, drafts) as the single writer
-- [ ] 2.8 `omaslack daemon`: one engine per signed-in workspace from the keyring, the hub and the methods on the socket, hello with workspaces and capabilities
-- [ ] 2.9 `files.upload` and `files.fetch`
-- Deferred: realtime mention counting (mentions refresh with the conversation list and the read-marker poll); unread thread counts (need thread read markers)
+- [x] 2.3 v1 methods (see design.md) with golden tests, plus a cap on concurrent calls per connection (`internal/api`, shapes in `internal/wire`)
+- [x] 2.4 `events.subscribe` with topics and `unread.summary` coalescing (`internal/events`)
+- [x] 2.5 `omaslack.service` systemd unit and `omaslack ctl` (including `--stream`)
+- [x] 2.6 Provider writes in both providers, as optional interfaces: edit, delete, reactions, message and user search, presence, DND
+- [x] 2.7 Store keeps the conversation list (kind, name, latest, mentions); the sync engine stores it and runs every client action (send, edit, delete, react, mark read, drafts) as the single writer
+- [x] 2.8 `omaslack daemon`: one engine per signed-in workspace from the keyring, the hub and the methods on the socket, hello with workspaces and capabilities
+- [x] 2.9 `files.upload` and `files.fetch`
+- Deferred:
+  - Realtime mention counting (mentions refresh with the conversation list and the read-marker poll).
+  - Unread thread counts (need thread read markers).
+  - When `chat.update` omits `edited.ts`, Edited is the local clock and the later, older Slack value is not stored (the text is right; only the edit time can be off).
+  - The systemd unit is not shipped yet: `.goreleaser.yaml` must install `packaging/systemd/omaslack.service` at `/usr/lib/systemd/user/` (task 6.1).
+- Client notes for M3/M4: a sent message arrives twice (the action and Slack's echo) with the same content, so clients key messages by conversation + ts; a workspace whose `state` is `auth_expired` needs `omaslack auth add` and `systemctl --user reload omaslack`; `files.fetch` paths are local to this machine.
 
 ## M3 — TUI MVP
 - [ ] 3.1 Layout: workspace rail, sidebar, messages, thread and compose
