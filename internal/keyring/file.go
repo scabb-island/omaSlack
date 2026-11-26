@@ -82,8 +82,13 @@ func (s *FileStore) Teams(_ context.Context) ([]domain.TeamID, error) {
 	for team := range all {
 		teams = append(teams, team)
 	}
-	slices.SortFunc(teams, func(a, b domain.TeamID) int { return cmp.Compare(a.String(), b.String()) })
+	sortTeams(teams)
 	return teams, nil
+}
+
+// sortTeams orders teams by ID, so listings are stable.
+func sortTeams(teams []domain.TeamID) {
+	slices.SortFunc(teams, func(a, b domain.TeamID) int { return cmp.Compare(a.String(), b.String()) })
 }
 
 // update applies change to the stored credentials under the lock and
