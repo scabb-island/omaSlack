@@ -73,7 +73,8 @@ func (c *conn) reply(id int, result any) error {
 
 // eventText returns a message body that exercises the parser: plain text,
 // accents and emoji, embedded newlines (escaped as \n by JSON), quotes, and
-// every 2000th event a 256 KiB line.
+// every 2000th event a 256 KiB line. The non-ASCII text is intentional test
+// data, not untranslated copy.
 func eventText(seq int) string {
 	switch {
 	case seq%2000 == 1999:

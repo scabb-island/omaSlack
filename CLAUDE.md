@@ -12,9 +12,17 @@ omaslack is an "Omarchy Way" Slack client with a UI (a QML plugin for Omarchy's 
 - The Omarchy plugin ID is `ar.scabb.omaslack`. It is permanent in the marketplace, so it does not change.
 - Repo: gitlab.com/scabb-island/omaslack (private)
 
-## Language
+## Rule: English only
 
-Everything in this repository and on GitLab is written in English: code, comments, docs, specs, commit messages, merge requests and issues. The only exception is test data that deliberately exercises non-ASCII text.
+omaslack is meant for an international audience. **Everything you write for this project MUST be in English**, even when the conversation with the user is in another language:
+
+- Code: identifiers, comments, log messages, errors and user-facing strings (CLI output, QML tooltips and labels).
+- Docs and specs: `README`s, `docs/`, `openspec/` (proposals, designs, tasks, specs) and this file.
+- Git: commit messages, branch names and tags.
+- GitLab: merge request titles and descriptions, review comments, issues, and project settings such as the description.
+- Published material about the project, such as the feasibility report page.
+
+The only exception is test data that deliberately exercises non-ASCII text (accents, emoji). Keep it, and say in a comment that it is intentional.
 
 ## Toolchain and commands
 
