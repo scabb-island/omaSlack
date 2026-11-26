@@ -22,12 +22,15 @@
 - [x] 1.13 RateBudget: a 429 also drains the accumulated burst, so calls do not burst again the moment the penalty ends
 - [x] 1.14 Desktop login: list desktop workspaces without a token as "needs sign-in" instead of skipping them
 - [x] 1.15 `omaslack auth add|list|remove` CLI, including the terminal paste reader ported from slk
-- [ ] 1.16 `Provider.Conversations` in both providers; the sync engine uses it to catch up every conversation with unread messages or mentions after an outage and to seed unread counts on a cold start
-- [ ] 1.17 internal-app implements `provider.ReadMarkerReader` with `conversations.info`
-- [ ] 1.18 desktop-session implements `provider.PresenceSubscriber` and `provider.TypingSender` over the web client socket
-- [ ] 1.19 Tolerant reaction mapping: accept reactions without `item.type` (as slk does) and log unexpected item types
-- [ ] 1.20 The sync engine's `LoadOlder` continues from `Store.Oldest` instead of a client-supplied cursor
-- [ ] 1.21 `auth add`: picking a workspace that needs sign-in goes straight to the browser paste flow
+- [x] 1.16 `Provider.Conversations` in both providers; the sync engine uses it to catch up every conversation with unread messages or mentions after an outage and to seed unread counts on a cold start
+- [x] 1.17 internal-app implements `provider.ReadMarkerReader` with `conversations.info`
+- [x] 1.18 desktop-session implements `provider.PresenceSubscriber` and `provider.TypingSender` over the web client socket
+- [x] 1.19 Tolerant reaction mapping: accept reactions without `item.type` (as slk does) and log unexpected item types
+- [x] 1.20 The sync engine's `LoadOlder` continues from `Store.Oldest` instead of a client-supplied cursor
+- [x] 1.21 `auth add`: picking a workspace that needs sign-in goes straight to the browser paste flow
+- [x] 1.22 desktop-session: when only `client.counts` fails (Enterprise Grid), return the conversation list without read state
+- [x] 1.23 desktop-session: remember the presence subscription and send it again on every socket that opens
+- [x] 1.24 Sync engine: log the conversation list failing and recovering when the state changes
 - Deferred: honoring a deliberate "mark unread" from another Slack client (needs an explicit signal on `ReadChanged`)
 
 ## M2 — Daemon API
