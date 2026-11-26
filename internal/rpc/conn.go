@@ -26,6 +26,7 @@ type Conn struct {
 	wmu     sync.Mutex     // one whole line at a time
 	greeted bool           // only touched by the reading goroutine
 	calls   sync.WaitGroup // calls still running
+	slots   chan struct{}  // one token per running call; full means stop reading
 }
 
 type connKey struct{}
@@ -37,7 +38,7 @@ func ConnFromContext(ctx context.Context) (*Conn, bool) {
 }
 
 func newConn(s *Server, nc *net.UnixConn) *Conn {
-	c := &Conn{srv: s, nc: nc}
+	c := &Conn{srv: s, nc: nc, slots: make(chan struct{}, s.maxCall)}
 	ctx, cancel := context.WithCancel(s.ctx)
 	c.ctx, c.cancel = context.WithValue(ctx, connKey{}, c), cancel
 	return c
@@ -130,10 +131,20 @@ func (c *Conn) greet(req request) bool {
 	return true
 }
 
+// dispatch runs req on its own goroutine once a slot is free. It runs on
+// the reading goroutine, so while every slot is taken the connection is
+// not read at all: the client's further calls wait in the socket buffer
+// (spec daemon-api, "Bounded concurrency per connection"). A call that
+// arrives after the connection ended is dropped.
 func (c *Conn) dispatch(req request) {
+	select {
+	case c.slots <- struct{}{}:
+	case <-c.ctx.Done():
+		return
+	}
 	c.calls.Add(1)
 	go func() {
-		defer c.calls.Done()
+		defer func() { <-c.slots; c.calls.Done() }()
 		result, err := c.call(req)
 		c.reply(req, result, err)
 	}()
