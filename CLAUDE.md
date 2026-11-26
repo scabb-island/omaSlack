@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-omaslack is an "Omarchy Way" Slack client with a UI (a QML plugin for Omarchy's Quattro shell) and a TUI (Go/bubbletea) on one shared daemon. M0 and M1 are done: the domain model, both providers (`internal/provider/internalapp`, `internal/provider/desktopsession`, sharing `internal/provider/slackwire`), the keyring, the SQLite store, the rate budget, the sync engine (`internal/syncengine`) and `omaslack auth add|list|remove`, plus the RPC server foundation from M2 (tasks 2.1, 2.2). Next: M2 (RPC methods, event subscriptions, the systemd unit and `ctl`). Every subcommand except `version` and `auth` still returns "not implemented" (exit 3) and names the milestone it lands in.
+omaslack is an "Omarchy Way" Slack client with a UI (a QML plugin for Omarchy's Quattro shell) and a TUI (Go/bubbletea) on one shared daemon. M0, M1 and M2 are done: the domain model, both providers (`internal/provider/internalapp`, `internal/provider/desktopsession`, sharing `internal/provider/slackwire`), the keyring, the SQLite store, the rate budget, the sync engine (`internal/syncengine`), `omaslack auth add|list|remove`, and the daemon API: `omaslack daemon` (`internal/daemon`) serves the v1 methods (`internal/api`, JSON shapes in `internal/wire`) and events (`internal/events`) on the socket, and `omaslack ctl` (`internal/rpcclient`) calls it. Next: M3 (the TUI). `tui` and `doctor` still return "not implemented" (exit 3) and name the milestone they land in.
 
 - Feasibility report: `docs/feasibility.md`. Spike results: `docs/spikes/`
 - Context, stack and conventions: `openspec/project.md`
