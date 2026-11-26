@@ -1,0 +1,55 @@
+# omaslack daemon, a systemd user unit. Installed as
+# /usr/lib/systemd/user/omaslack.service. Clients (omaslack tui, omaslack
+# ctl) start it on demand with `systemctl --user start omaslack` when the
+# socket is missing; `systemctl --user enable omaslack` starts it at login.
+#
+# The daemon needs, and the hardening below keeps:
+#   - the D-Bus session bus, for the Secret Service keyring;
+#   - $XDG_RUNTIME_DIR, for its socket;
+#   - read-write access to the home directory, for the stores in
+#     $XDG_DATA_HOME/omaslack and the file keyring in
+#     $XDG_CONFIG_HOME/omaslack, wherever those variables point;
+#   - outbound network, to reach Slack.
+
+[Unit]
+Description=omaslack Slack daemon
+Documentation=https://gitlab.com/scabb-island/omaslack
+After=dbus.socket
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/omaslack daemon
+Restart=on-failure
+RestartSec=2s
+
+# Files it creates are private to the user.
+UMask=0077
+
+# The system is read-only to it (/usr, /boot, /efi, /etc); home stays
+# writable because the store and keyring paths follow the user's XDG
+# variables, which ReadWritePaths= cannot name.
+ProtectSystem=full
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+
+NoNewPrivileges=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+# Unix for its socket and D-Bus; IP for Slack.
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged
+SystemCallErrorNumber=EPERM
+
+[Install]
+WantedBy=default.target
