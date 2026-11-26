@@ -1,6 +1,7 @@
 package syncengine
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -43,11 +44,11 @@ type Config struct {
 
 	Clock    ratebudget.Clock // default: the wall clock
 	Rand     func() float64   // in [0, 1), for jitter; default: math/rand
-	PageSize int              // messages per History call; default 100
+	PageSize int              // messages per History call; zero means 100
 	Log      *slog.Logger     // default: discard
 
 	// ReadPollInterval is how often read markers are polled when the
-	// provider implements ReadMarkerReader; default one minute.
+	// provider implements ReadMarkerReader; zero means one minute.
 	ReadPollInterval time.Duration
 }
 
@@ -58,15 +59,11 @@ func (c Config) withDefaults() Config {
 	if c.Rand == nil {
 		c.Rand = rand.Float64
 	}
-	if c.PageSize <= 0 {
-		c.PageSize = 100
-	}
 	if c.Log == nil {
 		c.Log = slog.New(slog.DiscardHandler)
 	}
-	if c.ReadPollInterval <= 0 {
-		c.ReadPollInterval = time.Minute
-	}
+	c.PageSize = cmp.Or(c.PageSize, 100)
+	c.ReadPollInterval = cmp.Or(c.ReadPollInterval, time.Minute)
 	return c
 }
 
@@ -82,9 +79,9 @@ type Engine struct {
 	expireOnce sync.Once
 	wg         sync.WaitGroup // every goroutine Run started
 
-	// wasUp is whether a stream ever reported connected. Only the connect
-	// loop's goroutine touches it.
-	wasUp bool
+	// Only the connect loop's goroutine touches these: whether a stream
+	// ever reported connected, and whether the current one did.
+	wasUp, upNow bool
 }
 
 // New builds an engine from cfg.
@@ -123,7 +120,7 @@ func (e *Engine) Run(ctx context.Context) error {
 // do runs o on the writer's goroutine and returns its result. Once ctx has
 // ended, that is the error, even if Run stopped at the same moment.
 func (e *Engine) do(ctx context.Context, o op) error {
-	r := request{op: o, done: make(chan error, 1)}
+	r := request{op: o, done: make(chan error)}
 	select {
 	case e.ops <- r:
 		return <-r.done
@@ -143,11 +140,11 @@ func (e *Engine) connectLoop(ctx context.Context) error {
 		if err := e.do(ctx, linkOp(domain.Connecting)); err != nil {
 			return err
 		}
-		connected, err := e.session(ctx)
-		if err != nil {
+		e.upNow = false
+		if err := e.session(ctx); err != nil {
 			return err
 		}
-		if connected {
+		if e.upNow {
 			attempt = 0
 		}
 		if err := e.do(ctx, linkOp(domain.Disconnected)); err != nil {
@@ -159,35 +156,32 @@ func (e *Engine) connectLoop(ctx context.Context) error {
 	}
 }
 
-// session runs one connection. It reports whether the stream ever said it
-// was connected, and returns an error only when the engine must stop.
-func (e *Engine) session(ctx context.Context) (connected bool, err error) {
+// session runs one connection. Its error means the engine must stop.
+func (e *Engine) session(ctx context.Context) error {
 	sctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	stream, err := e.connect(sctx)
 	if err != nil {
-		return false, e.fatal(ctx, err)
+		return e.fatal(ctx, err)
 	}
 	return e.consume(ctx, stream)
 }
 
 // consume handles stream until it closes or the engine must stop.
-func (e *Engine) consume(ctx context.Context, stream <-chan domain.Event) (connected bool, err error) {
+func (e *Engine) consume(ctx context.Context, stream <-chan domain.Event) error {
 	for {
 		select {
 		case ev, ok := <-stream:
 			if !ok {
-				return connected, ctx.Err()
+				return ctx.Err()
 			}
-			up, err := e.handle(ctx, ev)
-			connected = connected || up
-			if err != nil {
-				return connected, err
+			if err := e.handle(ctx, ev); err != nil {
+				return err
 			}
 		case <-e.expired:
-			return connected, errAuthExpired
+			return errAuthExpired
 		case <-ctx.Done():
-			return connected, ctx.Err()
+			return ctx.Err()
 		}
 	}
 }
@@ -202,11 +196,11 @@ func (e *Engine) connect(ctx context.Context) (<-chan domain.Event, error) {
 	return stream, err
 }
 
-// handle stores and publishes one stream event, and reports whether it
-// said the connection is up. Its error means the engine must stop.
-func (e *Engine) handle(ctx context.Context, ev domain.Event) (up bool, err error) {
+// handle stores and publishes one stream event. Its error means the
+// engine must stop.
+func (e *Engine) handle(ctx context.Context, ev domain.Event) error {
 	if err := e.store(ctx, ev); err != nil {
-		return false, err
+		return err
 	}
 	return e.react(ctx, ev)
 }
@@ -228,29 +222,27 @@ func (e *Engine) store(ctx context.Context, ev domain.Event) error {
 
 // react acts on a connection state the stream reported: catching up when
 // it is up, stopping when the credentials were rejected.
-func (e *Engine) react(ctx context.Context, ev domain.Event) (up bool, err error) {
-	cc, ok := ev.(domain.ConnectionChanged)
-	switch {
-	case !ok:
-		return false, nil
-	case cc.State == domain.AuthExpired:
+func (e *Engine) react(ctx context.Context, ev domain.Event) error {
+	// Any other event leaves cc zero, whose state (connecting) needs
+	// nothing done.
+	cc, _ := ev.(domain.ConnectionChanged)
+	switch cc.State {
+	case domain.AuthExpired:
 		e.expire(ctx)
-		return false, errAuthExpired
-	case cc.State == domain.Connected:
+		return errAuthExpired
+	case domain.Connected:
 		e.connected(ctx)
-		return true, nil
-	default:
-		return false, nil
 	}
+	return nil
 }
 
-// connected starts catching up after every connection but the first:
-// before that there was no outage to miss anything in.
+// connected resets the backoff and, after every connection but the first
+// (before that there was no outage to miss anything in), catches up.
 func (e *Engine) connected(ctx context.Context) {
 	if e.wasUp {
 		e.wg.Go(func() { e.reconcile(ctx) })
 	}
-	e.wasUp = true
+	e.wasUp, e.upNow = true, true
 }
 
 // fatal sorts an error from a provider call: rejected credentials and an

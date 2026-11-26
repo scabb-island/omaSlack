@@ -133,6 +133,20 @@ func TestAnEndedCtxStopsDelivery(t *testing.T) {
 	}
 }
 
+func TestCtxEndingWhileAnEventWaitsClosesTheStream(t *testing.T) {
+	f := providertest.New(team, domain.Capabilities{})
+	f.Script(providertest.Session{Events: []domain.Event{created(ts1), created(ts2), created(ts3)}})
+	ctx, cancel := context.WithCancel(context.Background())
+	stream, err := f.Connect(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cancel() // nobody has read the first event yet
+	if got := drain(t, stream); len(got) > 1 {
+		t.Fatalf("delivered %v after ctx ended, want at most the one in flight", got)
+	}
+}
+
 func TestHistoryPagesNewestFirstBeforeACursor(t *testing.T) {
 	f := providertest.New(team, domain.Capabilities{})
 	f.SetHistory(conv, msg(ts2), msg(ts1), msg(ts3))

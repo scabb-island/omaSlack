@@ -2,6 +2,7 @@ package syncengine_test
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -56,6 +57,9 @@ func TestReadMarkersArePolledForConversationsThatMatter(t *testing.T) {
 	if got := r.lastRead(t, convA); got != ts2 {
 		t.Fatalf("store marker = %v after an older one", got)
 	}
+	if logs := r.logs.String(); logs != "" {
+		t.Fatalf("logged %q after polls that worked", logs)
+	}
 }
 
 func TestAConversationNeverReadHasNoMarkerToMove(t *testing.T) {
@@ -82,6 +86,9 @@ func TestAMarkerThatCannotBeReadDoesNotStopTheOthers(t *testing.T) {
 
 	r.clock.fire(t, time.Minute)
 	r.pub.expect(t, readTo(convB, ts1))
+	if logs := r.logs.String(); !strings.Contains(logs, "channel_not_found") || !strings.Contains(logs, convA.String()) {
+		t.Fatalf("log = %q, want convA's failure", logs)
+	}
 }
 
 func TestRejectedCredentialsWhilePollingStopTheEngine(t *testing.T) {

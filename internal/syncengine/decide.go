@@ -50,17 +50,12 @@ func (s status) shown() domain.ConnectionState {
 // reconcileSet is every conversation worth catching up after a reconnect:
 // the ones open in a client and the ones with activity since startup, in
 // a stable order.
-func reconcileSet(open map[domain.ConversationID]int, active map[domain.ConversationID]bool) []domain.ConversationID {
-	set := maps.Clone(active)
-	if set == nil {
-		set = make(map[domain.ConversationID]bool)
-	}
-	for c := range open {
-		set[c] = true
-	}
-	return slices.SortedFunc(maps.Keys(set), func(a, b domain.ConversationID) int {
+func reconcileSet(open map[domain.ConversationID]int, active map[domain.ConversationID]struct{}) []domain.ConversationID {
+	all := slices.AppendSeq(slices.Collect(maps.Keys(open)), maps.Keys(active))
+	slices.SortFunc(all, func(a, b domain.ConversationID) int {
 		return cmp.Compare(a.String(), b.String())
 	})
+	return slices.Compact(all)
 }
 
 // activityIn names the conversation whose messages ev changed, if any. A

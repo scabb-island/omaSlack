@@ -244,18 +244,17 @@ func forward(ctx context.Context, live <-chan domain.Event, out chan<- domain.Ev
 	}
 }
 
-// send hands ev to out unless ctx has ended. ctx is checked first because
-// a select with both cases ready picks one at random.
+// send hands ev to out unless ctx has ended, and reports whether delivery
+// may go on. ctx is checked first because a select with both cases ready
+// picks one at random.
 func send(ctx context.Context, out chan<- domain.Event, ev domain.Event) bool {
-	if ctx.Err() != nil {
-		return false
+	if ctx.Err() == nil {
+		select {
+		case out <- ev:
+		case <-ctx.Done():
+		}
 	}
-	select {
-	case out <- ev:
-		return true
-	case <-ctx.Done():
-		return false
-	}
+	return ctx.Err() == nil
 }
 
 // newestFirst orders messages through their timestamps' fixed-width string

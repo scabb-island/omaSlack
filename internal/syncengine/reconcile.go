@@ -55,7 +55,7 @@ func (e *Engine) eachInteresting(ctx context.Context, what string, fn func(domai
 	}
 	for _, conv := range convs {
 		if err := fn(conv); err != nil {
-			if stopping(ctx, err) {
+			if stopping(err) {
 				return
 			}
 			e.cfg.Log.Warn("sync: could not "+what+" a conversation", "team", e.w.team, "conversation", conv, "err", err)
@@ -76,16 +76,17 @@ func (e *Engine) syncRead(ctx context.Context, conv domain.ConversationID) error
 		at, err = r.LastRead(ctx, conv)
 		return err
 	})
-	if err != nil || at.IsZero() {
+	if err != nil {
 		return err
 	}
 	return e.do(ctx, readOp(conv, at))
 }
 
 // stopping reports whether err means the engine is shutting down, so
-// there is no point trying the next conversation.
-func stopping(ctx context.Context, err error) bool {
-	return ctx.Err() != nil || errors.Is(err, provider.ErrAuthExpired) || errors.Is(err, ErrStopped)
+// there is no point trying the next conversation. Once Run's ctx has
+// ended, every call fails with its error before reaching Slack.
+func stopping(err error) bool {
+	return errors.Is(err, provider.ErrAuthExpired) || errors.Is(err, context.Canceled)
 }
 
 // interestOp copies the conversations worth catching up into out.

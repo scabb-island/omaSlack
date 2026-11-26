@@ -20,8 +20,8 @@ type writer struct {
 	page  int // rows per Store read
 
 	status status
-	open   map[domain.ConversationID]int  // how many clients have it open
-	active map[domain.ConversationID]bool // had message activity since startup
+	open   map[domain.ConversationID]int      // how many clients have it open
+	active map[domain.ConversationID]struct{} // had message activity since startup
 }
 
 // op is one unit of work on the writer's goroutine.
@@ -30,7 +30,7 @@ type op func(ctx context.Context, w *writer) error
 // request carries an op and returns its result.
 type request struct {
 	op   op
-	done chan error // buffered: the writer never waits on the caller
+	done chan error // do receives as soon as the writer took the op
 }
 
 func newWriter(cfg Config) *writer {
@@ -42,7 +42,7 @@ func newWriter(cfg Config) *writer {
 		page:   cfg.PageSize,
 		status: status{link: domain.Disconnected},
 		open:   make(map[domain.ConversationID]int),
-		active: make(map[domain.ConversationID]bool),
+		active: make(map[domain.ConversationID]struct{}),
 	}
 }
 
@@ -77,7 +77,7 @@ func (w *writer) apply(ctx context.Context, ev domain.Event) error {
 		return err
 	}
 	if conv, ok := activityIn(ev); ok {
-		w.active[conv] = true
+		w.active[conv] = struct{}{}
 	}
 	w.pub.Publish(ev)
 	return nil
@@ -136,7 +136,7 @@ func (w *writer) storedSince(ctx context.Context, conv domain.ConversationID, si
 	msgs, err := pageBack(func(before domain.TS) ([]domain.Message, error) {
 		return w.store.Messages(ctx, conv, before, w.page)
 	}, func(page []domain.Message) bool {
-		return len(page) < w.page || page[len(page)-1].TS.Before(since)
+		return page[len(page)-1].TS.Before(since)
 	})
 	known := make(map[domain.TS]bool, len(msgs))
 	for _, m := range msgs {

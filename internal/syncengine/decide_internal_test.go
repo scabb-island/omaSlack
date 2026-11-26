@@ -69,7 +69,7 @@ func TestStatusShowsTheLinkUnlessRateLimited(t *testing.T) {
 
 func TestReconcileSetIsOpenPlusActiveSortedWithoutDuplicates(t *testing.T) {
 	open := map[domain.ConversationID]int{cB: 1, cD: 2}
-	active := map[domain.ConversationID]bool{cD: true, cA: true}
+	active := map[domain.ConversationID]struct{}{cD: {}, cA: {}}
 	want := []domain.ConversationID{cA, cB, cD}
 	if got := reconcileSet(open, active); !slices.Equal(got, want) {
 		t.Fatalf("reconcileSet = %v, want %v", got, want)

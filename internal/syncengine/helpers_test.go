@@ -2,6 +2,7 @@ package syncengine_test
 
 import (
 	"context"
+	"log/slog"
 	"path/filepath"
 	"slices"
 	"sync"
@@ -166,10 +167,31 @@ func (t *fakeTimer) C() <-chan time.Time { return t.c }
 func (t *fakeTimer) Stop()               {}
 
 // budget grants every call at once and records what was asked of it.
+// One method can be held: its calls wait until their ctx ends, as under
+// a long penalty, and each says so on held.
 type budget struct {
 	mu        sync.Mutex
 	waits     []grant
 	penalties []penalty
+	hold      string
+	held      chan string
+}
+
+// holdOn makes every call of method wait until its ctx ends.
+func (b *budget) holdOn(method string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.hold, b.held = method, make(chan string, 100)
+}
+
+// awaitHeld waits until a call of the held method is waiting.
+func (b *budget) awaitHeld(t *testing.T) {
+	t.Helper()
+	select {
+	case <-b.held:
+	case <-time.After(patience):
+		t.Fatal("no call is waiting on the budget")
+	}
 }
 
 type grant struct {
@@ -184,8 +206,13 @@ type penalty struct {
 
 func (b *budget) Wait(ctx context.Context, method string, p ratebudget.Priority) error {
 	b.mu.Lock()
-	defer b.mu.Unlock()
 	b.waits = append(b.waits, grant{method, p})
+	held := method == b.hold
+	b.mu.Unlock()
+	if held {
+		b.held <- method
+		<-ctx.Done()
+	}
 	return ctx.Err()
 }
 
@@ -214,7 +241,9 @@ type rig struct {
 	pub    *recorder
 	clock  *fakeClock
 	budget *budget
+	logs   *lockedBuffer
 	engine *syncengine.Engine
+	stop   context.CancelFunc // ends Run, once start ran
 }
 
 const pageSize = 3
@@ -245,6 +274,7 @@ func newRigFrom(t *testing.T, wrap func(*providertest.Fake) provider.Provider, w
 		pub:    newRecorder(),
 		clock:  newFakeClock(),
 		budget: &budget{},
+		logs:   &lockedBuffer{},
 	}
 	var p provider.Provider = r.fake
 	if wrap != nil {
@@ -258,6 +288,7 @@ func newRigFrom(t *testing.T, wrap func(*providertest.Fake) provider.Provider, w
 		Clock:     r.clock,
 		Rand:      func() float64 { return 0.5 },
 		PageSize:  pageSize,
+		Log:       slog.New(slog.NewTextHandler(r.logs, nil)),
 	})
 	return r
 }
@@ -267,6 +298,7 @@ func newRigFrom(t *testing.T, wrap func(*providertest.Fake) provider.Provider, w
 func (r *rig) start(t *testing.T) (cancel context.CancelFunc, result func() error) {
 	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
+	r.stop = cancel
 	done := make(chan error, 1)
 	go func() { done <- r.engine.Run(ctx) }()
 	stopped := false

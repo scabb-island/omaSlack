@@ -136,8 +136,8 @@ func TestProviderErrorsReachTheCaller(t *testing.T) {
 	if err := r.engine.OpenConversation(bg, convA); !errors.Is(err, boom) {
 		t.Fatalf("OpenConversation = %v", err)
 	}
-	if _, err := r.engine.LoadOlder(bg, convA, ts1); !errors.Is(err, boom) {
-		t.Fatalf("LoadOlder = %v", err)
+	if n, err := r.engine.LoadOlder(bg, convA, ts1); !errors.Is(err, boom) || n != 0 {
+		t.Fatalf("LoadOlder = %d, %v", n, err)
 	}
 	r.pub.expectNothing(t)
 }
