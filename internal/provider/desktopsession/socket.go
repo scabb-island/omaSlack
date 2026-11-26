@@ -74,22 +74,14 @@ func (p *Provider) open(ctx context.Context) (*websocket.Conn, error) {
 		return nil, fmt.Errorf("open socket: %w", err)
 	}
 	_ = resp.Body.Close()
+	// Every ping restarts the read deadline; gorilla's own handler still
+	// answers it.
+	answer := conn.PingHandler()
 	conn.SetPingHandler(func(data string) error {
 		_ = conn.SetReadDeadline(time.Now().Add(p.readTimeout))
-		return pong(conn, data)
+		return answer(data)
 	})
 	return conn, nil
-}
-
-// pong answers a ping. Like gorilla's default handler, it ignores a
-// connection that is already closing: the next read reports that.
-func pong(conn *websocket.Conn, data string) error {
-	err := conn.WriteControl(websocket.PongMessage, []byte(data), time.Now().Add(10*time.Second))
-	var netErr interface{ Timeout() bool }
-	if errors.Is(err, websocket.ErrCloseSent) || errors.As(err, &netErr) && netErr.Timeout() {
-		return nil
-	}
-	return err
 }
 
 // socketAddress is the web client's socket URL for this team, its query
