@@ -8,6 +8,10 @@ package internalapp
 import (
 	"context"
 	"errors"
+	"log/slog"
+	"net/http"
+	"net/url"
+	"strconv"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 	"gitlab.com/scabb-island/omaslack/internal/keyring"
@@ -16,13 +20,34 @@ import (
 // Provider is the internal-app connection to one workspace. Create it with
 // New; it is safe for concurrent use.
 type Provider struct {
-	team  domain.TeamID
-	creds keyring.InternalApp
+	team   domain.TeamID
+	creds  keyring.InternalApp
+	apiURL string
+	http   *http.Client
+	log    *slog.Logger
 }
 
+// defaultAPIURL is Slack's Web API base. Method names are appended to it.
+const defaultAPIURL = "https://slack.com/api/"
+
+// Option configures a Provider.
+type Option func(*Provider)
+
+// WithAPIURL replaces Slack's Web API base URL (it must end in "/"). Tests
+// point it at an httptest server.
+func WithAPIURL(u string) Option { return func(p *Provider) { p.apiURL = u } }
+
+// WithLogger sets where dropped events and messages are logged. The
+// default is slog.Default().
+func WithLogger(l *slog.Logger) Option { return func(p *Provider) { p.log = l } }
+
 // New returns the provider for team, authenticated with creds.
-func New(team domain.TeamID, creds keyring.InternalApp) *Provider {
-	return &Provider{team: team, creds: creds}
+func New(team domain.TeamID, creds keyring.InternalApp, opts ...Option) *Provider {
+	p := &Provider{team: team, creds: creds, apiURL: defaultAPIURL, http: http.DefaultClient, log: slog.Default()}
+	for _, opt := range opts {
+		opt(p)
+	}
+	return p
 }
 
 // Team is the workspace this provider is bound to.
@@ -48,8 +73,22 @@ var errTODO = errors.New("not implemented")
 
 func (p *Provider) Connect(ctx context.Context) (<-chan domain.Event, error) { return nil, errTODO }
 
+type messagesResponse struct {
+	envelope
+	Messages []wireMessage `json:"messages"`
+}
+
+// History calls conversations.history.
 func (p *Provider) History(ctx context.Context, conv domain.ConversationID, before domain.TS, limit int) ([]domain.Message, error) {
-	return nil, errTODO
+	form := url.Values{"channel": {conv.String()}, "limit": {strconv.Itoa(limit)}}
+	if !before.IsZero() {
+		form.Set("latest", before.String())
+	}
+	var resp messagesResponse
+	if err := p.call(ctx, "conversations.history", form, &resp); err != nil {
+		return nil, err
+	}
+	return p.parseMessages(resp.Messages), nil
 }
 
 func (p *Provider) Replies(ctx context.Context, conv domain.ConversationID, thread domain.TS) ([]domain.Message, error) {
