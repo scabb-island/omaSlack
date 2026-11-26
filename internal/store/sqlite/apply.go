@@ -62,11 +62,19 @@ func (s *Store) deleteMessage(ctx context.Context, conv domain.ConversationID, t
 // deliberate "mark unread" in another Slack client is not reflected until
 // the cache is rebuilt.
 func (s *Store) markRead(ctx context.Context, conv domain.ConversationID, ts domain.TS) error {
-	return s.exec(ctx, "move read marker", `
+	if err := moveMarker(ctx, s.db, conv, ts); err != nil {
+		return fmt.Errorf("store/sqlite: move read marker: %w", err)
+	}
+	return nil
+}
+
+func moveMarker(ctx context.Context, ex execer, conv domain.ConversationID, ts domain.TS) error {
+	_, err := ex.ExecContext(ctx, `
 		INSERT INTO read_markers (conv_id, last_read) VALUES (?, ?)
 		ON CONFLICT (conv_id) DO UPDATE SET last_read = excluded.last_read
 		WHERE excluded.last_read > read_markers.last_read`,
 		conv.String(), optTS(ts))
+	return err
 }
 
 // LastRead returns the read marker of conv, zero if it was never read.

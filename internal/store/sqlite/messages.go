@@ -22,12 +22,15 @@ type execer interface {
 //     every timestamp, so an unedited copy never undoes an edit).
 //   - The deleted mark is never cleared, so a late create or edit cannot
 //     bring a deleted message back.
+//   - A version without a thread or an author keeps the stored ones: an
+//     edit's result (chat.update) does not always carry them, and a
+//     message never leaves its thread or changes hands.
 const upsertMessage = `
 INSERT INTO messages (conv_id, ts, thread_ts, author, text, edited_ts)
 VALUES (?, ?, ?, ?, ?, ?)
 ON CONFLICT (conv_id, ts) DO UPDATE SET
-    thread_ts = excluded.thread_ts,
-    author    = excluded.author,
+    thread_ts = COALESCE(NULLIF(excluded.thread_ts, ''), messages.thread_ts),
+    author    = COALESCE(NULLIF(excluded.author, ''), messages.author),
     text      = excluded.text,
     edited_ts = excluded.edited_ts
 WHERE excluded.edited_ts >= messages.edited_ts`

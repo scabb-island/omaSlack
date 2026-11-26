@@ -69,8 +69,8 @@ func TestOpenUsesWAL(t *testing.T) {
 func TestOpenRecordsSchemaVersion(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "T123.db")
 	openAt(t, path)
-	if got := rawQuery(t, path, "PRAGMA user_version"); got != "2" {
-		t.Errorf("user_version = %s, want 2", got)
+	if got := rawQuery(t, path, "PRAGMA user_version"); got != "3" {
+		t.Errorf("user_version = %s, want 3", got)
 	}
 }
 
@@ -92,8 +92,8 @@ func TestReopenKeepsDataAndVersion(t *testing.T) {
 	if err != nil || got != "hello" {
 		t.Errorf("Draft after reopen = %q, %v; want hello", got, err)
 	}
-	if v := rawQuery(t, path, "PRAGMA user_version"); v != "2" {
-		t.Errorf("user_version after reopen = %s, want 2", v)
+	if v := rawQuery(t, path, "PRAGMA user_version"); v != "3" {
+		t.Errorf("user_version after reopen = %s, want 3", v)
 	}
 }
 
