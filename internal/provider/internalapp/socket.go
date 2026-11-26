@@ -42,7 +42,7 @@ func (p *Provider) Connect(ctx context.Context) (<-chan domain.Event, error) {
 // connect again or ctx ends, so no envelope is pending at that point.
 func (p *Provider) run(ctx context.Context, client *socketmode.Client, out chan<- domain.Event) {
 	defer close(out)
-	done := make(chan error, 1)
+	done := make(chan error) // run always receives it, so no buffer
 	go func() { done <- client.RunContext(ctx) }()
 	for {
 		select {
@@ -58,12 +58,11 @@ func (p *Provider) run(ctx context.Context, client *socketmode.Client, out chan<
 }
 
 // handle acknowledges evt when it is an envelope, before mapping it, so
-// Slack does not redeliver events this provider drops.
+// Slack does not redeliver events this provider drops. With no payload,
+// AckCtx fails only once ctx has ended, and then nothing is left to do.
 func (p *Provider) handle(ctx context.Context, client *socketmode.Client, evt socketmode.Event, out chan<- domain.Event) {
 	if needsAck(evt) {
-		if err := client.AckCtx(ctx, evt.Request.EnvelopeID, nil); err != nil {
-			p.log.Warn("internal-app: could not acknowledge an envelope", "team", p.team, "err", err)
-		}
+		_ = client.AckCtx(ctx, evt.Request.EnvelopeID, nil)
 	}
 	if ev := p.domainEvent(evt); ev != nil {
 		p.emit(ctx, out, ev)

@@ -3,6 +3,7 @@ package internalapp
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"reflect"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/socketmode"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
@@ -223,6 +225,23 @@ func TestOnlyEnvelopesAreAcknowledged(t *testing.T) {
 	for _, tc := range cases {
 		if got := needsAck(tc.evt); got != tc.want {
 			t.Errorf("needsAck(%s) = %v, want %v", tc.evt.Type, got, tc.want)
+		}
+	}
+}
+
+func TestOnlyRejectedCredentialsEndInAuthExpired(t *testing.T) {
+	cases := map[string]struct {
+		err  error
+		want domain.ConnectionState
+	}{
+		"token_revoked":      {slack.SlackErrorResponse{Err: "token_revoked"}, domain.AuthExpired},
+		"other slack error":  {slack.SlackErrorResponse{Err: "internal_error"}, domain.Disconnected},
+		"wrapped auth error": {fmt.Errorf("open: %w", slack.SlackErrorResponse{Err: "not_authed"}), domain.AuthExpired},
+		"HTTP status":        {slack.StatusCodeError{Code: http.StatusNotFound}, domain.Disconnected},
+	}
+	for name, tc := range cases {
+		if got := finalState(tc.err); got != tc.want {
+			t.Errorf("%s: finalState() = %v, want %v", name, got, tc.want)
 		}
 	}
 }
