@@ -4,10 +4,12 @@ package desktopsession
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
+	"gitlab.com/scabb-island/omaslack/internal/provider"
 	"gitlab.com/scabb-island/omaslack/internal/provider/slackwire"
 )
 
@@ -21,7 +23,9 @@ import (
 // does, but no capture proves it. It is passed through unchanged.
 //
 // A conversation client.counts leaves out, or whose entry does not
-// parse (it is logged), keeps zero read state: unknown, never guessed.
+// parse (it is logged), keeps zero read state: unknown, never guessed. When
+// client.counts itself fails for any reason other than rejected
+// credentials or a rate limit, the whole list comes back that way.
 // Entries for conversations the user is not a member of are ignored.
 func (p *Provider) Conversations(ctx context.Context) ([]domain.Conversation, error) {
 	convs, err := p.UserConversations(ctx)
@@ -30,7 +34,13 @@ func (p *Provider) Conversations(ctx context.Context) ([]domain.Conversation, er
 	}
 	states, err := p.readStates(ctx)
 	if err != nil {
-		return nil, err
+		if mustSurface(err) {
+			return nil, err
+		}
+		// Enterprise Grid member workspaces refuse client.counts: the list
+		// is still worth having, with its read state unknown.
+		p.log.Warn("desktop-session: no read state from client.counts", "team", p.team, "err", err)
+		return convs, nil
 	}
 	for i, c := range convs {
 		if s, ok := states[c.ID]; ok {
@@ -38,6 +48,13 @@ func (p *Provider) Conversations(ctx context.Context) ([]domain.Conversation, er
 		}
 	}
 	return convs, nil
+}
+
+// mustSurface reports whether a failure must reach the sync engine instead
+// of being worked around: rejected credentials and rate limits.
+func mustSurface(err error) bool {
+	var rl *provider.RateLimitedError
+	return errors.Is(err, provider.ErrAuthExpired) || errors.As(err, &rl)
 }
 
 // countsEntry is one conversation in client.counts.
