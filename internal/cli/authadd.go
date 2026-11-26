@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"flag"
@@ -205,11 +206,11 @@ func (a adder) pickDesktop(listed []auth.Workspace) ([]newWorkspace, error) {
 }
 
 // fromDesktop is a picked workspace ready to store: with the desktop app's
-// credentials, or, when it needs sign-in, with a browser session pasted
-// for it, which must belong to that workspace.
+// credentials, once Slack accepts them, or, when it needs sign-in, with a
+// browser session pasted for it, which must belong to that workspace.
 func (a adder) fromDesktop(w auth.Workspace) (newWorkspace, error) {
 	if !w.NeedsSignIn() {
-		return newWorkspace{team: w.Team, name: w.Name, creds: w.Credentials}, nil
+		return a.checkDesktop(w)
 	}
 	fmt.Fprintf(a.env.Stdout, "%s (%s) needs sign-in. ", w.Name, w.Team)
 	pasted, err := a.pasteSession()
@@ -220,6 +221,18 @@ func (a adder) fromDesktop(w auth.Workspace) (newWorkspace, error) {
 		return newWorkspace{}, fmt.Errorf("the pasted session is for %s (%s), not %s (%s)", pasted.name, pasted.team, w.Name, w.Team)
 	}
 	return pasted, nil
+}
+
+// checkDesktop asks Slack whether the desktop app's session for w works,
+// as pasteSession does for a browser one: the files on disk can hold a
+// session Slack no longer accepts. Slack's name for the workspace wins
+// over the one the app stored, when Slack gives one.
+func (a adder) checkDesktop(w auth.Workspace) (newWorkspace, error) {
+	id, err := desktopsession.AuthTest(a.env.SlackAPIURL)(a.ctx, w.Credentials)
+	if err != nil {
+		return newWorkspace{}, fmt.Errorf("%s (%s): %w", w.Name, w.Team, err)
+	}
+	return newWorkspace{team: w.Team, name: cmp.Or(id.Team, w.Name), creds: w.Credentials}, nil
 }
 
 // pick returns the workspaces an answer names: numbers separated by

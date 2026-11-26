@@ -76,14 +76,21 @@ func team(t *testing.T, s string) domain.TeamID {
 }
 
 // slack answers auth.test: the browser session is Browser (T0BRWSR), the
-// user token is Acme (T0ACME1), anything else is rejected.
+// user token is Acme (T0ACME1), the desktop app's sessions are Alpha
+// (T0ALPHA, which Slack answers without a name) and Beta Corp (T0BETA1),
+// anything else is rejected.
 func (f *authFixture) slack(w http.ResponseWriter, r *http.Request) {
 	f.slackCalls++
 	token := r.FormValue("token") + strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 	cookie, _ := r.Cookie("d")
+	desktop := cookie != nil && cookie.Value == "xoxd-desktop"
 	switch {
 	case token == browserToken && cookie != nil && cookie.Value == browserCookie:
 		_, _ = w.Write([]byte(`{"ok":true,"team":"Browser","team_id":"T0BRWSR","url":"https://browser.slack.com/"}`))
+	case token == "xoxc-alpha" && desktop:
+		_, _ = w.Write([]byte(`{"ok":true,"team":"","team_id":"T0ALPHA","url":"https://alpha.slack.com/"}`))
+	case token == "xoxc-beta" && desktop:
+		_, _ = w.Write([]byte(`{"ok":true,"team":"Beta Corp","team_id":"T0BETA1","url":"https://beta.slack.com/"}`))
 	case token == userToken:
 		_, _ = w.Write([]byte(`{"ok":true,"team":"Acme","team_id":"T0ACME1","url":"https://acme.slack.com/"}`))
 	default:
@@ -212,8 +219,38 @@ func TestAuthAddDesktopListsAndAddsThePicked(t *testing.T) {
 	if code != ExitOK {
 		t.Fatalf("exit code = %d, stderr %q", code, errOut)
 	}
-	wantIn(t, "stdout", out, "1. Alpha", "T0ALPHA", "2. Beta", "3. Gone", "T0GONE1", "needs sign-in", "Added Beta (T0BETA1)")
+	wantIn(t, "stdout", out, "1. Alpha", "T0ALPHA", "2. Beta", "3. Gone", "T0GONE1", "needs sign-in", "Added Beta Corp (T0BETA1)")
 	f.wantStored(map[string]keyring.Credentials{"T0BETA1": betaCreds})
+	if f.slackCalls != 1 {
+		t.Errorf("%d auth.test calls, want 1: the picked session is checked with Slack", f.slackCalls)
+	}
+}
+
+// Desktop app credentials are checked with Slack before anything is
+// stored: one Slack rejects stores nothing, even with others that pass.
+func TestAuthAddDesktopRejectedBySlackStoresNothing(t *testing.T) {
+	f := newAuthFixture(t)
+	f.desktop[1].Credentials.Token = "xoxc-rejected"
+	code, out, errOut := f.run("yes\n1 2\n", "auth", "add", "--provider", "desktop-session")
+	if code != ExitError {
+		t.Errorf("exit code = %d, want %d", code, ExitError)
+	}
+	wantIn(t, "stderr", errOut, "Beta (T0BETA1)", "invalid_auth")
+	if f.opened || strings.Contains(out, "Added") {
+		t.Errorf("stored after Slack rejected a session:\n%s", out)
+	}
+	f.wantStored(nil)
+}
+
+func TestAuthAddDesktopNamesTheWorkspaceAsSlackDoes(t *testing.T) {
+	f := newAuthFixture(t)
+	code, out, errOut := f.run("yes\nall\n", "auth", "add", "--provider", "desktop-session")
+	if code != ExitOK {
+		t.Fatalf("exit code = %d, stderr %q", code, errOut)
+	}
+	// Slack names Beta "Beta Corp", and Alpha not at all: the desktop
+	// app's name stays.
+	wantIn(t, "stdout", out, "Added Alpha (T0ALPHA)", "Added Beta Corp (T0BETA1)")
 }
 
 func TestAuthAddDesktopAddsEverySignedInByDefault(t *testing.T) {
