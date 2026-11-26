@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -145,5 +146,18 @@ func TestOnlyTheOwnerIsAllowed(t *testing.T) {
 	}
 	if sameUser(1001, 1000) {
 		t.Error("another user was allowed")
+	}
+}
+
+func TestListenFailsWhenThePathIsTooLongForASocket(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), strings.Repeat("d", 120))
+	if err := os.Mkdir(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Listen(context.Background(), filepath.Join(dir, "omaslack.sock")); err == nil {
+		t.Fatal("Listen succeeded beyond the unix socket path limit")
+	}
+	if entries, _ := os.ReadDir(dir); len(entries) != 0 {
+		t.Fatalf("left %d entries behind", len(entries))
 	}
 }

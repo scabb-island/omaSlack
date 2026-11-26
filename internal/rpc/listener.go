@@ -57,15 +57,17 @@ func Listen(ctx context.Context, path string) (*Listener, error) {
 	return l, nil
 }
 
+// publish makes the socket private, moves it into place and remembers
+// which file it is. Each step fails only on an I/O error the caller can do
+// nothing about, so they share one exit.
 func (l *Listener) publish(tmp string) error {
-	if err := os.Chmod(tmp, 0o600); err != nil {
-		return err
+	err := os.Chmod(tmp, 0o600)
+	if err == nil {
+		err = os.Rename(tmp, l.path)
 	}
-	if err := os.Rename(tmp, l.path); err != nil {
-		return err
+	if err == nil {
+		l.file, err = os.Lstat(l.path)
 	}
-	fi, err := os.Lstat(l.path)
-	l.file = fi
 	return err
 }
 
