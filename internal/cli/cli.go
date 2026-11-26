@@ -16,6 +16,8 @@ import (
 
 	"gitlab.com/scabb-island/omaslack/internal/keyring"
 	"gitlab.com/scabb-island/omaslack/internal/provider/desktopsession/auth"
+	"gitlab.com/scabb-island/omaslack/internal/rpc"
+	"gitlab.com/scabb-island/omaslack/internal/rpcclient"
 	"gitlab.com/scabb-island/omaslack/internal/version"
 )
 
@@ -25,6 +27,8 @@ const (
 	ExitError          = 1
 	ExitUsage          = 2
 	ExitNotImplemented = 3
+	ExitRPCError       = 4 // the daemon answered with a JSON-RPC error
+	ExitUnavailable    = 5 // the daemon could not be reached or went away
 )
 
 // ErrNotImplemented marks a subcommand whose milestone has not landed yet.
@@ -44,6 +48,9 @@ type Env struct {
 	DesktopWorkspaces func(context.Context) ([]auth.Workspace, error)
 	// SlackAPIURL is Slack's Web API base URL, ending in "/".
 	SlackAPIURL string
+	// DialDaemon connects to the daemon as omaslack ctl. Nil means
+	// rpcclient.Dial on the real socket, starting the user service.
+	DialDaemon func(context.Context) (*rpcclient.Client, error)
 }
 
 // usageError reports a command line that does not parse. Run prints it
@@ -65,7 +72,7 @@ func commands() map[string]command {
 	return map[string]command{
 		"daemon":  {summary: "run the local daemon that talks to Slack", milestone: "M1/M2"},
 		"tui":     {summary: "open the terminal client", milestone: "M3"},
-		"ctl":     {summary: "call a daemon RPC method or stream its events", milestone: "M2"},
+		"ctl":     {summary: "call a daemon RPC method or stream its events", run: runCtl},
 		"auth":    {summary: "add, list or remove Slack workspaces", run: runAuth},
 		"doctor":  {summary: "check the installation and report problems", milestone: "M5"},
 		"version": {summary: "print version information", run: runVersion},
@@ -110,6 +117,19 @@ func exitCode(env Env, name string, err error) int {
 	if errors.As(err, &usage) {
 		fmt.Fprint(env.Stderr, usage.usage)
 		return ExitUsage
+	}
+	return daemonExitCode(err)
+}
+
+// daemonExitCode tells a daemon's error answer and an unreachable daemon
+// apart from other errors, so scripts can react to each.
+func daemonExitCode(err error) int {
+	var rpcErr *rpc.Error
+	switch {
+	case errors.As(err, &rpcErr):
+		return ExitRPCError
+	case errors.Is(err, rpcclient.ErrUnavailable), errors.Is(err, rpcclient.ErrClosed):
+		return ExitUnavailable
 	}
 	return ExitError
 }
