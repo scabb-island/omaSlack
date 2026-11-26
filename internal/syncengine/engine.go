@@ -168,6 +168,11 @@ func (e *Engine) session(ctx context.Context) (connected bool, err error) {
 	if err != nil {
 		return false, e.fatal(ctx, err)
 	}
+	return e.consume(ctx, stream)
+}
+
+// consume handles stream until it closes or the engine must stop.
+func (e *Engine) consume(ctx context.Context, stream <-chan domain.Event) (connected bool, err error) {
 	for {
 		select {
 		case ev, ok := <-stream:
@@ -200,15 +205,30 @@ func (e *Engine) connect(ctx context.Context) (<-chan domain.Event, error) {
 // handle stores and publishes one stream event, and reports whether it
 // said the connection is up. Its error means the engine must stop.
 func (e *Engine) handle(ctx context.Context, ev domain.Event) (up bool, err error) {
-	if err := ctx.Err(); err != nil {
+	if err := e.store(ctx, ev); err != nil {
 		return false, err
+	}
+	return e.react(ctx, ev)
+}
+
+// store hands ev to the writer. An event the Store rejects is logged and
+// skipped; only an ended ctx is an error.
+func (e *Engine) store(ctx context.Context, ev domain.Event) error {
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 	if err := e.do(ctx, applyOp(ev)); err != nil {
 		if ctx.Err() != nil {
-			return false, ctx.Err()
+			return ctx.Err()
 		}
 		e.cfg.Log.Warn("sync: could not store an event", "team", e.w.team, "topic", ev.Topic(), "err", err)
 	}
+	return nil
+}
+
+// react acts on a connection state the stream reported: catching up when
+// it is up, stopping when the credentials were rejected.
+func (e *Engine) react(ctx context.Context, ev domain.Event) (up bool, err error) {
 	cc, ok := ev.(domain.ConnectionChanged)
 	switch {
 	case !ok:
