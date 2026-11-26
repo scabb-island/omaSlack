@@ -142,8 +142,8 @@ func assertSocketRequest(t *testing.T, req request) {
 	if args := q.Get("start_args"); !strings.Contains(args, "agent=client") || !strings.Contains(args, "connect_only=true") {
 		t.Errorf("start_args = %q, want the web client's", args)
 	}
-	if req.Cookie != testCookie {
-		t.Errorf("socket d cookie = %q, want %q", req.Cookie, testCookie)
+	if req.Cookies != testCookies {
+		t.Errorf("socket cookies = %q, want every cookie of the session", req.Cookies)
 	}
 	assertBrowserHeaders(t, req.Header)
 }

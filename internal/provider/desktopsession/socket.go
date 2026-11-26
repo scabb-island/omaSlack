@@ -65,7 +65,7 @@ func (p *Provider) run(ctx context.Context, out chan<- domain.Event) {
 	provider.Emit(ctx, out, p.state(domain.Disconnected))
 }
 
-// open checks the session and dials the socket with the same cookie and
+// open checks the session and dials the socket with the same cookies and
 // headers as the Web API calls.
 func (p *Provider) open(ctx context.Context) (*websocket.Conn, error) {
 	if err := p.Call(ctx, "auth.test", url.Values{}, &slackwire.Envelope{}); err != nil {

@@ -13,7 +13,9 @@ import (
 )
 
 // The token and cookie are fake.
-var testSession = keyring.DesktopSession{Token: "xoxc-test-token", Cookie: "xoxd-test%2Fcookie"}
+var testSession = keyring.DesktopSession{
+	Token: "xoxc-test-token", Cookie: "xoxd-test%2Fcookie", Cookies: "b=test-b; d=xoxd-test%2Fcookie; x=test-x",
+}
 
 // fakeAuthTest serves auth.test with body and records the request.
 func fakeAuthTest(t *testing.T, status int, body string) (apiURL string, got *http.Request) {
@@ -44,8 +46,8 @@ func TestAuthTestSendsTheSession(t *testing.T) {
 	if req.PostForm.Get("token") != testSession.Token {
 		t.Errorf("token = %q, want the xoxc token", req.PostForm.Get("token"))
 	}
-	if c, err := req.Cookie("d"); err != nil || c.Value != testSession.Cookie {
-		t.Errorf("d cookie = %v, %v; want it as stored", c, err)
+	if got := req.Header.Get("Cookie"); got != testSession.Cookies {
+		t.Errorf("cookies = %q; want every cookie of the session", got)
 	}
 }
 

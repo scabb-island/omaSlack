@@ -53,7 +53,7 @@ func TestFilesTravelWithTheWebClientsCredentials(t *testing.T) {
 	if reqs[1].Cookie != "" || reqs[1].Header.Get("Authorization") != "" {
 		t.Errorf("the pre-signed upload URL got credentials: %+v", reqs[1])
 	}
-	if d := reqs[3]; d.Header.Get("Authorization") != "Bearer "+testToken || d.Cookie != testCookie {
-		t.Errorf("download headers = %v, want the bearer token and the d cookie", d.Header)
+	if d := reqs[3]; d.Header.Get("Authorization") != "Bearer "+testToken || d.Cookies != testCookies {
+		t.Errorf("download headers = %v, want the bearer token and the session's cookies", d.Header)
 	}
 }

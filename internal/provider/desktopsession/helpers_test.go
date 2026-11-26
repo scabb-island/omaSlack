@@ -19,10 +19,12 @@ import (
 const (
 	testToken  = "xoxc-test-token"
 	testCookie = "xoxd-test%2Fcookie%3D"
+	// testCookies is the whole session, as the browser sends it.
+	testCookies = "b=test-b; d=" + testCookie + "; d-s=1700000000; x=test-x"
 )
 
 func testCreds() keyring.DesktopSession {
-	return keyring.DesktopSession{Token: testToken, Cookie: testCookie}
+	return keyring.DesktopSession{Token: testToken, Cookie: testCookie, Cookies: testCookies}
 }
 
 // parse runs one of the domain parsers and fails the test on an error.
@@ -46,10 +48,11 @@ func fixture(t *testing.T, name string) []byte {
 
 // request is what the fake Slack saw of one HTTP request.
 type request struct {
-	Path   string
-	Header http.Header
-	Form   url.Values
-	Cookie string // the d cookie, "" when absent
+	Path    string
+	Header  http.Header
+	Form    url.Values
+	Cookie  string // the d cookie, "" when absent
+	Cookies string // the whole Cookie header
 }
 
 // fakeSlack is an httptest server for both the Web API (under /api/) and
@@ -69,7 +72,7 @@ func newFakeSlack(t *testing.T, routes map[string]http.HandlerFunc) *fakeSlack {
 			if err := r.ParseForm(); err != nil {
 				t.Errorf("parse form: %v", err)
 			}
-			rec := request{Path: r.URL.Path, Header: r.Header.Clone(), Form: r.Form}
+			rec := request{Path: r.URL.Path, Header: r.Header.Clone(), Form: r.Form, Cookies: r.Header.Get("Cookie")}
 			if c, err := r.Cookie("d"); err == nil {
 				rec.Cookie = c.Value
 			}
