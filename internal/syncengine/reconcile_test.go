@@ -4,7 +4,6 @@ import (
 	"errors"
 	"slices"
 	"testing"
-	"time"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 	"gitlab.com/scabb-island/omaslack/internal/provider"
@@ -29,11 +28,7 @@ func (r *rig) firstSession(t *testing.T, events ...domain.Event) (live chan doma
 // lets the next session come up and stay open.
 func (r *rig) dropAndReconnect(t *testing.T, live chan domain.Event) {
 	t.Helper()
-	r.fake.Script(providertest.Session{Events: []domain.Event{state(domain.Connected)}, Live: make(chan domain.Event)})
-	close(live)
-	r.pub.expect(t, state(domain.Disconnected))
-	r.clock.fire(t, time.Second)
-	r.pub.expect(t, state(domain.Connecting), state(domain.Connected))
+	r.reconnectKeepingLive(t, live)
 }
 
 // historyCalls are the History calls the fake received, in order.

@@ -78,7 +78,7 @@ type Engine struct {
 	stopped    chan struct{} // closed when Run stops serving ops
 	expired    chan struct{} // closed when Slack rejected the credentials
 	expireOnce sync.Once
-	listFailed atomic.Bool    // the conversation list failed and was logged
+	listFailed atomic.Bool    // the conversation list is failing (logged when it changes)
 	wg         sync.WaitGroup // every goroutine Run started
 
 	// Only the connect loop's goroutine touches these: whether a stream
