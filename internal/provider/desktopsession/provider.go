@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"time"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 	"gitlab.com/scabb-island/omaslack/internal/keyring"
@@ -31,8 +32,10 @@ type Provider struct {
 	creds     keyring.DesktopSession
 	apiURL    string
 	socketURL string
-	http      *http.Client
-	log       *slog.Logger
+	// readTimeout is how long the socket may stay silent; tests shorten it.
+	readTimeout time.Duration
+	http        *http.Client
+	log         *slog.Logger
 }
 
 const (
@@ -67,7 +70,7 @@ func WithLogger(l *slog.Logger) Option { return func(p *Provider) { p.log = l } 
 func New(team domain.TeamID, creds keyring.DesktopSession, opts ...Option) *Provider {
 	p := &Provider{
 		team: team, creds: creds,
-		apiURL: defaultAPIURL, socketURL: defaultSocketURL,
+		apiURL: defaultAPIURL, socketURL: defaultSocketURL, readTimeout: defaultReadTimeout,
 		http: http.DefaultClient, log: slog.Default(),
 	}
 	for _, opt := range opts {
@@ -88,7 +91,7 @@ func (p *Provider) sign(form url.Values, h http.Header) {
 // browserHeaders are what the web client's requests carry: the d cookie,
 // and the Origin and User-Agent of a Chrome tab on app.slack.com.
 func (p *Provider) browserHeaders(h http.Header) {
-	h.Set("Cookie", (&http.Cookie{Name: "d", Value: p.creds.Cookie}).String())
+	h.Set("Cookie", "d="+p.creds.Cookie)
 	h.Set("Origin", "https://app.slack.com")
 	h.Set("User-Agent", userAgent)
 }

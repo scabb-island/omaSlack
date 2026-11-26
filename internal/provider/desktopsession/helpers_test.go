@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sync"
@@ -47,7 +48,7 @@ func fixture(t *testing.T, name string) []byte {
 type request struct {
 	Path   string
 	Header http.Header
-	Form   map[string][]string
+	Form   url.Values
 	Cookie string // the d cookie, "" when absent
 }
 
