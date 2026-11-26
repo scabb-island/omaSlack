@@ -7,10 +7,26 @@
 //     one JSON-RPC notification per event of those topics on the same
 //     connection: method = topic, params = wire.FromEvent(ev). A second
 //     call replaces the topic set. An unknown topic is -32602.
-//   - Publish never blocks the engine: each subscriber has its own bounded
-//     queue (Options.QueueSize). A subscriber whose queue overflows is too
-//     slow to be trusted with a consistent view, so its connection is
-//     closed (rpc.Conn.Close) and logged; the client reconnects and reloads.
+//   - Publish never blocks the engine: each subscriber has its own queue.
+//   - State is coalesced while queued: a newer conversation.updated (team,
+//     conversation), read.changed (team, conversation), presence.changed
+//     (team, user), connection.state (team), draft.changed (team,
+//     conversation, thread), typing (team, conversation, user) or
+//     unread.summary replaces the queued one with the same key and moves to
+//     the end of the queue. What a client receives is therefore always the
+//     published sequence minus superseded states, in publish order: no
+//     event overtakes one published before it (a conversation.updated never
+//     arrives before the message.created that preceded it), and each key's
+//     latest state is delivered. A key that keeps changing faster than the
+//     client reads waits until it settles; the engine's state changes come
+//     in bursts, so it does.
+//   - message.*, reaction.changed and ui.focus are never coalesced or
+//     dropped. They are the bound: a subscriber with Options.QueueSize of
+//     them queued is too slow to be trusted with a consistent view, so its
+//     connection is closed (rpc.Conn.Close) and logged; the client
+//     reconnects and reloads. Queued state is bounded by its distinct keys
+//     (conversations, users, teams), not by how many events were published,
+//     so a reconcile burst on a large workspace does not count against it.
 //   - unread.summary is coalesced: after anything that can change unread
 //     counts (message.created, message.deleted, read.changed,
 //     conversation.updated, connection.state) the hub recomputes the
@@ -55,7 +71,7 @@ type Options struct {
 	Summary func(ctx context.Context) (wire.Summary, error)
 
 	Interval  time.Duration // unread.summary coalescing; zero means 250 ms
-	QueueSize int           // events queued per subscriber; zero means 1024
+	QueueSize int           // un-coalescible events queued per subscriber; zero means 1024
 	Log       *slog.Logger  // default: discard
 
 	// After starts the coalescing timer; default time.After. Tests inject
@@ -129,7 +145,7 @@ func (h *Hub) Run(ctx context.Context) error {
 // Publish queues ev for every subscriber of its topic. It never blocks.
 func (h *Hub) Publish(ev domain.Event) {
 	topic := ev.Topic()
-	h.fanOut(topic, func() any { return wire.FromEvent(ev) })
+	h.fanOut(topic, stateKey(ev), func() any { return wire.FromEvent(ev) })
 	if summaryTopics[topic] {
 		select {
 		case h.dirty <- struct{}{}:
@@ -141,7 +157,7 @@ func (h *Hub) Publish(ev domain.Event) {
 // Focus sends f to the ui.focus subscribers and reports how many it
 // reached.
 func (h *Hub) Focus(f wire.FocusEvent) int {
-	return h.fanOut(TopicFocus, func() any { return f })
+	return h.fanOut(TopicFocus, key{}, func() any { return f })
 }
 
 // Subscribe is the events.subscribe method: params {topics[]}, result

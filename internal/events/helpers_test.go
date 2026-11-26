@@ -254,3 +254,93 @@ func (l *logBuffer) String() string {
 }
 
 func (l *logBuffer) logger() *slog.Logger { return slog.New(slog.NewTextHandler(l, nil)) }
+
+// delivered is one notification a gatedPeer wrote.
+type delivered struct {
+	method string
+	params any
+}
+
+// gatedPeer is a client that reads nothing until open is called and then
+// reads everything at once, like a client that was busy while a burst was
+// published. Its first notification is the primer stalled sends to fill
+// the hub's in-flight slot; got leaves it out.
+type gatedPeer struct {
+	mu     sync.Mutex
+	gate   chan struct{}
+	notes  []delivered
+	closed bool
+	done   chan struct{}
+}
+
+func (p *gatedPeer) Notify(method string, params any) error {
+	select {
+	case <-p.gate:
+	case <-p.done:
+		return net.ErrClosed
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.notes = append(p.notes, delivered{method, params})
+	return nil
+}
+
+func (p *gatedPeer) Close() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.closed = true
+	return nil
+}
+
+func (p *gatedPeer) Done() <-chan struct{} { return p.done }
+
+func (p *gatedPeer) isClosed() bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.closed
+}
+
+// open lets the client read.
+func (p *gatedPeer) open() { close(p.gate) }
+
+// got waits until want notifications after the primer have arrived,
+// checks that no more follow, and returns them.
+func (p *gatedPeer) got(t *testing.T, want int) []delivered {
+	t.Helper()
+	count := func() int {
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		return len(p.notes) - 1
+	}
+	for deadline := time.Now().Add(5 * time.Second); count() < want && time.Now().Before(deadline); {
+		time.Sleep(time.Millisecond)
+	}
+	time.Sleep(20 * time.Millisecond) // anything extra would show up now
+	if n := count(); n != want {
+		t.Fatalf("got %d notifications after the primer, want %d", n, want)
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return append([]delivered(nil), p.notes[1:]...)
+}
+
+// stalled subscribes a gatedPeer to topics (plus ui.focus) and sends it a
+// primer, which the hub takes from the queue and holds in flight: from
+// then on everything published stays queued until open.
+func stalled(t *testing.T, h *Hub, topics ...string) *gatedPeer {
+	t.Helper()
+	p := &gatedPeer{gate: make(chan struct{}), done: make(chan struct{})}
+	t.Cleanup(func() { close(p.done) })
+	if err := h.subscribe(p, append(topics, TopicFocus)); err != nil {
+		t.Fatal(err)
+	}
+	h.Focus(wire.FocusEvent{})
+	return p
+}
+
+func team(t *testing.T, s string) domain.TeamID { return must(t, domain.ParseTeamID, s) }
+func conv(t *testing.T, s string) domain.ConversationID {
+	return must(t, domain.ParseConversationID, s)
+}
+func user(t *testing.T, s string) domain.UserID { return must(t, domain.ParseUserID, s) }
+func ts(t *testing.T, s string) domain.TS       { return must(t, domain.ParseTS, s) }
