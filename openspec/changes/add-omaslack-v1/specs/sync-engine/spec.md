@@ -21,6 +21,10 @@ After reconnecting, the engine SHALL fetch what happened during the outage in ac
 - **WHEN** 3 DMs arrived while the daemon was disconnected
 - **THEN** after reconnecting the 3 messages are in the Store and the DM counter shows 3 unread
 
+#### Scenario: Provider list without read state
+- **WHEN** the provider's conversation list has no latest message per conversation (the internal-app provider)
+- **THEN** the engine fills it in the background, direct messages first, then channels, then only the group DMs known to be active, and unread counts converge without blocking the clients
+
 ### Requirement: Local SQLite cache
 The Store SHALL be one SQLite database per workspace, in WAL mode, with versioned migrations. It SHALL be treated as a cache: deleting it MUST NOT lose user data, except unsent drafts and local preferences.
 
