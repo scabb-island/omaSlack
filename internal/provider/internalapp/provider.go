@@ -16,7 +16,8 @@ import (
 )
 
 // webAPI is embedded under an unexported name, so Provider gets its
-// History, Replies, Post and MarkRead without exposing the field.
+// History, Replies, Post, MarkRead and the writes (writes.go)
+// without exposing the field.
 type webAPI = slackwire.WebAPI
 
 // Provider is the internal-app connection to one workspace. Create it with
@@ -50,7 +51,7 @@ func New(team domain.TeamID, creds keyring.InternalApp, opts ...Option) *Provide
 	for _, opt := range opts {
 		opt(p)
 	}
-	p.webAPI = slackwire.NewWebAPI(p.apiURL, p.http, bearer(creds.UserToken), p.log.With("provider", "internal-app", "team", team))
+	p.webAPI = slackwire.NewWebAPI(p.apiURL, p.http, bearer(creds.UserToken), capabilities, p.log.With("provider", "internal-app", "team", team))
 	return p
 }
 

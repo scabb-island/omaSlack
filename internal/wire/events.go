@@ -82,16 +82,33 @@ type FocusEvent struct {
 // FromEvent converts a domain event to its notification payload. Message
 // events carry no reactions: those arrive as reaction.changed.
 func FromEvent(ev domain.Event) any {
+	if p, ok := fromMessageEvent(ev); ok {
+		return p
+	}
+	return fromStateEvent(ev)
+}
+
+// fromMessageEvent converts the events about messages and their reactions.
+func fromMessageEvent(ev domain.Event) (any, bool) {
 	team := ev.TeamID().String()
 	switch e := ev.(type) {
 	case domain.MessageCreated:
-		return MessageEvent{Team: team, Conv: e.Conversation.String(), Message: FromMessage(e.Message, nil)}
+		return MessageEvent{Team: team, Conv: e.Conversation.String(), Message: FromMessage(e.Message, nil)}, true
 	case domain.MessageUpdated:
-		return MessageEvent{Team: team, Conv: e.Conversation.String(), Message: FromMessage(e.Message, nil)}
+		return MessageEvent{Team: team, Conv: e.Conversation.String(), Message: FromMessage(e.Message, nil)}, true
 	case domain.MessageDeleted:
-		return MessageDeletedEvent{Team: team, Conv: e.Conversation.String(), TS: e.TS.String()}
+		return MessageDeletedEvent{Team: team, Conv: e.Conversation.String(), TS: e.TS.String()}, true
 	case domain.ReactionChanged:
-		return ReactionEvent{Team: team, Conv: e.Conversation.String(), TS: e.TS.String(), User: e.User.String(), Emoji: e.Emoji, Added: e.Added}
+		return ReactionEvent{Team: team, Conv: e.Conversation.String(), TS: e.TS.String(), User: e.User.String(), Emoji: e.Emoji, Added: e.Added}, true
+	}
+	return nil, false
+}
+
+// fromStateEvent converts the rest: read state, people, connection,
+// conversations and drafts.
+func fromStateEvent(ev domain.Event) any {
+	team := ev.TeamID().String()
+	switch e := ev.(type) {
 	case domain.ReadChanged:
 		return ReadEvent{Team: team, Conv: e.Conversation.String(), LastRead: e.LastRead.String()}
 	case domain.PresenceChanged:

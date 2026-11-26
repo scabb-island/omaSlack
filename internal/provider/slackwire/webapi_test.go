@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -47,7 +48,7 @@ func (s *slack) serve(pages map[string]map[string]string, status int, header map
 	s.t.Cleanup(srv.Close)
 	var logs bytes.Buffer
 	sign := func(form url.Values, h http.Header) { form.Set("token", "secret"); h.Set("X-Signed", "yes") }
-	return NewWebAPI(srv.URL+"/api/", srv.Client(), sign, slog.New(slog.NewTextHandler(&logs, nil))), &logs
+	return NewWebAPI(srv.URL+"/api/", srv.Client(), sign, domain.NewCapabilities(domain.Search, domain.PresenceWrite), slog.New(slog.NewTextHandler(&logs, nil))), &logs
 }
 
 func fakeSlack(t *testing.T, pages map[string]map[string]string) (*WebAPI, *slack, *bytes.Buffer) {
@@ -220,6 +221,20 @@ func TestSlackErrorsAreReported(t *testing.T) {
 	if errors.Is(err, provider.ErrAuthExpired) || err == nil || err.Error() != "auth.test: ratelimited" {
 		t.Fatalf("err = %v, want a plain auth.test: ratelimited", err)
 	}
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) || *apiErr != (APIError{Method: "auth.test", Code: "ratelimited"}) {
+		t.Fatalf("err = %#v, want an APIError with the method and the code", err)
+	}
+}
+
+func TestHasCodeMatchesOnlyThatSlackError(t *testing.T) {
+	err := fmt.Errorf("wrapped: %w", &APIError{Method: "chat.update", Code: "message_not_found"})
+	if !HasCode(err, "message_not_found") {
+		t.Error("HasCode(message_not_found) = false, want true")
+	}
+	if HasCode(err, "cant_update_message") || HasCode(errors.New("message_not_found"), "message_not_found") || HasCode(nil, "") {
+		t.Error("HasCode matched another code or a non-Slack error")
+	}
 }
 
 func TestHTTPFailuresAreReported(t *testing.T) {
@@ -276,7 +291,7 @@ func TestRequestsThatCannotBeSentAreErrors(t *testing.T) {
 		"unreachable": "http://127.0.0.1:1/",
 	} {
 		t.Run(name, func(t *testing.T) {
-			api := NewWebAPI(base, http.DefaultClient, func(url.Values, http.Header) {}, slog.Default())
+			api := NewWebAPI(base, http.DefaultClient, func(url.Values, http.Header) {}, domain.Capabilities{}, slog.Default())
 			err := api.Call(context.Background(), "auth.test", url.Values{}, &Envelope{})
 			if err == nil || !strings.HasPrefix(err.Error(), "auth.test: ") {
 				t.Fatalf("err = %v, want an auth.test error", err)

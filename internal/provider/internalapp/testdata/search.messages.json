@@ -1,0 +1,28 @@
+{
+  "ok": true,
+  "query": "deploy",
+  "messages": {
+    "total": 2,
+    "matches": [
+      {
+        "type": "message",
+        "user": "U0002",
+        "username": "bob",
+        "ts": "1700000200.000200",
+        "text": "deploy done",
+        "channel": {"id": "C0001", "name": "ops", "is_private": false},
+        "permalink": "https://example.slack.com/archives/C0001/p1700000200000200"
+      },
+      {
+        "type": "message",
+        "user": "U0001",
+        "username": "ana",
+        "ts": "1700000100.000100",
+        "text": "deploy now?",
+        "channel": {"id": "D0001", "is_im": true},
+        "permalink": "https://example.slack.com/archives/D0001/p1700000100000100"
+      }
+    ],
+    "paging": {"count": 20, "total": 2, "page": 1, "pages": 1}
+  }
+}

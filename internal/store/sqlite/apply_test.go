@@ -55,6 +55,25 @@ func editedMsg(t *testing.T, at, text, editedAt string) domain.Message {
 	return m
 }
 
+// An edit's result may lack the thread and the author (chat.update does
+// not always return them): what the store knows of both is kept.
+func TestAnUpdateWithoutThreadOrAuthorKeepsTheStoredOnes(t *testing.T) {
+	s := openStore(t)
+	root := "1700000001.000000"
+	reply := msg(t, "1700000002.000000", "reply")
+	reply.ThreadTS = ts(t, root)
+	reply.Author = author(t, "U01")
+	mustApply(t, s, created(t, "C01", reply))
+
+	mustApply(t, s, updated(t, "C01", editedMsg(t, "1700000002.000000", "fixed", "1700000003.000000")))
+	got := replies(t, s, "C01", root)
+	want := reply
+	want.Text, want.Edited = "fixed", ts(t, "1700000003.000000")
+	if len(got) != 1 || got[0] != want {
+		t.Errorf("Replies = %+v, want %+v", got, want)
+	}
+}
+
 func TestMessageCreatedIsStoredOnce(t *testing.T) {
 	s := openStore(t)
 	ev := created(t, "C01", msg(t, "1700000001.000000", "hi"))

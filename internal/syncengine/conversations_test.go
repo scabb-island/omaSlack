@@ -43,10 +43,11 @@ func TestAnUnreadDMNobodyTouchedIsCaughtUpAfterReconnecting(t *testing.T) {
 	r.cache(t, dm, msg(ts1)) // left by the previous session
 	live, _ := r.firstSession(t)
 	r.fake.SetHistory(dm, msg(ts1), msg(ts2))
-	r.fake.SetConversations(domain.Conversation{ID: dm, Kind: domain.DirectMessage, Latest: ts2})
+	listed := domain.Conversation{ID: dm, Kind: domain.DirectMessage, Latest: ts2}
+	r.fake.SetConversations(listed)
 
 	r.dropAndReconnect(t, live)
-	r.pub.expect(t, created(dm, ts2))
+	r.pub.expect(t, entry(listed), created(dm, ts2))
 	if got := r.stored(t, dm); !slices.Equal(got, []domain.TS{ts2, ts1}) {
 		t.Fatalf("store = %v", got)
 	}
@@ -59,15 +60,18 @@ func TestAMentionIsCaughtUpAfterReconnectingAndAReadChannelIsNot(t *testing.T) {
 	live, _ := r.firstSession(t)
 	r.fake.SetHistory(convA, msg(ts1), msg(ts2))
 	r.fake.SetHistory(convB, msg(ts1), msg(ts2))
-	r.fake.SetConversations(
-		domain.Conversation{ID: convA, Kind: domain.Channel, Mentions: 1},
-		domain.Conversation{ID: convB, Kind: domain.Channel, Latest: ts2, LastRead: ts2},
-	)
+	mention := domain.Conversation{ID: convA, Kind: domain.Channel, Mentions: 1}
+	read := domain.Conversation{ID: convB, Kind: domain.Channel, Latest: ts2, LastRead: ts2}
+	r.fake.SetConversations(mention, read)
 	seen := len(r.historyCalls())
 
 	r.dropAndReconnect(t, live)
-	// The markers the list reports are stored first, then the catch-up.
-	r.pub.expect(t, readTo(convB, ts2), created(convA, ts2))
+	// The list is stored first (its markers, then its entries), then the
+	// catch-up, which moves convA's latest.
+	mention.Latest = ts1
+	r.pub.expect(t, readTo(convB, ts2), entry(mention), entry(read), created(convA, ts2))
+	mention.Latest = ts2
+	r.pub.expect(t, entry(mention))
 	want := []providertest.Call{{Method: providertest.MethodHistory, Conv: convA}}
 	if got := r.historyCalls()[seen:]; !slices.Equal(got, want) {
 		t.Fatalf("History calls after reconnect = %v, want %v", got, want)
@@ -102,14 +106,15 @@ func TestAColdStartNeverMovesAStoredMarkerBack(t *testing.T) {
 	if err := r.store.Apply(bg, readTo(convA, ts3)); err != nil {
 		t.Fatal(err)
 	}
-	r.fake.SetConversations(
-		domain.Conversation{ID: convA, Kind: domain.Channel, Latest: ts3, LastRead: ts2},
-		domain.Conversation{ID: convB, Kind: domain.Channel, Latest: ts1, LastRead: ts1},
-	)
+	behind := domain.Conversation{ID: convA, Kind: domain.Channel, Latest: ts3, LastRead: ts2}
+	other := domain.Conversation{ID: convB, Kind: domain.Channel, Latest: ts1, LastRead: ts1}
+	r.fake.SetConversations(behind, other)
 	r.firstSession(t)
 
-	// The list is handled in order, so convB's marker means convA's is done.
-	r.pub.expect(t, readTo(convB, ts1))
+	// The list is handled in order, so convB's marker means convA's is
+	// done; its entry keeps the stored marker.
+	behind.LastRead = ts3
+	r.pub.expect(t, readTo(convB, ts1), entry(behind), entry(other))
 	r.pub.expectNothing(t)
 	if got := r.lastRead(t, convA); got != ts3 {
 		t.Fatalf("convA marker = %v, want ts3 kept", got)

@@ -3,6 +3,8 @@ package syncengine
 import (
 	"context"
 	"log/slog"
+	"slices"
+	"sync/atomic"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 	"gitlab.com/scabb-island/omaslack/internal/store"
@@ -11,7 +13,9 @@ import (
 // writer is the state only Run's goroutine touches: the Store's writes,
 // what clients were last told about the connection, and which
 // conversations matter. Nothing else reads or writes it, so it needs no
-// lock; other goroutines reach it by sending an op (see Engine.do).
+// lock; other goroutines reach it by sending an op (see Engine.do). The
+// one exception is shown, an atomic copy of the published connection
+// state for Engine.State.
 type writer struct {
 	team  domain.TeamID
 	store store.Store
@@ -20,8 +24,13 @@ type writer struct {
 	page  int // rows per Store read
 
 	status status
-	open   map[domain.ConversationID]int      // how many clients have it open
-	active map[domain.ConversationID]struct{} // had message activity since startup
+	shown  atomic.Pointer[domain.ConnectionState] // the state last published; the one field any goroutine may read
+	open   map[domain.ConversationID]int          // how many clients have it open
+	active map[domain.ConversationID]struct{}     // had message activity since startup
+
+	// views is each list entry as clients were last told of it, nil until
+	// read from the Store (see views.go).
+	views map[domain.ConversationID]domain.Conversation
 }
 
 // op is one unit of work on the writer's goroutine.
@@ -34,7 +43,7 @@ type request struct {
 }
 
 func newWriter(cfg Config) *writer {
-	return &writer{
+	w := &writer{
 		team:   cfg.Provider.Team(),
 		store:  cfg.Store,
 		pub:    cfg.Publisher,
@@ -44,6 +53,8 @@ func newWriter(cfg Config) *writer {
 		open:   make(map[domain.ConversationID]int),
 		active: make(map[domain.ConversationID]struct{}),
 	}
+	w.shown.Store(new(domain.Connecting)) // nothing published yet: Run starts by connecting
+	return w
 }
 
 // serve runs ops one at a time until ctx ends. An op that arrives once
@@ -73,6 +84,9 @@ func (w *writer) apply(ctx context.Context, ev domain.Event) error {
 		w.setLink(cc.State)
 		return nil
 	}
+	if same, err := w.inEffect(ctx, ev); err != nil || same {
+		return err
+	}
 	if err := w.store.Apply(ctx, ev); err != nil {
 		return err
 	}
@@ -92,13 +106,42 @@ func (w *writer) update(change func(*status)) {
 	before := w.status.shown()
 	change(&w.status)
 	if now := w.status.shown(); now != before {
+		w.shown.Store(&now)
 		w.pub.Publish(domain.ConnectionChanged{Team: w.team, State: now})
 	}
 }
 
-// applyOp and the other *Op helpers wrap writer methods as ops.
+// inEffect reports whether ev is a reaction the Store already reflects:
+// Slack echoes the user's own reactions on the stream, before or after
+// React returns, and whichever comes second must not reach clients as a
+// second change.
+func (w *writer) inEffect(ctx context.Context, ev domain.Event) (bool, error) {
+	rc, ok := ev.(domain.ReactionChanged)
+	if !ok {
+		return false, nil
+	}
+	rs, err := w.store.Reactions(ctx, rc.Conversation, rc.TS)
+	if err != nil {
+		return false, err
+	}
+	has := slices.ContainsFunc(rs, func(r store.Reaction) bool {
+		return r.Emoji == rc.Emoji && slices.Contains(r.Users, rc.User)
+	})
+	return has == rc.Added, nil
+}
+
+// applyOp and the other *Op helpers wrap writer methods as ops. Every op
+// that can change a conversation's list entry ends by refreshing it.
 func applyOp(ev domain.Event) op {
-	return func(ctx context.Context, w *writer) error { return w.apply(ctx, ev) }
+	return func(ctx context.Context, w *writer) error {
+		if err := w.apply(ctx, ev); err != nil {
+			return err
+		}
+		if conv, ok := entryChangedBy(ev); ok {
+			w.refresh(ctx, conv)
+		}
+		return nil
+	}
 }
 
 func linkOp(s domain.ConnectionState) op {
@@ -157,11 +200,22 @@ func (w *writer) moveRead(ctx context.Context, conv domain.ConversationID, at do
 }
 
 func putOp(conv domain.ConversationID, msgs []domain.Message) op {
-	return func(ctx context.Context, w *writer) error { return w.store.PutHistory(ctx, conv, msgs) }
+	return refreshing(conv, func(ctx context.Context, w *writer) error { return w.store.PutHistory(ctx, conv, msgs) })
 }
 
 func catchUpOp(conv domain.ConversationID, fetched []domain.Message) op {
-	return func(ctx context.Context, w *writer) error { return w.catchUp(ctx, conv, fetched) }
+	return refreshing(conv, func(ctx context.Context, w *writer) error { return w.catchUp(ctx, conv, fetched) })
+}
+
+// refreshing runs o and, when it worked, refreshes conv's list entry.
+func refreshing(conv domain.ConversationID, o op) op {
+	return func(ctx context.Context, w *writer) error {
+		if err := o(ctx, w); err != nil {
+			return err
+		}
+		w.refresh(ctx, conv)
+		return nil
+	}
 }
 
 // openOp counts one client more (delta 1) or fewer (delta -1) with conv
