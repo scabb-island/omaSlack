@@ -3,6 +3,7 @@ package daemon
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -86,6 +87,9 @@ type daemon struct {
 	// engines is the context every engine derives from. It is not the
 	// signal's context: engines stop only once the server has.
 	engines context.Context
+	// reloadReq carries a reload asked for over RPC (workspaces.reload),
+	// handled like a SIGHUP. Buffered 1: coalesced, never blocks a caller.
+	reloadReq chan struct{}
 }
 
 // Run is `omaslack daemon`. It claims the socket, starts one sync engine
@@ -132,9 +136,10 @@ func Run(ctx context.Context, cfg Config) error {
 func newDaemon(ctx context.Context, cfg Config) *daemon {
 	d := &daemon{
 		cfg: cfg, log: cfg.Log, dir: newDirectory(),
-		cache:   identityCache{dir: cfg.Paths.Data},
-		engines: context.WithoutCancel(ctx),
-		clients: newClients(&notify.Views{}, time.Now),
+		cache:     identityCache{dir: cfg.Paths.Data},
+		engines:   context.WithoutCancel(ctx),
+		clients:   newClients(&notify.Views{}, time.Now),
+		reloadReq: make(chan struct{}, 1),
 	}
 	d.hub = events.New(events.Options{
 		Summary: func(ctx context.Context) (wire.Summary, error) { return api.Summary(ctx, d.dir) },
@@ -150,7 +155,19 @@ func (d *daemon) router() rpc.Router {
 	r := api.Methods(d.dir, d.hub)
 	r["events.subscribe"] = d.clients.subscribe(d.hub.Subscribe())
 	r["ui.viewing"] = d.clients.viewing()
+	r["workspaces.reload"] = rpc.HandlerFunc(d.handleReload)
 	return r
+}
+
+// handleReload asks the serve loop to read the keyring again, the same
+// effect as SIGHUP, so auth add and auth refresh take effect at once. The
+// request is coalesced and never blocks, so a client gets a prompt ack.
+func (d *daemon) handleReload(context.Context, string, json.RawMessage) (any, error) {
+	select {
+	case d.reloadReq <- struct{}{}:
+	default: // a reload is already pending
+	}
+	return wire.ReloadAck{Reloading: true}, nil
 }
 
 // wait serves, reloading on request, until ctx ends or the server fails.
@@ -163,6 +180,9 @@ func (d *daemon) wait(ctx context.Context, served <-chan error) error {
 		case err := <-served:
 			return fmt.Errorf("daemon: serve: %w", err)
 		case <-d.cfg.Reload:
+			d.reload(ctx)
+			d.loadNotifyConfig()
+		case <-d.reloadReq:
 			d.reload(ctx)
 			d.loadNotifyConfig()
 		}

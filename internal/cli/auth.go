@@ -12,6 +12,7 @@ import (
 // authUsage is the usage of `omaslack auth`.
 const authUsage = `Usage: omaslack auth add --provider internal-app
        omaslack auth add --provider desktop-session [--browser]
+       omaslack auth refresh [team-id]
        omaslack auth list
        omaslack auth remove <team-id>
 `
@@ -32,6 +33,8 @@ func runAuth(env Env, args []string) error {
 	switch args[0] {
 	case "add":
 		return authAdd(ctx, env, args[1:])
+	case "refresh":
+		return authRefresh(ctx, env, args[1:])
 	case "list":
 		return authList(ctx, env, args[1:])
 	case "remove":
