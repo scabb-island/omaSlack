@@ -61,7 +61,7 @@ func putConversation(ctx context.Context, ex execer, c domain.Conversation) erro
 // each entry's read marker and the newest stored top-level message that
 // is not deleted (the same set Messages pages through).
 func (s *Store) Conversations(ctx context.Context) ([]domain.Conversation, error) {
-	rows, err := s.db.QueryContext(ctx, `
+	return queryRows[domain.Conversation, conversationRow](ctx, s.db, "conversation list", `
 		SELECT c.conv_id, c.kind, c.name, c.latest, c.mentions, c.user_id,
 		       COALESCE(r.last_read, ''),
 		       COALESCE((SELECT MAX(m.ts) FROM messages m
@@ -69,24 +69,6 @@ func (s *Store) Conversations(ctx context.Context) ([]domain.Conversation, error
 		                   AND (m.thread_ts = '' OR m.thread_ts = m.ts)), '')
 		FROM conversations c LEFT JOIN read_markers r ON r.conv_id = c.conv_id
 		ORDER BY c.conv_id`)
-	if err != nil {
-		return nil, fmt.Errorf("store/sqlite: read conversation list: %w", err)
-	}
-	defer func() { _ = rows.Close() }()
-
-	var out []domain.Conversation
-	for rows.Next() {
-		var r conversationRow
-		if err := rows.Scan(&r.id, &r.kind, &r.name, &r.latest, &r.mentions, &r.user, &r.lastRead, &r.newest); err != nil {
-			return nil, fmt.Errorf("store/sqlite: read conversation list: %w", err)
-		}
-		c, err := r.parse()
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, c)
-	}
-	return out, rows.Err()
 }
 
 // conversationRow is a list entry as stored, joined with its read marker
@@ -94,6 +76,10 @@ func (s *Store) Conversations(ctx context.Context) ([]domain.Conversation, error
 type conversationRow struct {
 	id, kind, name, latest, user, lastRead, newest string
 	mentions                                       int
+}
+
+func (r *conversationRow) targets() []any {
+	return []any{&r.id, &r.kind, &r.name, &r.latest, &r.mentions, &r.user, &r.lastRead, &r.newest}
 }
 
 func (r conversationRow) parse() (domain.Conversation, error) {

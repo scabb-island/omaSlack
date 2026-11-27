@@ -1,6 +1,7 @@
 package slackwire
 
 import (
+	"cmp"
 	"fmt"
 	"slices"
 
@@ -10,8 +11,14 @@ import (
 // Message is a Slack message as the Web API, the Events API and the web
 // client's socket send it.
 type Message struct {
-	User     string `json:"user"`
-	BotID    string `json:"bot_id"`
+	User  string `json:"user"`
+	BotID string `json:"bot_id"`
+	// A bot's names: the one a legacy integration gives each message,
+	// and the bot's own (see authorName).
+	Username   string `json:"username"`
+	BotProfile struct {
+		Name string `json:"name"`
+	} `json:"bot_profile"`
 	Text     string `json:"text"`
 	TS       string `json:"ts"`
 	ThreadTS string `json:"thread_ts"`
@@ -86,7 +93,7 @@ func (w Message) Parse() (domain.Message, error) {
 		return domain.Message{}, fmt.Errorf("message %s latest_reply: %w", w.TS, err)
 	}
 	return domain.Message{
-		TS: ts, ThreadTS: thread, Author: author, Text: w.Text, Edited: edited, Files: parseFiles(w.Files),
+		TS: ts, ThreadTS: thread, Author: author, AuthorName: w.authorName(), Text: w.Text, Edited: edited, Files: parseFiles(w.Files),
 		ReplyCount: max(w.ReplyCount, 0), LatestReply: latest,
 	}, nil
 }
@@ -98,6 +105,16 @@ func (w Message) author() (domain.Author, error) {
 	}
 	bot, err := domain.ParseBotID(w.BotID)
 	return domain.BotAuthor(bot), err
+}
+
+// authorName is the name Slack shows on a message a bot posted: the
+// per-message username a legacy integration sets, else the bot's profile
+// name. A message without a bot ID is a person's and has none.
+func (w Message) authorName() string {
+	if w.BotID == "" {
+		return ""
+	}
+	return cmp.Or(w.Username, w.BotProfile.Name)
 }
 
 // ParseOptionalTS parses s, where an empty s means "no timestamp".

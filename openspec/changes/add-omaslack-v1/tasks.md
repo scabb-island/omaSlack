@@ -95,7 +95,7 @@
   - `packaging/desktop/omaslack.desktop`; shortcuts and coexistence notes in `packaging/omarchy/README.md`.
 - [x] 5.6 `omaslack doctor`: provider, permissions, socket, theme and shell version
 - [x] 5.7 Contracts: `dnd.changed` / `dnd.info` (`wire.DNDEvent`), `presence.get`, `ui.viewing`, the notifier and its `config.toml`, `wire.Message.authorName` (design.md, "Notifications, DND and presence")
-- [ ] 5.8 Bot names: `authorName` from `username` / `bot_profile.name` in both providers, shown by the TUI and the plugin; the plugin asks `users.info` again after a failed batch
+- [x] 5.8 Bot names: `authorName` from `username` / `bot_profile.name` in both providers, shown by the TUI and the plugin; the plugin asks `users.info` again after a failed batch
 - [ ] 5.9 The window floats: a Hyprland window rule for the title `omaslack`, documented and installed by `omaslack setup` (6.1a)
   - Done: the rule (`packaging/omarchy/hypr/omaslack.lua`, Lua because Omarchy's Hyprland 0.56 config is Lua) and its docs. Left: installing it with `omaslack setup` (6.1a), and shipping it in the package, whose file layout (spec `aur-packaging`) does not list it yet.
 
