@@ -323,6 +323,14 @@ function userName(state, team, user) {
   return /^B[A-Z0-9]+$/.test(user || "") ? BOT_LABEL : user
 }
 
+// authorName: who wrote message ([wire.Message] shape), as views show it:
+// the name Slack put on it (a bot's authorName), else userName(author)
+// for its author, "" when it has none.
+function authorName(message, userName) {
+  var m = message || {}
+  return m.authorName || (m.author ? userName(m.author) : "")
+}
+
 // conversationName: #channel (public or private), the person of a DM, or
 // the members of a group DM ("mpdm-ana--bo--cy-1" is "ana, bo, cy").
 function conversationName(state, team, conv) {

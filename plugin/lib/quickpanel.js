@@ -70,15 +70,16 @@ function shorten(text, max) {
 
 // preview picks the newest count messages of a messages.history page (the
 // daemon sends it newest first; any order works) and returns them oldest
-// first as [{ author, text }], skipping messages with no text.
-// authorName(user) names an author (service.userName for the row's team).
+// first as [{ author, authorName, text }], skipping messages with no text.
+// authorName(user) names an author (service.userName for the row's team);
+// a line's authorName is the bot's name Slack sent, "" for people.
 function preview(history, authorName, count, max) {
   return (history || [])
-    .map(function(m) { return { ts: Number(m.ts) || 0, author: m.author || "", text: plainText(m) } })
+    .map(function(m) { return { ts: Number(m.ts) || 0, author: m.author || "", authorName: m.authorName || "", text: plainText(m) } })
     .filter(function(m) { return m.text !== "" })
     .sort(function(a, b) { return a.ts - b.ts })
     .slice(-count)
-    .map(function(m) { return { author: m.author ? authorName(m.author) : "", text: shorten(m.text, max) } })
+    .map(function(m) { return { author: m.author ? authorName(m.author) : "", authorName: m.authorName, text: shorten(m.text, max) } })
 }
 
 // needsPreview: the row's preview is missing or older than its latest

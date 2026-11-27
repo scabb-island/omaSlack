@@ -102,6 +102,11 @@ Item {
     if (name === user) root._wantUser(team, user)
     return name
   }
+  // Who wrote message, as views show it: the bot's name Slack sent, else
+  // userName() of its author.
+  function authorName(team, message) {
+    return Store.authorName(message, function(user) { return root.userName(team, user) })
+  }
   // A display name for a conversation: #channel, the person of a DM, or the
   // members of a group DM.
   function conversationName(team, conv) {

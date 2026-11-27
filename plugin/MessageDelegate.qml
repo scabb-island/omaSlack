@@ -120,7 +120,7 @@ Column {
         Text {
           objectName: "author"
           textFormat: Text.PlainText
-          text: root.message.author && root.service ? root.service.userName(root.team, root.message.author) : ""
+          text: root.service ? root.service.authorName(root.team, root.message) : ""
           color: root.foreground
           font.family: root.fontFamily
           font.pixelSize: Style.font.body

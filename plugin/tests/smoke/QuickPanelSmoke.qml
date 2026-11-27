@@ -31,7 +31,8 @@ Item {
     s.answers = {
       "messages.history": { error: null, result: [
         { ts: "20.0", author: "U1", text: "see you", html: "<b>see</b> you" },
-        { ts: "19.0", author: "U1", text: "hello" }
+        { ts: "19.0", author: "U1", text: "hello" },
+        { ts: "18.0", author: "B1", authorName: "deploybot", text: "deployed" }
       ] }
     }
     s.unreadList = [
@@ -60,8 +61,9 @@ Item {
     check(callsOf("conversations.open").length === 0, "previews called conversations.open")
     check(callsOf("conversations.markRead").length === 0, "previews marked something read")
     var lines = panel.previewLines("T1/D1")
-    check(lines.length === 2 && lines[1].text === "see you" && lines[1].author === "Ana",
+    check(lines.length === 3 && lines[2].text === "see you" && lines[2].author === "Ana",
           "the preview is not the latest messages: " + JSON.stringify(lines))
+    check(lines.length === 3 && lines[0].author === "deploybot", "a bot's line lost its name: " + JSON.stringify(lines))
 
     // Unchanged latest: no refetch. New latest: one refetch.
     panel.refreshPreviews()

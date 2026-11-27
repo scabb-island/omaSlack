@@ -320,6 +320,12 @@ TestCase {
     verify(r[0].key !== r[1].key)
   }
 
+  function test_search_rows_show_a_bots_name() {
+    var r = N.searchRows([{ conv: "C1", message: { ts: "1.0", author: "B1", authorName: "deploybot", text: "x" } }], [],
+      function(c) { return c }, function(u) { return "Bot" })
+    compare(r[0].who, "deploybot")
+  }
+
   function test_html_from_plain_text_is_escaped() {
     compare(N.searchRows([{ conv: "C1", message: { ts: "1.0", author: "U1", text: "a<b>&" } }], [],
       function(c) { return c }, function(u) { return u })[0].html, "a&lt;b&gt;&amp;")
