@@ -23,11 +23,18 @@ import (
 // suspend) is noticed within a minute instead of never.
 const defaultReadTimeout = 60 * time.Second
 
+// agentVersion is the web client build the socket declares: a unix
+// timestamp, the _x_version_ts of the web client's API calls. Checked
+// against Slack on 2026-11-26: an empty agent_version (what slk sent) gets
+// a socket that never says hello, "1" gets an error frame, and any
+// plausible build time, even a years-old one, gets hello. This is the build
+// the web client used that day.
+const agentVersion = "1795655257"
+
 // startArgs are the web client's start arguments, key for key and in its
-// order, from slk's captures of the official client. With fewer of them
-// Slack stopped sending user_typing. agent_version is left empty, as slk
-// does without its telemetry envelope.
-const startArgs = "?agent=client&org_wide_aware=true&agent_version=&eac_cache_ts=true&cache_ts=0" +
+// order, as the web client sent them on 2026-11-26 (the same keys slk
+// captured). With fewer of them Slack stopped sending user_typing.
+const startArgs = "?agent=client&org_wide_aware=true&agent_version=" + agentVersion + "&eac_cache_ts=true&cache_ts=0" +
 	"&name_tagging=true&only_self_subteams=true&connect_only=true&ms_latest=true"
 
 // Connect opens the web client's WebSocket. It first checks the session
@@ -102,20 +109,39 @@ func (p *Provider) socketAddress() string {
 // silent for readTimeout, or is closed. Malformed frames are logged and
 // dropped.
 func (p *Provider) read(ctx context.Context, conn *websocket.Conn, out chan<- domain.Event) error {
+	greeted := false
 	for {
 		_ = conn.SetReadDeadline(time.Now().Add(p.readTimeout))
 		_, data, err := conn.ReadMessage()
 		if err != nil {
-			return err
+			return withoutHello(err, greeted)
 		}
 		evs, err := mapFrame(p.team, data)
 		if err != nil {
 			p.log.Warn("desktop-session: dropped a frame", "team", p.team, "err", err)
 		}
 		for _, ev := range evs {
+			greeted = greeted || isHello(ev)
 			provider.Emit(ctx, out, ev)
 		}
 	}
+}
+
+// errNoHello marks a socket that closed or went silent before Slack's
+// hello: Slack accepted the handshake but not what the socket URL asked
+// for, which is how a change in the web client protocol shows up.
+var errNoHello = errors.New("the socket never sent hello (the web client protocol may have changed)")
+
+func withoutHello(err error, greeted bool) error {
+	if greeted {
+		return err
+	}
+	return fmt.Errorf("%w: %w", errNoHello, err)
+}
+
+func isHello(ev domain.Event) bool {
+	c, ok := ev.(domain.ConnectionChanged)
+	return ok && c.State == domain.Connected
 }
 
 func (p *Provider) state(s domain.ConnectionState) domain.Event {

@@ -48,6 +48,7 @@
 - [x] 2.11 Per-subscriber queues coalesce state events by key, and the slow-subscriber bound counts only message, reaction and focus events, so a reconcile burst on a large workspace no longer disconnects a client that reads (`internal/events`)
 - [x] 2.12 desktop-session sends every session cookie (from a pasted cURL or the desktop app's Cookies database), not only `d`, and calls the Web API on the workspace's own domain; `auth add` stores the `auth.test` URL with the credentials of both providers (internal-app keeps calling `slack.com`), and entries stored before keep working with `d` alone
 - [x] 2.13 Daemon fixes from a live run: a coalesced `unread.summary` is only sent when it differs from the last one that subscriber got, and the sync engine's log lines name the team once
+- [x] 2.14 desktop-session socket declares a client build (`agent_version` in `start_args`); without it Slack accepts the socket but never says hello. Error frames and a missing hello are logged
 - Deferred:
   - Realtime mention counting (mentions refresh with the conversation list and the read-marker poll).
   - Unread thread counts (need thread read markers).
