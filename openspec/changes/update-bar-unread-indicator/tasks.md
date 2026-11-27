@@ -11,6 +11,6 @@
 
 ## 3. Verification
 - [x] 3.1 `BarIconSmoke`: dot on/off per state, alert hides it, vertical bar fits, DND visible with hideWhenEmpty
-- [ ] 3.2 Renders at 1.0 / 1.2 / 2.0, horizontal and vertical, dark and light (incl. white, rose-pine, flexoki-light); grayscale check that the dot reads without color
+- [x] 3.2 Renders at 1.0 / 1.2 / 2.0, horizontal and vertical, dark and light (incl. white, rose-pine, flexoki-light); grayscale check that the dot reads without color
 - [ ] 3.3 Live check in omarchy-shell (with the user's consent) and screenshots attached to issue #2
-- [ ] 3.4 `make qmllint`, `make qmltest`, `omarchy plugin validate plugin`, `openspec validate --all --strict`
+- [x] 3.4 `make qmllint`, `make qmltest`, `omarchy plugin validate plugin`, `openspec validate --all --strict`
