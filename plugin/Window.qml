@@ -5,6 +5,7 @@ import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
 import "lib/window.js" as W
+import "lib/nav.js" as N
 
 // The full window (task 4.5): a FloatingWindow with the fixed title
 // "omaslack" (for Hyprland rules), with the workspace and conversation
@@ -32,7 +33,12 @@ import "lib/window.js" as W
 //   R                 reply in the selected message's thread
 //   Esc               leave the composer, then close the thread, then the
 //                     window
-// In a composer: Enter sends, Shift+Enter is a new line, Esc leaves.
+//   Ctrl+K, Ctrl+T    find a conversation in any workspace (Finder)
+//   /                 search messages in this workspace (SearchOverlay)
+//   1–9               the n-th workspace's first conversation in the sidebar
+//   ?                 every key (HelpOverlay; lib/nav.js HELP)
+// In a composer: Enter sends, Shift+Enter is a new line, Esc leaves; @ # :
+// suggest people, channels and emoji (Autocomplete).
 //
 // Seams for the rest of 4.5 (see textKey() and the `overlays` layer):
 // message actions (e edit, D delete) act on currentMessage(); the
@@ -82,6 +88,10 @@ Item {
   readonly property alias conversationView: convPane
   readonly property alias threadView: threadPane
   readonly property alias overlayLayer: overlays
+  readonly property alias finderView: finder
+  readonly property alias searchView: searchOverlay
+  readonly property alias helpView: help
+  readonly property alias conversationAutocomplete: convComplete
 
   function nameOf(team, conv) {
     void service.messagesRevision
@@ -243,7 +253,7 @@ Item {
   function send(composer, text) {
     var t = composer.target
     if (!service || !t || text.trim() === "") return
-    service.send(t.team, t.conv, text.trim(), t.threadTS, function(err) {
+    service.send(t.team, t.conv, N.toWire(text.trim(), mentionTokens), t.threadTS, function(err) {
       if (err) { root.status = "Could not send: " + (err.message || err.code); return }
       root.status = ""
       composer.clear()
@@ -307,6 +317,7 @@ Item {
   }
 
   function textKey(t, modifiers) {
+    if (navKey(t, modifiers)) return
     if (t === "i") compose(pane)
     else if (t === "g" && pane !== "sidebar") paneList(pane).toTop()
     else if (t === "G" && pane !== "sidebar") paneList(pane).toBottom()
@@ -316,6 +327,105 @@ Item {
     }
     // Next: e (edit), D (delete), r (react), / (search), Ctrl+K (finder),
     // o (open file).
+  }
+
+  // ---- navigation: finder, search, autocomplete, workspaces, help (lib/nav.js) ----
+
+  // The composers' display -> wire mention tokens (lib/nav.js toWire),
+  // for the session, across conversations, as in the TUI.
+  property var mentionTokens: ({})
+  // A search hit being brought into view: { team, conv, root, ts, pages }.
+  property var seeking: null
+  readonly property bool navOpen: finder.visible || searchOverlay.visible || help.visible
+
+  // How many older pages a jump to a search hit loads, at most (the TUI's
+  // jumpPages).
+  readonly property int seekPages: 10
+
+  function addMentionToken(display, wire) {
+    var next = Object.assign({}, mentionTokens)
+    next[display] = wire
+    mentionTokens = next
+  }
+
+  // navKey runs Ctrl+K, /, ? and 1–9; false for any other key.
+  function navKey(t, modifiers) {
+    var k = N.navKey(t, (modifiers & Qt.ControlModifier) !== 0)
+    if (!k) return false
+    if (k.action === "finder") finder.show("")
+    else if (k.action === "search") searchOverlay.open(searchTeam())
+    else if (k.action === "help") help.show()
+    else switchWorkspace(k.index)
+    return true
+  }
+
+  // switchWorkspace puts the sidebar cursor on the first conversation of
+  // the index-th workspace.
+  function switchWorkspace(index) {
+    var j = N.workspaceJump(sidebarRows, index)
+    if (j.index < 0) { status = j.error; return }
+    status = ""
+    sidebarIndex = j.index
+    pane = "sidebar"
+  }
+
+  // searchTeam: the workspace / searches: the open conversation's, else
+  // the sidebar cursor's, else the first.
+  function searchTeam() {
+    if (team !== "") return team
+    var row = sidebarRows[sidebarIndex]
+    if (row) return row.team
+    return service && service.workspaces.length > 0 ? service.workspaces[0].team : ""
+  }
+
+  function closeNav() { Qt.callLater(root.focusKeys) }
+
+  // openHit opens a search result's conversation on its message (the
+  // thread's root for a reply, with the thread open on the reply), loading
+  // older history until it arrives, as the TUI's jump does.
+  function openHit(hitTeam, row) {
+    seeking = { team: hitTeam, conv: row.conv, root: row.root, ts: row.ts, pages: seekPages, waiting: false }
+    selectConversation(hitTeam, row.conv, row.root)
+    seek()
+  }
+
+  function seek() {
+    var s = seeking
+    if (!s || s.waiting) return
+    if (s.team !== team || s.conv !== conv) { seeking = null; return }
+    var msgs = service.messages(s.team, s.conv, "")
+    if (N.containsTS(msgs, s.root)) {
+      seeking = null
+      convPane.list.scrollWhenLoaded(s.root)
+      if (s.ts !== s.root) {
+        openThread(s.root)
+        threadPane.list.scrollWhenLoaded(s.ts)
+      }
+      return
+    }
+    // Nothing yet: conversations.open has not answered; messagesUpdated
+    // brings us back.
+    if (msgs.length === 0) return
+    if (s.pages <= 0 || !service.hasMoreHistory(s.team, s.conv)) {
+      seeking = null
+      status = "Could not reach that message in the history."
+      return
+    }
+    seeking = Object.assign({}, s, { pages: s.pages - 1, waiting: true })
+    service.loadOlder(s.team, s.conv, function(err) {
+      if (!root.seeking) return
+      root.seeking = Object.assign({}, root.seeking, { waiting: false })
+      if (err) { root.seeking = null; root.status = "Could not load the history: " + (err.message || err.code); return }
+      root.seek()
+    })
+  }
+
+  Connections {
+    target: root.service
+    ignoreUnknownSignals: true
+    function onMessagesUpdated(team, conv, threadTS) {
+      if (root.seeking && threadTS === "" && team === root.seeking.team && conv === root.seeking.conv) Qt.callLater(root.seek)
+    }
   }
 
   // ---- view -------------------------------------------------------------------------
@@ -334,7 +444,7 @@ Item {
     PanelKeyCatcher {
       id: keys
       anchors.fill: parent
-      blocked: root.composing
+      blocked: root.composing || root.navOpen
       onMoveRequested: function(dx, dy) {
         if (dx !== 0) root.pane = W.movePane(root.pane, dx, root.threadOpen, false)
         else root.moveVertical(dy)
@@ -461,6 +571,50 @@ Item {
         id: overlays
         objectName: "overlays"
         anchors.fill: parent
+
+        // Navigation (lib/nav.js): the composers' autocomplete, then the
+        // finder, search and help.
+        Autocomplete {
+          id: convComplete
+          objectName: "conversationAutocomplete"
+          service: root.service
+          composer: convPane.composer
+          fontFamily: root.fontFamily
+          onTokenPicked: function(display, wire) { root.addMentionToken(display, wire) }
+        }
+        Autocomplete {
+          id: threadComplete
+          objectName: "threadAutocomplete"
+          service: root.service
+          composer: threadPane.composer
+          fontFamily: root.fontFamily
+          onTokenPicked: function(display, wire) { root.addMentionToken(display, wire) }
+        }
+        Finder {
+          id: finder
+          objectName: "finder"
+          anchors.fill: parent
+          service: root.service
+          fontFamily: root.fontFamily
+          onConversationPicked: function(team, conv) { root.selectConversation(team, conv, "") }
+          onClosed: root.closeNav()
+        }
+        SearchOverlay {
+          id: searchOverlay
+          objectName: "search"
+          anchors.fill: parent
+          service: root.service
+          fontFamily: root.fontFamily
+          onHitPicked: function(team, row) { root.openHit(team, row) }
+          onClosed: root.closeNav()
+        }
+        HelpOverlay {
+          id: help
+          objectName: "help"
+          anchors.fill: parent
+          fontFamily: root.fontFamily
+          onClosed: root.closeNav()
+        }
       }
     }
   }
