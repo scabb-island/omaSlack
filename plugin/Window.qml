@@ -472,8 +472,8 @@ Item {
     visible: root.opened
     title: "omaslack"
     color: Commons.Color.background
-    implicitWidth: 1100
-    implicitHeight: 720
+    implicitWidth: Style.space(1100)
+    implicitHeight: Style.space(720)
 
     // The compositor closed the window: tell the shell.
     onVisibleChanged: if (!visible && root.opened) root.dismiss()
