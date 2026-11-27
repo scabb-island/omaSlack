@@ -10,7 +10,10 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/godbus/dbus/v5"
+
 	"gitlab.com/scabb-island/omaslack/internal/daemon"
+	"gitlab.com/scabb-island/omaslack/internal/notify"
 	"gitlab.com/scabb-island/omaslack/internal/rpc"
 )
 
@@ -24,7 +27,9 @@ Normally the omaslack systemd user service runs it.
 Signals:
   SIGINT, SIGTERM  shut down in order
   SIGHUP           read the keyring again, so omaslack auth add|remove takes
-                   effect (systemctl --user reload omaslack)
+                   effect (systemctl --user reload omaslack), and the
+                   [notifications] settings of
+                   $XDG_CONFIG_HOME/omaslack/config.toml
 `
 
 // runDaemon runs the daemon until SIGINT or SIGTERM.
@@ -49,6 +54,10 @@ func runDaemon(env Env, args []string) error {
 		NewProvider: daemon.SlackProviders(env.SlackAPIURL, log),
 		Log:         log,
 		Reload:      reload,
+		Notifications: func(events notify.Events) notify.Sender {
+			return notify.NewBus(func() (*dbus.Conn, error) { return dbus.ConnectSessionBus() }, events, log)
+		},
+		LaunchTUI: daemon.LaunchTUI,
 	})
 	if errors.Is(err, rpc.ErrSocketInUse) {
 		return fmt.Errorf("another omaslack daemon is already running on %s", paths.Socket)

@@ -90,6 +90,12 @@ Item {
   property string marked: ""
 
   readonly property bool threadOpen: threadTS !== ""
+  // ui.viewing's params (task 5.1): what the window shows, focused while
+  // it has the keyboard, so the daemon does not notify it. Sent when it
+  // changes (reportViewing).
+  readonly property var viewing: W.viewing(opened, focusProbe.active, team, conv, threadTS)
+  property string viewingSent: "{}"
+  onViewingChanged: Qt.callLater(root.reportViewing)
   readonly property bool composing: convPane.composer.editing || threadPane.composer.editing
   readonly property var sidebarRows: service
     ? W.sidebarRows(service.workspaces, service.conversations, service.summary, nameOf, service.presence)
@@ -177,6 +183,13 @@ Item {
     convPane.composer.flush()
     threadPane.composer.flush()
     if (conv !== "" && service) service.call("conversations.close", { team: team, conv: conv }, null)
+  }
+
+  function reportViewing() {
+    var json = JSON.stringify(viewing)
+    if (!service || json === viewingSent) return
+    viewingSent = json
+    service.call("ui.viewing", viewing, null)
   }
 
   // User-initiated close (Esc, the close button): tell the shell, so its
@@ -477,6 +490,12 @@ Item {
 
     // The compositor closed the window: tell the shell.
     onVisibleChanged: if (!visible && root.opened) root.dismiss()
+
+    // Whether the window has the keyboard, for ui.viewing.
+    Item {
+      id: focusProbe
+      readonly property bool active: Window.active
+    }
 
     PanelKeyCatcher {
       id: keys

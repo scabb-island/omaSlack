@@ -5,7 +5,7 @@ import "../.." as Plugin
 // sections, opening a conversation (conversations.open, draft restored),
 // sending from the composer and from a thread (messages.send with the
 // right threadTS), drafts, older history at the top with the reading
-// position kept, links, ui.focus and Esc stepping back.
+// position kept, links, ui.focus, ui.viewing and Esc stepping back.
 Item {
   id: root
   property var service: null
@@ -78,6 +78,14 @@ Item {
     check(win.pane === "messages", "opening did not move to the messages")
     var conv = win.conversationView
     check(conv.composer.text === "half written", "the draft was not restored: " + conv.composer.text)
+    // ui.viewing (sent a moment later; flushed here): the open conversation.
+    win.reportViewing()
+    var viewing = last("ui.viewing")
+    check(viewing && viewing.team === "T1" && viewing.conv === "C1" && typeof viewing.focused === "boolean" && !viewing.threadTS,
+          "ui.viewing for C1: " + JSON.stringify(viewing))
+    var views = callsOf("ui.viewing").length
+    win.reportViewing()
+    check(callsOf("ui.viewing").length === views, "the same view was reported again")
     check(conv.list.count === 61, "the list shows " + conv.list.count + " messages")
     check(conv.title === "general", "the header says " + conv.title)
 
@@ -125,6 +133,8 @@ Item {
     check(win.threadOpen && win.pane === "thread", "the thread pane did not open")
     var thread = win.threadView
     check(thread.list.count === 2, "the thread shows " + thread.list.count + " messages")
+    win.reportViewing()
+    check(last("ui.viewing") && last("ui.viewing").threadTS === rootTS, "ui.viewing for the thread: " + JSON.stringify(last("ui.viewing")))
 
     // Enter in the thread focuses its composer; Enter there replies in the thread.
     win.activate()
@@ -187,6 +197,8 @@ Item {
     win.stepBack()
     check(!win.opened, "Esc did not dismiss the window")
     check(last("conversations.close") && last("conversations.close").conv === "D1", "closing the window left D1 open")
+    win.reportViewing()
+    check(last("ui.viewing") && JSON.stringify(last("ui.viewing")) === "{}", "closing did not clear ui.viewing: " + JSON.stringify(last("ui.viewing")))
 
     for (var k in saved) s[k] = saved[k]
     return failures

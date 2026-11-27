@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // ErrInvalidTS reports a string that is not a Slack message timestamp.
@@ -48,6 +49,22 @@ func (t TS) OrEmpty() string {
 // Before reports whether t is strictly earlier than u.
 func (t TS) Before(u TS) bool {
 	return t.sec < u.sec || (t.sec == u.sec && t.micro < u.micro)
+}
+
+// TSAt is the timestamp Slack would give a message sent at t, to the
+// microsecond.
+func TSAt(t time.Time) TS {
+	micros := t.UnixMicro()
+	return TS{sec: micros / 1e6, micro: micros % 1e6}
+}
+
+// Next is the smallest timestamp after t, for a bound that must include t
+// where the bound is exclusive.
+func (t TS) Next() TS {
+	if t.micro == 999999 {
+		return TS{sec: t.sec + 1}
+	}
+	return TS{sec: t.sec, micro: t.micro + 1}
 }
 
 // IsZero reports whether t is the zero timestamp.

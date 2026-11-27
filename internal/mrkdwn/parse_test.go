@@ -90,3 +90,19 @@ func TestReferences(t *testing.T) {
 		t.Errorf("got %v", got)
 	}
 }
+
+func TestReferencesBroadcastsAndGroups(t *testing.T) {
+	got := References("<!here> _<!subteam^S1|@devs>_ <!subteam^S1> <!subteam^S2> `<!channel>`")
+	want := Refs{Groups: []string{"S1", "S2"}, Broadcast: true}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %+v want %+v", got, want)
+	}
+	for _, s := range []string{"<!channel>", "<!everyone>"} {
+		if !References(s).Broadcast {
+			t.Errorf("%s is a broadcast", s)
+		}
+	}
+	if References("<!date^1|x>").Broadcast {
+		t.Error("a date is not a broadcast")
+	}
+}

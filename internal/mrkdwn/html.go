@@ -1,7 +1,6 @@
 package mrkdwn
 
 import (
-	"cmp"
 	"html"
 	"net/url"
 	"strings"
@@ -106,33 +105,26 @@ func (h htmlVisitor) Styled(s Styled) string {
 }
 
 func (h htmlVisitor) User(u User) string {
-	name := cmp.Or(OneLine(h.names.UserName(u.ID)), u.Label, u.ID)
-	return anchor("omaslack://user/"+h.team+"/"+url.PathEscape(u.ID), "@"+name)
+	return anchor("omaslack://user/"+h.team+"/"+url.PathEscape(u.ID), "@"+userName(h.names, u))
 }
 
 func (h htmlVisitor) Channel(c Channel) string {
-	name := cmp.Or(c.Label, OneLine(h.names.ConversationName(c.ID)), c.ID)
-	return anchor("omaslack://conv/"+h.team+"/"+url.PathEscape(c.ID), "#"+name)
+	return anchor("omaslack://conv/"+h.team+"/"+url.PathEscape(c.ID), "#"+channelName(h.names, c))
 }
 
 // Special renders <!…>: broadcasts and groups in bold, dates as their
 // fallback text.
 func (htmlVisitor) Special(s Special) string {
-	switch s.Name() {
-	case "here", "channel", "everyone":
-		return "<b>@" + esc(s.Name()) + "</b>"
-	case "subteam":
-		return "<b>" + esc(cmp.Or(s.Label, "@"+s.Arg())) + "</b>"
-	case "date":
-		return esc(cmp.Or(s.Label, s.Cmd))
+	if s.Loud() {
+		return "<b>" + esc(s.Text()) + "</b>"
 	}
-	return esc(cmp.Or(s.Label, "@"+s.Name()))
+	return esc(s.Text())
 }
 
 // Link is an anchor only for web and mail URLs: a message must not hand
 // QML a javascript: or omaslack: link dressed as something else.
 func (htmlVisitor) Link(l Link) string {
-	text := cmp.Or(l.Label, strings.TrimPrefix(l.URL, "mailto:"))
+	text := l.Text()
 	if !safeURL(l.URL) {
 		return esc(text)
 	}
