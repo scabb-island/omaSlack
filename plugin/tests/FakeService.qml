@@ -86,6 +86,7 @@ Item {
   function openWindow(team, conv) { record("openWindow", { team: team, conv: conv }) }
   function openTui(team, conv) { record("openTui", { team: team, conv: conv }) }
   function openPreferred(client, team, conv) { client === "tui" ? openTui(team, conv) : openWindow(team, conv) }
+  function renew(team) { record("renew", { team: team }) }
 
   function reconnect() { record("reconnect", {}) }
   function runSetupAction() { record("runSetupAction", { need: setupNeed }) }

@@ -204,6 +204,12 @@ Item {
   // ("window" or "tui").
   function openPreferred(client, team, conv) { client === "tui" ? openTui(team, conv) : openWindow(team, conv) }
 
+  // Renew re-reads an expired desktop-session workspace's session from its
+  // local source (omaslack auth refresh). On success the daemon reconnects
+  // and a connection.state event clears the expired state. No tokens pass
+  // through QML: the subprocess reads the browser or desktop app itself.
+  function renew(team) { Quickshell.execDetached(["omaslack", "auth", "refresh", team]) }
+
   // Run the action of setupNeed: package actions and omaslack setup in a
   // visible floating terminal (never silently), systemctl directly, then a
   // reconnection. Does nothing for a need without an action.

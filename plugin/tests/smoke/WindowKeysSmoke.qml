@@ -252,6 +252,18 @@ Item {
     kd.press(Qt.Key_Escape)
     check(!win.opened, "Esc from the list did not close the window")
 
+    // An expired desktop session offers a one-click renew in the status line.
+    win.status = ""
+    win.info = ""
+    s.workspaces = [{ team: "T1", name: "Acme", self: "U1", state: "auth_expired", provider: "desktop-session" }]
+    check(win.canRenew, "an expired desktop session cannot be renewed")
+    check(line.visible && line.renew && line.text.indexOf("renew") >= 0,
+          "the status line does not offer renew: " + (line ? line.text : "gone"))
+    var renewClick = child(win.sidebarView.parent.parent, "renewClick")
+    check(renewClick && renewClick.enabled, "the renew click is not enabled")
+    renewClick.clicked(null)
+    check(last("renew") && last("renew").team === "T1", "clicking renew did not run auth refresh")
+
     win.close()
     for (var k in saved) s[k] = saved[k]
     return failures

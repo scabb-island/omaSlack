@@ -79,6 +79,12 @@ Item {
   // The pane with the keyboard: "sidebar", "messages" or "thread".
   property string pane: "sidebar"
   property int sidebarIndex: -1
+  // canRenew is true when the open workspace is an expired desktop session,
+  // the one case a one-click renew (auth refresh) can fix in place.
+  readonly property bool canRenew: {
+    var w = workspace(team)
+    return !!w && w.state === "auth_expired" && w.provider === "desktop-session"
+  }
   // The status line at the bottom: the last error of an action (status,
   // until something replaces it), or a short note on what just happened
   // (info: "Message deleted.", set with inform(), gone after infoDelay
@@ -625,17 +631,30 @@ Item {
         id: statusLine
         objectName: "statusLine"
         readonly property bool error: root.status !== ""
-        visible: error || root.info !== ""
+        // When nothing else claims the line, an expired desktop session
+        // offers a one-click renew (auth refresh).
+        readonly property bool renew: root.canRenew && root.status === "" && root.info === ""
+        visible: error || root.info !== "" || renew
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         padding: Style.spacing.md
         textFormat: Text.PlainText
-        text: (error ? "󰀦  " + root.status : "󰋽  " + root.info)
-        color: error ? C.readable(Commons.Color.urgent, Commons.Color.background, root.foreground) : root.foreground
+        text: error ? "󰀦  " + root.status
+                    : (root.info !== "" ? "󰋽  " + root.info
+                                        : "󰁪  Session expired — click to renew")
+        color: (error || renew) ? C.readable(Commons.Color.urgent, Commons.Color.background, root.foreground) : root.foreground
         font.family: root.fontFamily
         font.pixelSize: Style.font.bodySmall
         wrapMode: Text.WordWrap
+
+        MouseArea {
+          objectName: "renewClick"
+          anchors.fill: parent
+          enabled: statusLine.renew
+          cursorShape: Qt.PointingHandCursor
+          onClicked: { root.service.renew(root.team); root.info = "Renewing the session…" }
+        }
       }
 
       // Popups over the window (finder, search, reactions picker) go here.
