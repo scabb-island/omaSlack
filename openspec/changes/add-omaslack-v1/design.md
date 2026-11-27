@@ -88,7 +88,8 @@ Slack remains the remote source of truth. The Store is a cache that can be rebui
   - `reactions.add` and `reactions.remove`.
   - `files.upload{team, conv, threadTS?, paths[], caption?}` (returns the uploaded files; the message arrives as `message.created`, because `files.completeUploadExternal` does not reliably return its ts) and `files.fetch{team, fileId}` (returns `localPath`, a file in the daemon's cache on this machine).
   - `drafts.get` and `drafts.set`.
-  - `search.messages{team, query}`, `users.search{team, q}`.
+  - `search.messages{team, query}`, `users.search{team, q}`, `users.info{team, ids[]}` (names for the IDs in messages, mentions and DM titles; unknown IDs are left out).
+  - `emoji.list{team}` (custom emoji, with the `customEmoji` capability) and `typing.send{team, conv}` (with the `typing` capability).
   - `presence.set{team, auto|away}`, `dnd.snooze{team, minutes}`, `dnd.end`.
   - `unread.summary{}`: the aggregate the bar uses.
   - `ui.focus{team, conv, ts?}`: asks a client to open a conversation, for deep links and notification clicks.

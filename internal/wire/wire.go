@@ -53,6 +53,7 @@ type Conversation struct {
 	LastRead string `json:"lastRead,omitempty"`
 	Mentions int    `json:"mentions"`
 	Unread   bool   `json:"unread"`
+	User     string `json:"user,omitempty"` // the other person of an "im"
 }
 
 // Workspace is one signed-in workspace, as workspaces.list and hello
@@ -107,6 +108,7 @@ func FromConversation(c domain.Conversation) Conversation {
 		LastRead: optTS(c.LastRead),
 		Mentions: c.Mentions,
 		Unread:   c.Unread(),
+		User:     optUser(c.User),
 	}
 }
 
@@ -137,4 +139,18 @@ func ids(users []domain.UserID) []string {
 		out[i] = u.String()
 	}
 	return out
+}
+
+func optUser(u domain.UserID) string {
+	if u.IsZero() {
+		return ""
+	}
+	return u.String()
+}
+
+// EmojiList is the result of emoji.list: the workspace's custom emoji, by
+// name (without colons). A value is an image URL the daemon resolved, or
+// "alias:<name>" for an alias of another emoji (custom or standard).
+type EmojiList struct {
+	Emoji map[string]string `json:"emoji"`
 }

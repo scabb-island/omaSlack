@@ -324,3 +324,8 @@ func author(s string) domain.Author { return domain.UserAuthor(user(s)) }
 // errExpired is what an engine returns once Slack rejected the
 // credentials: provider.ErrAuthExpired, wrapped.
 var errExpired = fmt.Errorf("syncengine: %w", fmt.Errorf("chat.postMessage: invalid_auth: %w", provider.ErrAuthExpired))
+
+// Task 3.8 stubs: the methods arrive with that task's agent.
+func (e *fakeEngine) Users(context.Context, []domain.UserID) ([]domain.User, error) { return nil, nil }
+func (e *fakeEngine) Emoji(context.Context) (map[string]string, error)              { return nil, nil }
+func (e *fakeEngine) SendTyping(context.Context, domain.ConversationID) error       { return nil }

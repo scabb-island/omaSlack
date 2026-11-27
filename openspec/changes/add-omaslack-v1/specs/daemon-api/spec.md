@@ -71,6 +71,13 @@ The daemon SHALL expose at least the v1 methods listed in `design.md`: workspace
 - **WHEN** a client calls `search.messages` on a workspace whose provider declares `search = false`
 - **THEN** the daemon answers `-32002 unsupported_capability`
 
+### Requirement: Names for the IDs clients show
+The daemon SHALL let clients turn the IDs in messages into names without talking to Slack: `users.info{team, ids[]}` SHALL answer the known people among `ids` (unknown IDs left out, not an error), and every direct-message entry of `conversations.list` SHALL carry the other person's ID in `user` when known.
+
+#### Scenario: Rendering a direct message
+- **WHEN** a client lists conversations and finds an `im` entry with `user = U2`
+- **THEN** `users.info{team, ids:["U2"]}` answers U2's name, which the client uses as the conversation's title
+
 ### Requirement: User service and on-demand start
 The daemon SHALL ship with a systemd user unit (`omaslack.service`). If a client cannot find the socket, it SHALL try `systemctl --user start omaslack` before failing.
 
