@@ -126,7 +126,7 @@ func fromStateEvent(ev domain.Event) any {
 	case domain.ReadChanged:
 		return ReadEvent{Team: team, Conv: e.Conversation.String(), LastRead: e.LastRead.String()}
 	case domain.PresenceChanged:
-		return PresenceEvent{Team: team, User: e.User.String(), Presence: presence(e.Presence)}
+		return PresenceEvent{Team: team, User: e.User.String(), Presence: PresenceName(e.Presence)}
 	case domain.DNDChanged:
 		return FromDND(team, e.Until)
 	case domain.UserTyping:
@@ -141,7 +141,8 @@ func fromStateEvent(ev domain.Event) any {
 	panic("wire: unknown event " + ev.Topic()) // the interface is sealed
 }
 
-func presence(p domain.Presence) string {
+// PresenceName is a presence as the wire spells it: "active" or "away".
+func PresenceName(p domain.Presence) string {
 	if p == domain.Active {
 		return "active"
 	}

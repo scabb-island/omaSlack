@@ -154,3 +154,6 @@ func mustAuthor(t *testing.T, s string) domain.Author {
 	}
 	return a
 }
+
+// second is the error of a call that also returns a value.
+func second[T any](_ T, err error) error { return err }

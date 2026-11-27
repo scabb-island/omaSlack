@@ -65,6 +65,23 @@ TestCase {
     compare(W.sidebarRows(null, null, null, names).length, 0)
   }
 
+  function test_dm_rows_carry_the_other_persons_presence() {
+    var convs = { T1: [
+      { id: "D1", kind: "im", user: "U1" }, { id: "D2", kind: "im", user: "U2" },
+      { id: "D3", kind: "im", user: "U3" }, { id: "C1", kind: "channel", name: "general" }
+    ] }
+    var presence = { T1: { U1: "active", U2: "away" } }
+    var rows = W.sidebarRows([{ team: "T1", name: "Acme" }], convs, null, names, presence)
+    var by = {}
+    rows.forEach(function(r) { by[r.key] = r })
+    compare(by["T1/D1"].presence, "active")
+    compare(by["T1/D2"].presence, "away")
+    compare(by["T1/D3"].presence, "") // not reported (yet)
+    compare(by["T1/C1"].presence, "")
+    var none = W.sidebarRows([{ team: "T1" }], convs, null, names) // no presence at all
+    compare(none.filter(function(r) { return r.key === "T1/D1" })[0].presence, "")
+  }
+
   function test_step_skips_headers_and_stops_at_the_ends() {
     var rows = [
       { type: "workspace" }, { type: "section" }, { type: "conv" }, { type: "conv" },

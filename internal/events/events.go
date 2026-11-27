@@ -11,7 +11,7 @@
 //   - Publish never blocks the engine: each subscriber has its own queue.
 //   - State is coalesced while queued: a newer conversation.updated (team,
 //     conversation), read.changed (team, conversation), presence.changed
-//     (team, user), connection.state (team), draft.changed (team,
+//     (team, user), dnd.changed (team), connection.state (team), draft.changed (team,
 //     conversation, thread), typing (team, conversation, user) or
 //     unread.summary replaces the queued one with the same key and moves to
 //     the end of the queue. What a client receives is therefore always the
@@ -63,7 +63,7 @@ const (
 var Topics = []string{
 	"message.created", "message.updated", "message.deleted",
 	"reaction.changed", "conversation.updated", "read.changed",
-	"draft.changed", "typing", "presence.changed", "connection.state",
+	"draft.changed", "typing", "presence.changed", "dnd.changed", "connection.state",
 	TopicUnreadSummary, TopicFocus,
 }
 

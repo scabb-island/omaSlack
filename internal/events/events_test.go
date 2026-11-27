@@ -381,3 +381,19 @@ func TestAnUnchangedSummaryIsNotSentAgain(t *testing.T) {
 		t.Fatalf("got %s %s, want the changed summary", n.Method, n.Params)
 	}
 }
+
+func TestDNDChangesCanBeSubscribedTo(t *testing.T) {
+	h := New(Options{Summary: noSummary})
+	c := connect(t, serveHub(t, h))
+	if r := c.subscribe(`["dnd.changed"]`); r.Error != nil {
+		t.Fatalf("subscribe: %v", r.Error)
+	}
+	team, err := domain.ParseTeamID("T0001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.Publish(domain.DNDChanged{Team: team})
+	if n := c.next(); n.Method != "dnd.changed" || string(n.Params) != `{"team":"T0001","snoozed":false,"until":0}` {
+		t.Fatalf("notification = %s %s", n.Method, n.Params)
+	}
+}

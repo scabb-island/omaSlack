@@ -219,12 +219,27 @@ TestCase {
   function test_dnd_buttons_cycle_scope_then_choices_then_end_when_snoozed() {
     var scopes = QP.dndScopes(workspaces)
     var choices = QP.dndChoices(new Date(2026, 10, 27, 12, 0))
-    var b = QP.dndButtons(scopes, 1, choices, false)
-    compare(b.map(function(x) { return x.id }), ["scope", "snooze", "snooze", "snooze"])
+    var b = QP.dndButtons(scopes, 1, choices, false, false)
+    compare(b.map(function(x) { return x.id }), ["scope", "snooze", "snooze", "snooze", "presence"])
     compare(b[0].label, "Acme")
-    b = QP.dndButtons(QP.dndScopes([workspaces[0]]), 0, choices, true)
-    compare(b.map(function(x) { return x.id }), ["snooze", "snooze", "snooze", "end"])
+    compare(b[4].label, "Away")
+    compare(b[4].away, true)
+    b = QP.dndButtons(QP.dndScopes([workspaces[0]]), 0, choices, true, true)
+    compare(b.map(function(x) { return x.id }), ["snooze", "snooze", "snooze", "end", "presence"])
     compare(b[3].label, "End")
+    compare(b[4].label, "Back")
+    compare(b[4].away, false)
+  }
+
+  function test_away_status_needs_every_team_of_the_scope_away() {
+    var ws = [{ team: "T1", self: "U1" }, { team: "T2", self: "U2" }]
+    var presence = { T1: { U1: "away" }, T2: { U2: "away", U9: "active" } }
+    verify(QP.awayStatus(presence, ws, ["T1", "T2"]))
+    presence.T2.U2 = "active"
+    verify(!QP.awayStatus(presence, ws, ["T1", "T2"]))
+    verify(QP.awayStatus(presence, ws, ["T1"]))
+    verify(!QP.awayStatus(null, ws, ["T1"]))
+    verify(!QP.awayStatus(presence, ws, []))
   }
 
   function test_dnd_calls_for_a_button_cover_every_team_of_the_scope() {
@@ -236,6 +251,10 @@ TestCase {
     calls = QP.dndCalls({ id: "end" }, ["T1"])
     compare(calls[0].method, "end")
     compare(QP.dndCalls({ id: "scope" }, ["T1"]).length, 0)
+    calls = QP.dndCalls({ id: "presence", away: true }, ["T1", "T2"])
+    compare(calls.length, 2)
+    compare(calls[1].method, "presence")
+    compare(calls[1].away, true)
   }
 
   function test_next_scope_wraps() {

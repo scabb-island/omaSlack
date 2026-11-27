@@ -6,6 +6,7 @@ import (
 	"slices"
 	"sync"
 	"testing"
+	"time"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 	"gitlab.com/scabb-island/omaslack/internal/provider"
@@ -26,9 +27,15 @@ type writes struct {
 	users  []domain.User
 	served map[domain.FileID]string // what DownloadFile serves instead of contentOf
 
-	mu    sync.Mutex
-	calls []string
-	fail  map[string]error
+	// dnd is what dnd.info answers; snoozeEnd what dnd.setSnooze does.
+	// presence is what users.getPresence answers.
+	dnd, snoozeEnd time.Time
+	presence       domain.Presence
+
+	mu       sync.Mutex
+	calls    []string
+	dndReads int
+	fail     map[string]error
 }
 
 var (
@@ -38,6 +45,7 @@ var (
 	_ provider.UserSearcher    = (*writes)(nil)
 	_ provider.PresenceSetter  = (*writes)(nil)
 	_ provider.DNDController   = (*writes)(nil)
+	_ provider.PresenceReader  = (*writes)(nil)
 	_ provider.UserDirectory   = (*writes)(nil)
 	_ provider.EmojiLister     = (*writes)(nil)
 	_ provider.TypingSender    = (*writes)(nil)
@@ -49,7 +57,7 @@ func newWritesRig(t *testing.T, caps ...domain.Capability) (*rig, *writes) {
 	t.Helper()
 	var w *writes
 	r := newRigWith(t, func(f *providertest.Fake) provider.Provider {
-		w = &writes{Fake: f, caps: domain.NewCapabilities(caps...), postAt: ts4, fail: map[string]error{}}
+		w = &writes{Fake: f, caps: domain.NewCapabilities(caps...), postAt: ts4, fail: map[string]error{}, presence: domain.Active}
 		return w
 	})
 	return r, w
@@ -121,8 +129,28 @@ func (w *writes) SetPresence(_ context.Context, away bool) error {
 	return w.record("users.setPresence", away)
 }
 
-func (w *writes) SnoozeDND(_ context.Context, minutes int) error {
-	return w.record("dnd.setSnooze", minutes)
+func (w *writes) SnoozeDND(_ context.Context, minutes int) (time.Time, error) {
+	return w.snoozeEnd, w.record("dnd.setSnooze", minutes)
+}
+
+// DND is counted apart from the other calls: every connection reads it.
+func (w *writes) DND(context.Context) (time.Time, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.dndReads++
+	err := w.fail["dnd.info"]
+	delete(w.fail, "dnd.info")
+	return w.dnd, err
+}
+
+func (w *writes) dndInfoCalls() int {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.dndReads
+}
+
+func (w *writes) Presence(context.Context) (domain.Presence, error) {
+	return w.presence, w.record("users.getPresence")
 }
 
 func (w *writes) EndDND(context.Context) error { return w.record("dnd.endSnooze") }

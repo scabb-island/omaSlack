@@ -91,7 +91,7 @@ Slack remains the remote source of truth. The Store is a cache that can be rebui
   - `drafts.get` and `drafts.set`.
   - `search.messages{team, query}`, `users.search{team, q}`, `users.info{team, ids[]}` (names for the IDs in messages, mentions and DM titles; unknown IDs are left out).
   - `emoji.list{team}` (custom emoji, with the `customEmoji` capability) and `typing.send{team, conv}` (with the `typing` capability).
-  - `presence.set{team, auto|away}`, `dnd.snooze{team, minutes}`, `dnd.end`.
+  - `presence.set{team, auto|away}`, `presence.get{team}`, `dnd.snooze{team, minutes}`, `dnd.end`, `dnd.info{team}`.
   - `unread.summary{}`: the aggregate the bar uses.
   - `ui.focus{team, conv, ts?}`: asks a client to open a conversation, for deep links and notification clicks.
 - Events: `events.subscribe{topics[]}` turns the connection into a stream of JSON-RPC notifications. Topics:

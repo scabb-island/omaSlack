@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 	"gitlab.com/scabb-island/omaslack/internal/rpc"
@@ -27,7 +28,9 @@ var update = flag.Bool("update", false, "rewrite the golden files in testdata/")
 //
 //   - T0ACME (desktop-session) can do everything and has history,
 //     a thread, reactions and drafts in C0GENERAL; U0ANA is signed in.
-//   - T0BETA (internal-app) lacks search, presenceWrite and files.
+//   - T0ACME is snoozed until 1700003600 and away.
+//   - T0BETA (internal-app) lacks search, presenceWrite and files; it is
+//     not snoozed and active.
 //   - T0EXPIRED's credentials were rejected: every engine action fails
 //     with provider.ErrAuthExpired.
 type fixture struct {
@@ -43,6 +46,8 @@ func newFixture() *fixture {
 	f.dir[0].Self = user("U0ANA") // the other workspaces do not know who is signed in
 	f.add("T0BETA", "Beta", "internal-app", domain.NewCapabilities(domain.Realtime), betaStore(), nil, nil)
 	f.add("T0EXPIRED", "Expired", "desktop-session", all, newFakeStore(), nil, errExpired)
+	f.engines["T0ACME"].dnd, f.engines["T0ACME"].presence = time.Unix(1700003600, 0), domain.Away
+	f.engines["T0BETA"].presence = domain.Active
 	return f
 }
 
@@ -177,7 +182,7 @@ func methodNames() []string {
 		"drafts.get", "drafts.set",
 		"users.info", "emoji.list", "typing.send",
 		"search.messages", "users.search",
-		"presence.set", "dnd.snooze", "dnd.end",
+		"presence.set", "presence.get", "dnd.snooze", "dnd.end", "dnd.info",
 		"unread.summary", "ui.focus",
 	}
 }

@@ -41,6 +41,7 @@ type workspaceState struct {
 	convs  map[string]wire.Conversation
 	users  map[string]wire.User
 	emoji  map[string]string
+	own    ownState // own.go
 }
 
 // NewState starts the state from the daemon's hello result.
@@ -268,6 +269,8 @@ var eventHandlers = map[string]eventHandler{
 	"connection.state":     on((*State).connectionChanged),
 	"unread.summary":       on((*State).summaryChanged),
 	"typing":               on((*State).typingStarted),
+	"dnd.changed":          on((*State).dndChanged),
+	"presence.changed":     on((*State).presenceChanged),
 }
 
 func (s *State) messageCreated(ev wire.MessageEvent, now time.Time) {

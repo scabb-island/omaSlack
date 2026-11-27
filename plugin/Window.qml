@@ -98,7 +98,7 @@ Item {
   onViewingChanged: Qt.callLater(root.reportViewing)
   readonly property bool composing: convPane.composer.editing || threadPane.composer.editing
   readonly property var sidebarRows: service
-    ? W.sidebarRows(service.workspaces, service.conversations, service.summary, nameOf)
+    ? W.sidebarRows(service.workspaces, service.conversations, service.summary, nameOf, service.presence)
     : []
   readonly property color foreground: Commons.Color.foreground
   readonly property string fontFamily: Style.font.family

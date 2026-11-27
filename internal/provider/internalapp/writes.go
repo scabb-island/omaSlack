@@ -23,6 +23,7 @@ var (
 	_ provider.EmojiLister     = (*Provider)(nil)
 	_ provider.PresenceSetter  = (*Provider)(nil)
 	_ provider.DNDController   = (*Provider)(nil)
+	_ provider.PresenceReader  = (*Provider)(nil)
 	_ provider.FileUploader    = (*Provider)(nil)
 	_ provider.FileDownloader  = (*Provider)(nil)
 )

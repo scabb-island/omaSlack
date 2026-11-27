@@ -10,7 +10,7 @@ import "lib/contrast.js" as C
 
 // The window's sidebar: each workspace with its Unread, Channels and
 // Direct messages sections (rows of W.sidebarRows), unread conversations
-// in bold with their mention count. A ListView over a KeyedModel, so a
+// in bold with their mention count, DMs with the other person's presence. A ListView over a KeyedModel, so a
 // workspace with a thousand conversations builds only the rows on screen
 // and keeps its scroll position when one of them changes.
 //
@@ -130,13 +130,30 @@ ListView {
         onClicked: root.picked(item.index)
       }
 
+      // A DM's presence: filled in the accent color when active, a ring
+      // when away, nothing while unknown.
+      Rectangle {
+        id: presenceDot
+        objectName: "presenceDot"
+        visible: !!item.row.presence
+        anchors.left: parent.left
+        anchors.leftMargin: Style.spacing.rowPaddingX
+        anchors.verticalCenter: parent.verticalCenter
+        width: visible ? Math.round(convName.font.pixelSize / 2) : 0
+        height: width
+        radius: width / 2
+        color: item.row.presence === "active" ? Commons.Color.accent : "transparent"
+        border.width: item.row.presence === "away" ? 1 : 0
+        border.color: root.dim
+      }
+
       Text {
         id: convName
         objectName: "convName"
-        anchors.left: parent.left
+        anchors.left: presenceDot.right
         anchors.right: badge.left
         anchors.verticalCenter: parent.verticalCenter
-        anchors.leftMargin: Style.spacing.rowPaddingX
+        anchors.leftMargin: presenceDot.visible ? Style.spacing.sm : 0
         anchors.rightMargin: Style.spacing.sm
         textFormat: Text.PlainText
         text: item.row.name || ""

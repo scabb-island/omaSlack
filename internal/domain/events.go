@@ -84,7 +84,10 @@ const (
 	Active
 )
 
-// PresenceChanged: a user went active or away.
+// PresenceChanged: a user went active or away. A provider that reports
+// the signed-in user's own change without knowing their ID leaves User
+// zero; the sync engine fills it in before storing or publishing, so
+// clients always see an ID.
 type PresenceChanged struct {
 	Team     TeamID
 	User     UserID

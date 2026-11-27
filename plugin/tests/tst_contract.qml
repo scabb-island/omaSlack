@@ -12,12 +12,12 @@ TestCase {
 
   readonly property var properties: [
     "pluginId", "socketPath", "shell", "connectionState", "daemonAvailable", "connectionError",
-    "workspaces", "summary", "conversations", "dnd", "messagesRevision"
+    "workspaces", "summary", "conversations", "dnd", "presence", "messagesRevision"
   ]
   readonly property var functions: [
     "messages", "hasMoreHistory", "unreadConversations", "userName", "conversationName",
     "call", "openConversation", "loadOlder", "loadReplies", "send", "edit", "remove", "react",
-    "markRead", "setDraft", "snoozeDND", "endDND", "fetchFile",
+    "markRead", "setDraft", "snoozeDND", "endDND", "setPresence", "fetchFile",
     "openWindow", "openTui", "openPreferred", "reconnect"
   ]
   readonly property var signalNames: ["daemonEvent", "messagesUpdated", "focusRequested"]
@@ -43,6 +43,16 @@ TestCase {
     compare(fake.calls.length, 1)
     compare(fake.calls[0].method, "messages.send")
     compare(fake.calls[0].params.text, "hi")
+  }
+
+  // presence.set takes "away" or "auto" (internal/api/methods.go).
+  function test_set_presence_sends_away_or_auto() {
+    fake.reset()
+    fake.setPresence("T1", true, null)
+    fake.setPresence("T1", false, null)
+    compare(fake.calls[0].method, "presence.set")
+    compare(fake.calls[0].params.presence, "away")
+    compare(fake.calls[1].params.presence, "auto")
   }
 
   // files.fetch names the file "fileId" (internal/api/files.go).

@@ -291,8 +291,8 @@ func TestSetDraftNeverReachesSlack(t *testing.T) {
 	}
 }
 
-func TestPassThroughsReachTheProviderAndPublishNothing(t *testing.T) {
-	r, w := newWritesRig(t, domain.Search, domain.PresenceWrite)
+func TestSearchesReachTheProviderAndPublishNothing(t *testing.T) {
+	r, w := newWritesRig(t, domain.Search)
 	w.hits = []domain.SearchHit{{Conversation: convA, Message: msg(ts1)}}
 	w.users = []domain.User{{ID: me, Name: "me"}}
 	r.connected(t)
@@ -307,18 +307,8 @@ func TestPassThroughsReachTheProviderAndPublishNothing(t *testing.T) {
 		t.Fatalf("SearchUsers = %+v, %v", users, err)
 	}
 	r.expectGrant(t, "users.search")
-	for method, call := range map[string]func() error{
-		"users.setPresence": func() error { return r.engine.SetPresence(bg, true) },
-		"dnd.setSnooze":     func() error { return r.engine.SnoozeDND(bg, 30) },
-		"dnd.endSnooze":     func() error { return r.engine.EndDND(bg) },
-	} {
-		if err := call(); err != nil {
-			t.Fatalf("%s: %v", method, err)
-		}
-		r.expectGrant(t, method)
-	}
 	want := []string{"search.messages in:#general 5\n", "users.search me 3\n"}
-	if got := w.recorded(); !slices.Equal(got[:2], want) || !slices.Contains(got, "users.setPresence true\n") || !slices.Contains(got, "dnd.setSnooze 30\n") {
+	if got := w.recorded(); !slices.Equal(got, want) {
 		t.Fatalf("calls = %q", got)
 	}
 	r.pub.expectNothing(t)

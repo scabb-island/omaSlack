@@ -18,6 +18,7 @@ import (
 // state for Engine.State.
 type writer struct {
 	team  domain.TeamID
+	self  domain.UserID // the signed-in user; zero when unknown
 	store store.Store
 	pub   Publisher
 	log   *slog.Logger
@@ -36,6 +37,9 @@ type writer struct {
 	// the engine fills it in (readstate.go): a new list then keeps the
 	// latest messages and mentions the fill learned.
 	keepsKnown bool
+
+	// own is the user's own snooze and presence (own.go).
+	own own
 }
 
 // op is one unit of work on the writer's goroutine.
@@ -50,6 +54,7 @@ type request struct {
 func newWriter(cfg Config) *writer {
 	w := &writer{
 		team:   cfg.Provider.Team(),
+		self:   cfg.Self,
 		store:  cfg.Store,
 		pub:    cfg.Publisher,
 		log:    cfg.Log,
@@ -83,10 +88,15 @@ func (w *writer) run(ctx context.Context, o op) error {
 }
 
 // apply stores ev and then publishes it. Connection states are not
-// stored: they only move the status clients see.
+// stored: they only move the status clients see. The user's own snooze
+// and presence are remembered, and published only when they change.
 func (w *writer) apply(ctx context.Context, ev domain.Event) error {
 	if cc, ok := ev.(domain.ConnectionChanged); ok {
 		w.setLink(cc.State)
+		return nil
+	}
+	ev, ok := w.resolve(ev)
+	if !ok || w.repeats(ev) {
 		return nil
 	}
 	if same, err := w.inEffect(ctx, ev); err != nil || same {

@@ -15,6 +15,7 @@ func TestTheBudgetCoversTheMethodsTheEngineCalls(t *testing.T) {
 		providertest.MethodPost, providertest.MethodMarkRead, providertest.MethodReadMarker,
 		providertest.MethodConversations,
 		"users.info", "emoji.list", "typing", // the client actions of task 3.8
+		"dnd.info", "users.getPresence", "presence_sub", // the user's own state (task 5.3)
 	} {
 		if _, ok := slackLimits[m]; !ok {
 			t.Errorf("no limit for %s", m)

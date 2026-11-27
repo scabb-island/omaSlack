@@ -87,7 +87,7 @@
 ## M5 — Notifications, presence and Omarchy integration
 - [ ] 5.1 Notifier: rules (DM, mention, keywords, channels), DND and suppression when the conversation is in view
 - [ ] 5.2 Clicking a notification sends `ui.focus` and opens the active client (window or TUI)
-- [ ] 5.3 Presence and DND from both clients
+- [x] 5.3 Presence and DND from both clients
 - [x] 5.4 `omaslack.toml.tpl` template + `theme-set.d/omaslack` hook
   - The files exist in `packaging/omarchy/` (task 3.6); installing them into `$HOME` is 6.1a.
   - Tests: the template against the roles (`TestTemplateMatchesRoles`) and the hook signalling only TUIs (`hook_test.go`).
