@@ -8,7 +8,7 @@ import "charm.land/bubbles/v2/key"
 type Keys struct {
 	Down, Up, Left, Right, NextPane key.Binding
 	Insert, Back, Command, Help     key.Binding
-	Finder, Quit                    key.Binding
+	Finder, Quit, Renew             key.Binding
 
 	PrevPane, Top, Bottom               key.Binding // NORMAL: more movement
 	Open, Workspace                     key.Binding // NORMAL: open a conversation or thread; 1–9
@@ -46,6 +46,7 @@ func DefaultKeys() Keys {
 		Back:      b([]string{"esc"}, "Esc", "back to NORMAL / close the thread"),
 		Help:      b([]string{"?"}, "?", "this help"),
 		Quit:      b([]string{"q", "ctrl+c"}, "q", "quit"),
+		Renew:     b([]string{"ctrl+r"}, "C-r", "renew an expired desktop session"),
 		Send:      b([]string{"enter"}, "Enter", "send"),
 		Newline:   b([]string{"alt+enter", "ctrl+j"}, "A-Enter/C-j", "new line"),
 		OpenFile:  b([]string{"o"}, "o", "open the message's file (xdg-open)"),
@@ -77,7 +78,7 @@ type helpGroup struct {
 func (k Keys) groups() []helpGroup {
 	return []helpGroup{
 		{"Move (NORMAL)", []key.Binding{k.Down, k.Up, k.Top, k.Bottom, k.Left, k.Right, k.NextPane, k.PrevPane}},
-		{"Conversations", []key.Binding{k.Open, k.Workspace, k.Finder, k.Sidebar, k.Narrower, k.Wider}},
+		{"Conversations", []key.Binding{k.Open, k.Workspace, k.Finder, k.Sidebar, k.Narrower, k.Wider, k.Renew}},
 		{"Modes", []key.Binding{k.Insert, k.Command, k.Back, k.Help, k.Quit}},
 		{"Compose (INSERT)", []key.Binding{k.Send, k.Newline, k.Back}},
 		{"Files", []key.Binding{k.OpenFile, k.Images, k.Attach}},
