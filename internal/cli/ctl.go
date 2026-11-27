@@ -78,16 +78,16 @@ func ctlParams(args []string) (json.RawMessage, error) {
 	return p, nil
 }
 
-func dialDaemon(ctx context.Context, env Env) (*rpcclient.Client, error) {
+func dialDaemon(ctx context.Context, env Env, client string) (*rpcclient.Client, error) {
 	if env.DialDaemon != nil {
 		return env.DialDaemon(ctx)
 	}
-	return rpcclient.Dial(ctx, rpcclient.Options{Client: ctlClient})
+	return rpcclient.Dial(ctx, rpcclient.Options{Client: client})
 }
 
 func ctlCall(env Env, method string, params json.RawMessage) error {
 	ctx := context.Background()
-	c, err := dialDaemon(ctx, env)
+	c, err := dialDaemon(ctx, env, ctlClient)
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func ctlCall(env Env, method string, params json.RawMessage) error {
 // away, while forwarding the requests read on stdin.
 func ctlStream(env Env, topics []string) error {
 	ctx := context.Background()
-	c, err := dialDaemon(ctx, env)
+	c, err := dialDaemon(ctx, env, ctlClient)
 	if err != nil {
 		return err
 	}

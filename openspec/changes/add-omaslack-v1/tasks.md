@@ -57,13 +57,13 @@
 - Client notes for M3/M4: a sent message arrives twice (the action and Slack's echo) with the same content, so clients key messages by conversation + ts; a workspace whose `state` is `auth_expired` needs `omaslack auth add` and `systemctl --user reload omaslack`; `files.fetch` paths are local to this machine.
 
 ## M3 — TUI MVP
-- [ ] 3.1 Layout: workspace rail, sidebar, messages, thread and compose
-- [ ] 3.2 NORMAL, INSERT and COMMAND modes, with slk-compatible keys
+- [x] 3.1 Layout: workspace rail, sidebar, messages, thread and compose
+- [x] 3.2 NORMAL, INSERT and COMMAND modes, with slk-compatible keys
 - [ ] 3.3 Conversation finder, search and reaction picker
 - [ ] 3.4 mrkdwn rendering, mentions, emoji and day separators
 - [ ] 3.5 Images with kitty, sixel or half-block
 - [ ] 3.6 Theme from Omarchy's `omaslack.toml` + reload on SIGUSR1
-- [ ] 3.7 Golden view tests
+- [x] 3.7 Golden view tests
 - [ ] 3.8 Daemon methods the clients need to show names: `users.info{team, ids[]}`, the other person of each DM in `conversations.list` (`user`), `emoji.list{team}` and `typing.send{team, conv}`
 
 ## M4 — QML UI MVP
