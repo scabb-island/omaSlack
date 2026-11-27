@@ -139,6 +139,24 @@ func firstSet(values map[string]string, keys []string) (key, value string, ok bo
 // logged by the caller-supplied load and skipped.
 func Watch(ctx context.Context, load func() (Theme, error), sigs <-chan os.Signal) <-chan Theme {
 	ch := make(chan Theme)
-	go func() { <-ctx.Done(); close(ch) }()
+	go func() {
+		defer close(ch)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-sigs:
+			}
+			t, err := load()
+			if err != nil {
+				continue
+			}
+			select {
+			case ch <- t:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 	return ch
 }
