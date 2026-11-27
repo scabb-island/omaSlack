@@ -51,6 +51,10 @@ make quality   # all three
 
 They write their snapshots to `.metrics/` (gitignored) and never run in CI. uml-viewer is not installed: it needs Clojure and Java 21, and the skill does not use it.
 
+## ui-polish (visual changes)
+
+Visual changes follow the `ui-polish` skill (`.claude/skills/ui-polish/SKILL.md`) together with ub-mode: audit the surface first (with the `interfaces` plugin from `jakubkrehel/skills`: `/interfaces:better-interface full <scope>`, then `/interfaces:better-ui`), report the findings and a prioritized plan, and edit nothing until the user approves it. Behavior, state and daemon calls never change in a polish pass; colors and sizes stay on the theme tokens.
+
 ## CI (GitLab): keep it cheap
 
 CI minutes are limited. Keep `.gitlab-ci.yml` like this:
