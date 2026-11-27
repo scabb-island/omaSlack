@@ -183,3 +183,9 @@ func optUser(u domain.UserID) string {
 type EmojiList struct {
 	Emoji map[string]string `json:"emoji"`
 }
+
+// ReloadAck is what workspaces.reload returns: the daemon has been asked to
+// read the keyring again (the reload runs asynchronously).
+type ReloadAck struct {
+	Reloading bool `json:"reloading"`
+}
