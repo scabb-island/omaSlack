@@ -61,7 +61,8 @@ type Conversation struct {
 type Workspace struct {
 	Team         string   `json:"team"`
 	Name         string   `json:"name"`
-	Provider     string   `json:"provider"`
+	Self         string   `json:"self,omitempty"` // the signed-in user
+	Provider    string   `json:"provider"`
 	Capabilities []string `json:"capabilities"`
 	State        string   `json:"state"`
 }
@@ -112,13 +113,14 @@ func FromConversation(c domain.Conversation) Conversation {
 	}
 }
 
-// FromWorkspace converts a workspace's identity and state.
-func FromWorkspace(team domain.TeamID, name, provider string, caps domain.Capabilities, state domain.ConnectionState) Workspace {
+// FromWorkspace converts a workspace's identity and state. A zero self
+// (who is signed in is unknown) is omitted.
+func FromWorkspace(team domain.TeamID, name string, self domain.UserID, provider string, caps domain.Capabilities, state domain.ConnectionState) Workspace {
 	names := make([]string, 0, len(caps.List()))
 	for _, c := range caps.List() {
 		names = append(names, c.String())
 	}
-	return Workspace{Team: team.String(), Name: name, Provider: provider, Capabilities: names, State: state.String()}
+	return Workspace{Team: team.String(), Name: name, Self: optUser(self), Provider: provider, Capabilities: names, State: state.String()}
 }
 
 // FromUser converts one user.

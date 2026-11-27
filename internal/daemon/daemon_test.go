@@ -34,13 +34,14 @@ func TestEndToEndAMessageReachesTheClientAndTheCache(t *testing.T) {
 	if err := json.Unmarshal(c.Hello(), &hello); err != nil {
 		t.Fatal(err)
 	}
-	if len(hello.Workspaces) != 1 || hello.Workspaces[0].Name != "Name of T0ACME" || hello.Workspaces[0].Provider != "desktop-session" {
+	if len(hello.Workspaces) != 1 || hello.Workspaces[0].Name != "Name of T0ACME" || hello.Workspaces[0].Provider != "desktop-session" ||
+		hello.Workspaces[0].Self != "U0ME" {
 		t.Fatalf("hello workspaces = %+v", hello.Workspaces)
 	}
 	if got := hello.Capabilities["T0ACME"]; !slices.Equal(got, []string{"realtime", "search"}) {
 		t.Fatalf("hello capabilities = %v", hello.Capabilities)
 	}
-	if ws := call[[]wire.Workspace](t, c, "workspaces.list", nil); !slices.Equal(teamsOf(ws), []string{"T0ACME"}) {
+	if ws := call[[]wire.Workspace](t, c, "workspaces.list", nil); !slices.Equal(teamsOf(ws), []string{"T0ACME"}) || ws[0].Self != "U0ME" {
 		t.Fatalf("workspaces.list = %+v", ws)
 	}
 	call[json.RawMessage](t, c, "events.subscribe", map[string]any{"topics": []string{"message.created"}})

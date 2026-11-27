@@ -64,10 +64,11 @@ func TestShapes(t *testing.T) {
 	check(t, "unknown read state", FromConversation(domain.Conversation{ID: conv, Kind: domain.Channel}),
 		`{"id":"C0001","kind":"channel","mentions":0,"unread":false}`)
 
-	check(t, "workspace", FromWorkspace(must(t, domain.ParseTeamID, "T0001"), "Acme", "internal-app",
+	check(t, "workspace", FromWorkspace(must(t, domain.ParseTeamID, "T0001"), "Acme", user, "internal-app",
 		domain.NewCapabilities(domain.Search, domain.Realtime), domain.Connected),
-		`{"team":"T0001","name":"Acme","provider":"internal-app","capabilities":["realtime","search"],"state":"connected"}`)
-	check(t, "workspace without capabilities", FromWorkspace(must(t, domain.ParseTeamID, "T0001"), "Acme", "desktop-session",
+		`{"team":"T0001","name":"Acme","self":"U0001","provider":"internal-app","capabilities":["realtime","search"],"state":"connected"}`)
+	// Who is signed in is omitted while the daemon does not know it.
+	check(t, "workspace without capabilities", FromWorkspace(must(t, domain.ParseTeamID, "T0001"), "Acme", domain.UserID{}, "desktop-session",
 		domain.NewCapabilities(), domain.Connecting),
 		`{"team":"T0001","name":"Acme","provider":"desktop-session","capabilities":[],"state":"connecting"}`)
 

@@ -26,7 +26,7 @@ var update = flag.Bool("update", false, "rewrite the golden files in testdata/")
 // with its own store and engine.
 //
 //   - T0ACME (desktop-session) can do everything and has history,
-//     a thread, reactions and drafts in C0GENERAL.
+//     a thread, reactions and drafts in C0GENERAL; U0ANA is signed in.
 //   - T0BETA (internal-app) lacks search, presenceWrite and files.
 //   - T0EXPIRED's credentials were rejected: every engine action fails
 //     with provider.ErrAuthExpired.
@@ -40,6 +40,7 @@ func newFixture() *fixture {
 	f := &fixture{engines: map[string]*fakeEngine{}, focus: &fakeFocus{}}
 	all := domain.NewCapabilities(domain.AllCapabilities()...)
 	f.add("T0ACME", "Acme", "desktop-session", all, acmeStore(), acmeOlder(), nil)
+	f.dir[0].Self = user("U0ANA") // the other workspaces do not know who is signed in
 	f.add("T0BETA", "Beta", "internal-app", domain.NewCapabilities(domain.Realtime), betaStore(), nil, nil)
 	f.add("T0EXPIRED", "Expired", "desktop-session", all, newFakeStore(), nil, errExpired)
 	return f
