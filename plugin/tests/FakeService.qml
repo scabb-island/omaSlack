@@ -28,6 +28,8 @@ Item {
 
   // { "<team>/<conv>": [wire.Message] } and "<team>/<conv>/<threadTS>".
   property var messageLists: ({})
+  // { "<team>/<conv>": true } where hasMoreHistory() says older pages exist.
+  property var moreHistory: ({})
   // [{ team, conversation }], returned as is by unreadConversations().
   property var unreadList: []
   // { "<team>/<user>": name }
@@ -47,7 +49,7 @@ Item {
     var key = team + "/" + conv + (threadTS ? "/" + threadTS : "")
     return messageLists[key] || []
   }
-  function hasMoreHistory(team, conv) { return false }
+  function hasMoreHistory(team, conv) { return !!moreHistory[team + "/" + conv] }
   function unreadConversations() { return unreadList }
   function userName(team, user) { return userNames[team + "/" + user] || user }
   function conversationName(team, conv) {
