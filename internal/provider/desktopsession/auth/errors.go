@@ -10,7 +10,7 @@ import (
 
 var (
 	ErrDesktopNotFound = errors.New("the Slack desktop app config directory was not found")
-	ErrNotSignedIn     = errors.New("the Slack desktop app is not signed in to any workspace")
+	ErrNotSignedIn     = errors.New("not signed in to any Slack workspace")
 	ErrCookieDBMissing = errors.New("the Slack desktop app cookie database was not found")
 	ErrDecryptFailed   = errors.New("failed to decrypt the Slack session cookie")
 

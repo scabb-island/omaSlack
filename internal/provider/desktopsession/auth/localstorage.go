@@ -23,14 +23,41 @@ const localConfigKey = "localConfig_v2"
 type localConfig struct {
 	Teams map[string]struct {
 		Token string `json:"token"`
+		Name  string `json:"name"`
+		URL   string `json:"url"`
 	} `json:"teams"`
 }
 
+// localSession is one workspace's web session as the Local Storage holds
+// it: the xoxc token, and the name and URL the client keeps alongside it
+// (a browser profile has no root-state.json, so these come from here).
+type localSession struct {
+	Team  domain.TeamID
+	Token string
+	Name  string
+	URL   string
+}
+
 // readTokens returns each team's xoxc token from the desktop app's Local
-// Storage. The LevelDB is read from a copy (see withCopies); its directory
-// is flat, so copying its regular files is enough. No Local Storage means
-// no tokens.
+// Storage, keyed by team. It is the desktop path, which matches the tokens
+// against the app's own workspace list.
 func readTokens(dir string) (map[domain.TeamID]string, error) {
+	sessions, err := readSessions(dir)
+	if err != nil {
+		return nil, err
+	}
+	tokens := make(map[domain.TeamID]string, len(sessions))
+	for _, s := range sessions {
+		tokens[s.Team] = s.Token
+	}
+	return tokens, nil
+}
+
+// readSessions returns every workspace web session in the Local Storage.
+// The LevelDB is read from a copy (see withCopies); its directory is flat,
+// so copying its regular files is enough. No Local Storage means no
+// sessions.
+func readSessions(dir string) ([]localSession, error) {
 	entries, err := os.ReadDir(dir)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
@@ -44,19 +71,20 @@ func readTokens(dir string) (map[domain.TeamID]string, error) {
 			names = append(names, e.Name())
 		}
 	}
-	var tokens map[domain.TeamID]string
+	var sessions []localSession
 	err = withCopies(dir, names, func(copyDir string) (err error) {
-		tokens, err = tokensFromLevelDB(copyDir)
+		sessions, err = sessionsFromLevelDB(copyDir)
 		return err
 	})
-	return tokens, err
+	return sessions, err
 }
 
-// tokensFromLevelDB merges the tokens of every localConfig_v2 entry
+// sessionsFromLevelDB merges the sessions of every localConfig_v2 entry
 // (Chromium keeps one per origin). Keys are "_<origin>\x00<tag><key>"; the
 // origin is unknown (app.slack.com or a workspace host), so only the
-// suffix is matched. Entries that do not parse are skipped.
-func tokensFromLevelDB(dir string) (map[domain.TeamID]string, error) {
+// suffix is matched. Entries that do not parse are skipped, and a team
+// seen twice keeps its last entry.
+func sessionsFromLevelDB(dir string) ([]localSession, error) {
 	// dir is a throwaway copy, so opening it read-write cannot touch
 	// Slack's profile.
 	db, err := leveldb.OpenFile(dir, nil)
@@ -64,26 +92,39 @@ func tokensFromLevelDB(dir string) (map[domain.TeamID]string, error) {
 		return nil, err
 	}
 	defer db.Close()
-	tokens := map[domain.TeamID]string{}
+	byTeam := map[domain.TeamID]localSession{}
+	var order []domain.TeamID
 	iter := db.NewIterator(nil, nil)
 	defer iter.Release()
 	for iter.Next() {
 		if strings.HasSuffix(string(iter.Key()), localConfigKey) {
-			addTokens(tokens, decodeLocalStorageValue(iter.Value()))
+			addSessions(byTeam, &order, decodeLocalStorageValue(iter.Value()))
 		}
 	}
-	return tokens, iter.Error()
+	if err := iter.Error(); err != nil {
+		return nil, err
+	}
+	sessions := make([]localSession, 0, len(order))
+	for _, team := range order {
+		sessions = append(sessions, byTeam[team])
+	}
+	return sessions, nil
 }
 
-func addTokens(tokens map[domain.TeamID]string, value string) {
+func addSessions(byTeam map[domain.TeamID]localSession, order *[]domain.TeamID, value string) {
 	var cfg localConfig
 	if json.Unmarshal([]byte(value), &cfg) != nil {
 		return
 	}
 	for id, t := range cfg.Teams {
-		if team, err := domain.ParseTeamID(id); err == nil && t.Token != "" {
-			tokens[team] = t.Token
+		team, err := domain.ParseTeamID(id)
+		if err != nil || t.Token == "" {
+			continue
 		}
+		if _, seen := byTeam[team]; !seen {
+			*order = append(*order, team)
+		}
+		byTeam[team] = localSession{Team: team, Token: t.Token, Name: t.Name, URL: t.URL}
 	}
 }
 
