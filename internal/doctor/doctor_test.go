@@ -72,6 +72,7 @@ func newFixture(t *testing.T) *fixture {
 			}
 			return secretService{f.store}, nil
 		},
+		SessionSources: func() []string { return []string{"the Slack desktop app", "Brave"} },
 		Plugins: func(context.Context) ([]Plugin, error) {
 			return []Plugin{{ID: "omarchy.clock", Enabled: true}, {ID: PluginID, Enabled: true}}, nil
 		},
@@ -141,7 +142,7 @@ func TestHealthyMachinePassesEveryCheck(t *testing.T) {
 	f := newFixture(t)
 	results := Run(context.Background(), f.probes)
 	wantChecks := []string{"daemon", "service", "socket", "credentials", "workspace T0APP",
-		"theme template", "theme hook", "theme rendered", "plugin", "shell"}
+		"session sources", "theme template", "theme hook", "theme rendered", "plugin", "shell"}
 	if len(results) != len(wantChecks) {
 		t.Fatalf("%d results, want %d: %+v", len(results), len(wantChecks), results)
 	}
@@ -333,6 +334,23 @@ func TestWorkspaceStateIsSkippedWithoutDaemon(t *testing.T) {
 	f := newFixture(t)
 	f.probes.Hello = func(context.Context) (Hello, error) { return Hello{}, rpcclient.ErrUnavailable }
 	want(t, f.check("workspace T0APP"), OK, "internal-app", "")
+}
+
+func TestSessionSources(t *testing.T) {
+	t.Run("lists the available sources", func(t *testing.T) {
+		f := newFixture(t)
+		want(t, f.check("session sources"), OK, "the Slack desktop app, Brave", "")
+	})
+	t.Run("warns when none is signed in", func(t *testing.T) {
+		f := newFixture(t)
+		f.probes.SessionSources = func() []string { return nil }
+		want(t, f.check("session sources"), Warn, "no Slack session", "auth add --provider desktop-session")
+	})
+	t.Run("skipped when the probe is absent", func(t *testing.T) {
+		f := newFixture(t)
+		f.probes.SessionSources = nil
+		want(t, f.check("session sources"), OK, "not checked", "")
+	})
 }
 
 func TestTheme(t *testing.T) {

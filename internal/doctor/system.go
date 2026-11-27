@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"gitlab.com/scabb-island/omaslack/internal/keyring"
+	"gitlab.com/scabb-island/omaslack/internal/provider/desktopsession/auth"
 	"gitlab.com/scabb-island/omaslack/internal/rpcclient"
 )
 
@@ -32,14 +33,15 @@ func SystemProbes(openKeyring func(context.Context) (keyring.ClosableStore, erro
 	paths := PathsFor(home, os.Getenv("XDG_RUNTIME_DIR"))
 	paths.CredentialsFile, _ = keyring.DefaultFilePath()
 	return Probes{
-		Paths:   paths,
-		UID:     os.Getuid(),
-		Hello:   func(ctx context.Context) (Hello, error) { return dialHello(ctx, paths.Socket) },
-		Service: func(ctx context.Context) (Unit, error) { return service(ctx, output) },
-		Stat:    stat,
-		Keyring: openKeyring,
-		Plugins: func(ctx context.Context) ([]Plugin, error) { return plugins(ctx, output) },
-		Shell:   func(ctx context.Context) (Shell, error) { return shell(ctx, exec.LookPath, output) },
+		Paths:          paths,
+		UID:            os.Getuid(),
+		Hello:          func(ctx context.Context) (Hello, error) { return dialHello(ctx, paths.Socket) },
+		Service:        func(ctx context.Context) (Unit, error) { return service(ctx, output) },
+		Stat:           stat,
+		Keyring:        openKeyring,
+		SessionSources: auth.SignedInSources,
+		Plugins:        func(ctx context.Context) ([]Plugin, error) { return plugins(ctx, output) },
+		Shell:          func(ctx context.Context) (Shell, error) { return shell(ctx, exec.LookPath, output) },
 	}
 }
 

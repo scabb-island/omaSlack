@@ -58,7 +58,7 @@ func readCookies(ctx context.Context, path string, src PasswordSource, log *slog
 			}
 			j.d = value
 		case err != nil:
-			log.Warn("desktop app: skipped a cookie that cannot be decrypted", "name", c.name, "host", c.host)
+			log.Warn("Slack session: skipped a cookie that cannot be decrypted", "name", c.name, "host", c.host)
 		default:
 			c.plain = value
 			j.others = append(j.others, c)

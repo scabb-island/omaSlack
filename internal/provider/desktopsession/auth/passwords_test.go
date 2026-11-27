@@ -97,7 +97,7 @@ func TestSecretServiceKeysAsksEverySchemaChromiumUses(t *testing.T) {
 		unlocked: map[string][]dbus.ObjectPath{schemaV2: {"/v2"}, schemaQt: {"/qt", "/qt-empty"}},
 		secrets:  map[dbus.ObjectPath]string{"/v2": "key-v2", "/qt": "key-qt"},
 	}
-	got, err := secretServiceKeys(context.Background(), f)
+	got, err := secretServiceKeys(context.Background(), f, slackApp.secretQueries())
 	if err != nil || !reflect.DeepEqual(keysAsStrings(got), []string{"key-v2", "key-qt"}) {
 		t.Fatalf("keys = %q, %v", got, err)
 	}
@@ -127,7 +127,7 @@ func TestSecretServiceKeysFailures(t *testing.T) {
 			secretErr: map[dbus.ObjectPath]error{"/b": boom},
 		}, boom},
 	} {
-		if _, err := secretServiceKeys(context.Background(), tt.f); !errors.Is(err, tt.want) {
+		if _, err := secretServiceKeys(context.Background(), tt.f, slackApp.secretQueries()); !errors.Is(err, tt.want) {
 			t.Errorf("%s: error = %v, want %v", tt.name, err, tt.want)
 		}
 	}
@@ -200,7 +200,7 @@ func (f *fakeKWallet) Close(_ context.Context, handle int32, appID string) error
 func TestKWalletKeyReadsSlacksEntryWithoutPrompting(t *testing.T) {
 	f := workingKWallet()
 	f.fail["close omaslack"] = errors.New("close failed")
-	got, err := kwalletKey(context.Background(), f)
+	got, err := kwalletKey(context.Background(), f, slackApp)
 	if err != nil || !reflect.DeepEqual(keysAsStrings(got), []string{"kwallet-key"}) {
 		t.Fatalf("kwalletKey = %q, %v", got, err)
 	}
@@ -219,7 +219,7 @@ func TestKWalletKeyReadsSlacksEntryWithoutPrompting(t *testing.T) {
 func TestKWalletKeyAcceptsHandleZero(t *testing.T) {
 	f := workingKWallet()
 	f.handle = 0
-	if got, err := kwalletKey(context.Background(), f); err != nil || len(got) != 1 {
+	if got, err := kwalletKey(context.Background(), f, slackApp); err != nil || len(got) != 1 {
 		t.Errorf("kwalletKey = %q, %v", got, err)
 	}
 }
@@ -247,7 +247,7 @@ func TestKWalletKeyFailures(t *testing.T) {
 	} {
 		f := workingKWallet()
 		tt.mutate(f)
-		_, err := kwalletKey(context.Background(), f)
+		_, err := kwalletKey(context.Background(), f, slackApp)
 		if !errors.Is(err, tt.want) {
 			t.Errorf("%s: error = %v, want %v", tt.name, err, tt.want)
 		}

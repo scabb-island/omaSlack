@@ -47,6 +47,9 @@ type Env struct {
 	Keyring func(context.Context) (keyring.ClosableStore, error)
 	// DesktopWorkspaces lists the workspaces of the Slack desktop app.
 	DesktopWorkspaces func(context.Context) ([]auth.Workspace, error)
+	// Browsers lists the Chromium browsers whose Slack web session can be
+	// read as a desktop-session source. Nil means none are offered.
+	Browsers func() []BrowserSession
 	// SlackAPIURL is Slack's Web API base URL, ending in "/".
 	SlackAPIURL string
 	// DialDaemon connects to the daemon as omaslack ctl. Nil means
@@ -58,6 +61,13 @@ type Env struct {
 	// DoctorProbes reads the system for omaslack doctor. Nil means
 	// doctor.SystemProbes with Keyring.
 	DoctorProbes func() doctor.Probes
+}
+
+// BrowserSession is one browser offered as a desktop-session source: its
+// display name and a way to read the Slack web session it holds.
+type BrowserSession struct {
+	Name       string
+	Workspaces func(context.Context) ([]auth.Workspace, error)
 }
 
 // usageError reports a command line that does not parse. Run prints it

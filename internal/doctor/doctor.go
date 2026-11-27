@@ -132,6 +132,10 @@ type Probes struct {
 	Stat func(path string) (File, error)
 	// Keyring opens the credential store (keyring.Open).
 	Keyring func(context.Context) (keyring.ClosableStore, error)
+	// SessionSources lists the desktop-session sources available on this
+	// machine by name (the Slack desktop app and each browser signed in to
+	// Slack). Nil means the check is skipped.
+	SessionSources func() []string
 	// Plugins lists the Omarchy shell plugins.
 	Plugins func(context.Context) ([]Plugin, error)
 	// Shell finds the Omarchy shell; an error means it is not installed.
@@ -147,6 +151,7 @@ func Run(ctx context.Context, p Probes) []Result {
 		checkSocket(p),
 	}
 	results = append(results, checkCredentials(ctx, p, hello, helloErr)...)
+	results = append(results, checkSessionSources(p))
 	plugins, pluginsErr := p.Plugins(ctx)
 	return append(results,
 		checkTemplate(p),

@@ -21,6 +21,7 @@ func main() {
 		StdinIsTerminal:   console.IsTerminal(os.Stdin),
 		Keyring:           keyring.Open,
 		DesktopWorkspaces: desktopWorkspaces,
+		Browsers:          browsers,
 		SlackAPIURL:       desktopsession.DefaultAPIURL,
 	}, os.Args[1:]))
 }
@@ -32,4 +33,14 @@ func desktopWorkspaces(ctx context.Context) ([]auth.Workspace, error) {
 		return nil, err
 	}
 	return auth.Desktop{Dir: dir, Passwords: auth.SystemPasswords{}}.Workspaces(ctx)
+}
+
+// browsers lists the Chromium browsers whose Slack web session can be read.
+func browsers() []cli.BrowserSession {
+	found := auth.FindBrowsers()
+	sources := make([]cli.BrowserSession, len(found))
+	for i, b := range found {
+		sources[i] = cli.BrowserSession{Name: b.Name, Workspaces: b.Workspaces}
+	}
+	return sources
 }

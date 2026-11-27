@@ -11,22 +11,61 @@ import (
 	"gitlab.com/scabb-island/omaslack/internal/keyring/secretservice"
 )
 
-// SystemPasswords reads the "Slack Safe Storage" key from the session bus.
-// Electron picks its backend from the desktop session (KWallet on KDE,
+// keyringApp names whose "Safe Storage" cookie key to read. The Slack
+// desktop app and each Chromium browser store their own key under their own
+// name: the Secret Service "application" attribute (Slack spells it
+// "Slack", browsers use their lowercase name such as "brave") and the
+// KWallet folder and entry ("<Product> Keys" / "<Product> Safe Storage").
+type keyringApp struct {
+	secretAttr     string // Secret Service "application" attribute
+	kwalletProduct string // product name for the KWallet folder and entry
+}
+
+// slackApp is the Slack desktop app's key identity, the zero value's
+// meaning so SystemPasswords{} keeps reading it.
+var slackApp = keyringApp{secretAttr: "Slack", kwalletProduct: "Slack"}
+
+func (a keyringApp) resolved() keyringApp {
+	if a.secretAttr == "" {
+		return slackApp
+	}
+	return a
+}
+
+func (a keyringApp) kwalletFolder() string { return a.kwalletProduct + " Keys" }
+func (a keyringApp) kwalletEntry() string  { return a.kwalletProduct + " Safe Storage" }
+
+// secretQueries are where Chromium's libsecret backend keeps the key, plus
+// the QtKeychain schema for setups where kwalletd bridges itself onto
+// org.freedesktop.secrets.
+func (a keyringApp) secretQueries() []map[string]string {
+	return []map[string]string{
+		{"xdg:schema": "chrome_libsecret_os_crypt_password_v2", "application": a.secretAttr},
+		{"xdg:schema": "chrome_libsecret_os_crypt_password_v1", "application": a.secretAttr},
+		{"xdg:schema": "org.qt.keychain", "server": a.kwalletFolder(), "user": a.kwalletEntry()},
+	}
+}
+
+// SystemPasswords reads a "Safe Storage" key from the session bus. Electron
+// and Chromium pick their backend from the desktop session (KWallet on KDE,
 // libsecret elsewhere) and KWallet is not reachable over
 // org.freedesktop.secrets, so both are asked and every key found is
-// returned.
-type SystemPasswords struct{}
+// returned. The zero value reads the Slack desktop app's key; App names a
+// browser's key instead.
+type SystemPasswords struct {
+	App keyringApp
+}
 
-func (SystemPasswords) Passwords(ctx context.Context) ([][]byte, error) {
+func (p SystemPasswords) Passwords(ctx context.Context) ([][]byte, error) {
+	app := p.App.resolved()
 	conn, err := dbus.ConnectSessionBus()
 	if err != nil {
 		return nil, ErrNoKeyring
 	}
 	defer conn.Close()
 	return gather(ctx, []attempt{
-		func(ctx context.Context) ([][]byte, error) { return secretServicePasswords(ctx, conn) },
-		func(ctx context.Context) ([][]byte, error) { return kwalletPasswords(ctx, conn) },
+		func(ctx context.Context) ([][]byte, error) { return secretServicePasswords(ctx, conn, app) },
+		func(ctx context.Context) ([][]byte, error) { return kwalletPasswords(ctx, conn, app) },
 	})
 }
 
@@ -93,22 +132,13 @@ func rank(err error) int {
 	}
 }
 
-// slackSecretQueries are where Chromium's libsecret backend keeps the key,
-// plus the QtKeychain schema for setups where kwalletd bridges itself onto
-// org.freedesktop.secrets.
-var slackSecretQueries = []map[string]string{
-	{"xdg:schema": "chrome_libsecret_os_crypt_password_v2", "application": "Slack"},
-	{"xdg:schema": "chrome_libsecret_os_crypt_password_v1", "application": "Slack"},
-	{"xdg:schema": "org.qt.keychain", "server": "Slack Keys", "user": "Slack Safe Storage"},
-}
-
 // items is the part of a Secret Service session the key lookup uses.
 type items interface {
 	Search(ctx context.Context, attrs map[string]string) (unlocked, locked []dbus.ObjectPath, err error)
 	Secret(ctx context.Context, item dbus.ObjectPath) ([]byte, error)
 }
 
-func secretServicePasswords(ctx context.Context, conn *dbus.Conn) ([][]byte, error) {
+func secretServicePasswords(ctx context.Context, conn *dbus.Conn, app keyringApp) ([][]byte, error) {
 	session, err := secretservice.Open(ctx, conn)
 	if errors.Is(err, secretservice.ErrUnavailable) {
 		return nil, ErrNoKeyring
@@ -117,14 +147,14 @@ func secretServicePasswords(ctx context.Context, conn *dbus.Conn) ([][]byte, err
 		return nil, err
 	}
 	defer func() { _ = session.Close(ctx) }()
-	return secretServiceKeys(ctx, session)
+	return secretServiceKeys(ctx, session, app.secretQueries())
 }
 
 // secretServiceKeys reads every unlocked item each query matches. Locked
 // matches are only counted: unlocking them would raise a prompt.
-func secretServiceKeys(ctx context.Context, s items) ([][]byte, error) {
-	queries := make([]attempt, len(slackSecretQueries))
-	for i, attrs := range slackSecretQueries {
+func secretServiceKeys(ctx context.Context, s items, secretQueries []map[string]string) ([][]byte, error) {
+	queries := make([]attempt, len(secretQueries))
+	for i, attrs := range secretQueries {
 		queries[i] = func(ctx context.Context) ([][]byte, error) {
 			unlocked, locked, err := s.Search(ctx, attrs)
 			if err != nil {
