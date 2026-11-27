@@ -62,7 +62,7 @@ type Workspace struct {
 	Team         string   `json:"team"`
 	Name         string   `json:"name"`
 	Self         string   `json:"self,omitempty"` // the signed-in user
-	Provider    string   `json:"provider"`
+	Provider     string   `json:"provider"`
 	Capabilities []string `json:"capabilities"`
 	State        string   `json:"state"`
 }
