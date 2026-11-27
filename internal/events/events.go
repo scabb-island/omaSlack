@@ -6,7 +6,8 @@
 //   - A client calls events.subscribe{topics[]} and from then on receives
 //     one JSON-RPC notification per event of those topics on the same
 //     connection: method = topic, params = wire.FromEvent(ev). A second
-//     call replaces the topic set. An unknown topic is -32602.
+//     call replaces the topic set. An unknown topic is -32602. A message's
+//     HTML comes from Options.HTML (task 4.9).
 //   - Publish never blocks the engine: each subscriber has its own queue.
 //   - State is coalesced while queued: a newer conversation.updated (team,
 //     conversation), read.changed (team, conversation), presence.changed
@@ -70,6 +71,9 @@ var Topics = []string{
 type Options struct {
 	// Summary computes the current unread summary across workspaces.
 	Summary func(ctx context.Context) (wire.Summary, error)
+	// HTML returns a workspace's renderer for message events' HTML. It is
+	// called while publishing, so it must not block. nil: no HTML.
+	HTML func(team domain.TeamID) wire.HTMLFunc
 
 	Interval  time.Duration // unread.summary coalescing; zero means 250 ms
 	QueueSize int           // un-coalescible events queued per subscriber; zero means 1024
@@ -146,13 +150,22 @@ func (h *Hub) Run(ctx context.Context) error {
 // Publish queues ev for every subscriber of its topic. It never blocks.
 func (h *Hub) Publish(ev domain.Event) {
 	topic := ev.Topic()
-	h.fanOut(topic, stateKey(ev), func() any { return wire.FromEvent(ev) })
+	h.fanOut(topic, stateKey(ev), func() any { return wire.FromEvent(ev, h.html(ev.TeamID())) })
 	if summaryTopics[topic] {
 		select {
 		case h.dirty <- struct{}{}:
 		default: // a change is already signaled
 		}
 	}
+}
+
+// html renders a message of team with Options.HTML, asked only when a
+// message is converted.
+func (h *Hub) html(team domain.TeamID) wire.HTMLFunc {
+	if h.opts.HTML == nil {
+		return nil
+	}
+	return func(text string) string { return h.opts.HTML(team)(text) }
 }
 
 // Focus sends f to the ui.focus subscribers and reports how many it

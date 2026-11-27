@@ -12,7 +12,8 @@
     "result": {
       "ts": "1700000900.000000",
       "author": "U0ME",
-      "text": "ship it"
+      "text": "ship it",
+      "html": "ship it"
     }
   },
   {
@@ -30,7 +31,8 @@
       "ts": "1700000900.000000",
       "threadTS": "1700000200.000000",
       "author": "U0ME",
-      "text": "agreed"
+      "text": "agreed",
+      "html": "agreed"
     }
   },
   {
@@ -46,7 +48,8 @@
     "result": {
       "ts": "1700000900.000000",
       "author": "U0ME",
-      "text": "¡listo! 🚀"
+      "text": "¡listo! 🚀",
+      "html": "¡listo! 🚀"
     }
   },
   {

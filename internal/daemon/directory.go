@@ -93,6 +93,15 @@ func (d *directory) running() []*workspace {
 	})
 }
 
+// html is the renderer of team's message events (events.Options.HTML):
+// with the names the workspace learned, or none once it is gone.
+func (d *directory) html(team domain.TeamID) wire.HTMLFunc {
+	if w, ok := d.ws.Load(team); ok {
+		return w.(*workspace).HTML
+	}
+	return api.Workspace{Team: team}.HTML
+}
+
 // put lists w, in place of any workspace of its team listed before.
 func (d *directory) put(w *workspace) { d.ws.Store(w.Team, w) }
 

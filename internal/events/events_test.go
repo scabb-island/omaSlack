@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"testing"
 
+	"gitlab.com/scabb-island/omaslack/internal/domain"
 	"gitlab.com/scabb-island/omaslack/internal/rpc"
 	"gitlab.com/scabb-island/omaslack/internal/wire"
 )
@@ -29,11 +30,40 @@ func TestSubscribersGetTheirTopicsAsNotifications(t *testing.T) {
 	h.Publish(ev)
 
 	n := c.next()
-	if n.Method != "message.created" || string(n.Params) != jsonOf(t, wire.FromEvent(ev)) {
+	if n.Method != "message.created" || string(n.Params) != jsonOf(t, wire.FromEvent(ev, nil)) {
 		t.Fatalf("notification = %s %s", n.Method, n.Params)
 	}
 	if n.ID != nil {
 		t.Errorf("a notification has id %s", n.ID)
+	}
+}
+
+// Message events carry HTML rendered by their workspace's renderer.
+func TestMessageEventsCarryTheirWorkspacesHTML(t *testing.T) {
+	var asked []string
+	h := New(Options{Summary: noSummary, HTML: func(team domain.TeamID) wire.HTMLFunc {
+		asked = append(asked, team.String())
+		return func(text string) string { return "<b>" + team.String() + " " + text + "</b>" }
+	}})
+	c := connect(t, serveHub(t, h))
+	c.subscribe(`["message.created","typing"]`)
+
+	ev := created(t, 1)
+	h.Publish(typing(t))
+	h.Publish(ev)
+
+	if n := c.next(); n.Method != "typing" {
+		t.Fatalf("got %s", n.Method)
+	}
+	var p wire.MessageEvent
+	if err := json.Unmarshal(c.next().Params, &p); err != nil {
+		t.Fatal(err)
+	}
+	if want := "<b>" + ev.Team.String() + " " + ev.Message.Text + "</b>"; p.Message.HTML != want {
+		t.Errorf("html %q, want %q", p.Message.HTML, want)
+	}
+	if len(asked) != 1 || asked[0] != ev.Team.String() {
+		t.Errorf("renderers asked for %v, want only the message's team once", asked)
 	}
 }
 
@@ -112,7 +142,7 @@ func TestABurstReachesEveryMessageSubscriberAndIsCoalescedForTheSummary(t *testi
 	}
 	for i := range 40 {
 		n := msgs.next()
-		if want := jsonOf(t, wire.FromEvent(created(t, i))); n.Method != "message.created" || string(n.Params) != want {
+		if want := jsonOf(t, wire.FromEvent(created(t, i), nil)); n.Method != "message.created" || string(n.Params) != want {
 			t.Fatalf("event %d = %s %s, want %s", i, n.Method, n.Params, want)
 		}
 	}

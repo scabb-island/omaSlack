@@ -79,3 +79,14 @@ func TestEmoji(t *testing.T) {
 		t.Errorf("custom text must be one clean line, got %q", got)
 	}
 }
+
+func TestReferences(t *testing.T) {
+	got := References("<@U1> *hi <@U2|x> <#C1>* <@U1> `<@U3>` <#C2|named> > <@W4> <#C1>\n```<@U5>```")
+	want := Refs{Users: []string{"U1", "U2", "W4"}, Channels: []string{"C1"}}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v want %v", got, want)
+	}
+	if got := References("no one"); !reflect.DeepEqual(got, Refs{}) {
+		t.Errorf("got %v", got)
+	}
+}

@@ -143,9 +143,10 @@ func messagesReplies(ctx context.Context, p *params) (any, error) {
 // withReactions converts msgs, each with its reactions from the cache.
 // The result is never nil, so an empty list is [] on the wire.
 func (t target) withReactions(ctx context.Context, msgs []domain.Message) ([]wire.Message, error) {
+	html := t.w.named(ctx, msgs...)
 	out := make([]wire.Message, 0, len(msgs))
 	for _, m := range msgs {
-		wm, err := t.message(ctx, m)
+		wm, err := t.message(ctx, m, html)
 		if err != nil {
 			return nil, err
 		}
@@ -154,9 +155,9 @@ func (t target) withReactions(ctx context.Context, msgs []domain.Message) ([]wir
 	return out, nil
 }
 
-func (t target) message(ctx context.Context, m domain.Message) (wire.Message, error) {
+func (t target) message(ctx context.Context, m domain.Message, html wire.HTMLFunc) (wire.Message, error) {
 	reactions, err := t.w.Store.Reactions(ctx, t.conv, m.TS)
-	return wire.FromMessage(m, reactions), err
+	return wire.FromMessage(m, reactions, html), err
 }
 
 type draftResult struct {
@@ -217,7 +218,7 @@ func messagesSend(ctx context.Context, p *params) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return wire.FromMessage(m, nil), nil
+	return wire.FromMessage(m, nil, t.w.named(ctx, m)), nil
 }
 
 func messagesEdit(ctx context.Context, p *params) (any, error) {
@@ -231,7 +232,7 @@ func messagesEdit(ctx context.Context, p *params) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return t.message(ctx, m)
+	return t.message(ctx, m, t.w.named(ctx, m))
 }
 
 func messagesDelete(ctx context.Context, p *params) (any, error) {
@@ -267,9 +268,14 @@ func searchMessages(ctx context.Context, p *params) (any, error) {
 	if err != nil {
 		return nil, err
 	}
+	msgs := make([]domain.Message, len(hits))
+	for i, h := range hits {
+		msgs[i] = h.Message
+	}
+	html := w.named(ctx, msgs...)
 	out := make([]wire.SearchHit, 0, len(hits))
 	for _, h := range hits {
-		out = append(out, wire.FromSearchHit(h))
+		out = append(out, wire.FromSearchHit(h, html))
 	}
 	return out, nil
 }

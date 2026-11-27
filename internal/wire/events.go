@@ -80,22 +80,23 @@ type FocusEvent struct {
 }
 
 // FromEvent converts a domain event to its notification payload. Message
-// events carry no reactions: those arrive as reaction.changed.
-func FromEvent(ev domain.Event) any {
-	if p, ok := fromMessageEvent(ev); ok {
+// events carry no reactions (those arrive as reaction.changed) and their
+// HTML comes from html, the event's workspace's renderer (nil: none).
+func FromEvent(ev domain.Event, html HTMLFunc) any {
+	if p, ok := fromMessageEvent(ev, html); ok {
 		return p
 	}
 	return fromStateEvent(ev)
 }
 
 // fromMessageEvent converts the events about messages and their reactions.
-func fromMessageEvent(ev domain.Event) (any, bool) {
+func fromMessageEvent(ev domain.Event, html HTMLFunc) (any, bool) {
 	team := ev.TeamID().String()
 	switch e := ev.(type) {
 	case domain.MessageCreated:
-		return MessageEvent{Team: team, Conv: e.Conversation.String(), Message: FromMessage(e.Message, nil)}, true
+		return MessageEvent{Team: team, Conv: e.Conversation.String(), Message: FromMessage(e.Message, nil, html)}, true
 	case domain.MessageUpdated:
-		return MessageEvent{Team: team, Conv: e.Conversation.String(), Message: FromMessage(e.Message, nil)}, true
+		return MessageEvent{Team: team, Conv: e.Conversation.String(), Message: FromMessage(e.Message, nil, html)}, true
 	case domain.MessageDeleted:
 		return MessageDeletedEvent{Team: team, Conv: e.Conversation.String(), TS: e.TS.String()}, true
 	case domain.ReactionChanged:

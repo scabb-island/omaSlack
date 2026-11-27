@@ -7,14 +7,16 @@
       "threadTS": "1700000200.000000"
     },
     "calls": [
-      "T0ACME OpenThread C0GENERAL 1700000200.000000"
+      "T0ACME OpenThread C0GENERAL 1700000200.000000",
+      "T0ACME Users [U0BOB]"
     ],
     "result": [
       {
         "ts": "1700000210.000000",
         "threadTS": "1700000200.000000",
         "author": "U0ANA",
-        "text": "first reply",
+        "text": "first reply, *for* \u003c@U0BOB\u003e about \u003c#C0RANDOM\u003e",
+        "html": "first reply, \u003cb\u003efor\u003c/b\u003e \u003ca href=\"omaslack://user/T0ACME/U0BOB\"\u003e@Bob Stone\u003c/a\u003e about \u003ca href=\"omaslack://conv/T0ACME/C0RANDOM\"\u003e#random\u003c/a\u003e",
         "reactions": [
           {
             "emoji": "eyes",
@@ -28,7 +30,8 @@
         "ts": "1700000220.000000",
         "threadTS": "1700000200.000000",
         "author": "U0BOB",
-        "text": "second reply"
+        "text": "second reply",
+        "html": "second reply"
       }
     ]
   },

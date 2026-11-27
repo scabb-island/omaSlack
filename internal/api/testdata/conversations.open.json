@@ -14,6 +14,7 @@
           "ts": "1700000300.000000",
           "author": "U0ANA",
           "text": "latest",
+          "html": "latest",
           "edited": "1700000310.000000",
           "reactions": [
             {
@@ -39,13 +40,15 @@
           "threadTS": "1700000200.000000",
           "author": "U0BOB",
           "text": "thread root",
+          "html": "thread root",
           "replyCount": 2,
           "latestReply": "1700000220.000000"
         },
         {
           "ts": "1700000100.000000",
           "author": "U0ANA",
-          "text": "hello"
+          "text": "hello",
+          "html": "hello"
         }
       ],
       "draft": "half a thought"

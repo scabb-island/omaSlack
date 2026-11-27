@@ -223,7 +223,7 @@ func TestStreamPrintsEventsAndForwardsRequests(t *testing.T) {
 		Message:      domain.Message{TS: mustParse(t, domain.ParseTS, "1700000000.000001"), Text: "hi"},
 	}
 	d.hub.Publish(ev)
-	if l := s.line(); l != `{"jsonrpc":"2.0","method":"message.created","params":`+jsonText(t, wire.FromEvent(ev))+`}` {
+	if l := s.line(); l != `{"jsonrpc":"2.0","method":"message.created","params":`+jsonText(t, wire.FromEvent(ev, nil))+`}` {
 		t.Fatalf("event line = %s", l)
 	}
 

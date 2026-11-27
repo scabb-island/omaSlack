@@ -39,17 +39,17 @@ func TestShapes(t *testing.T) {
 	conv := must(t, domain.ParseConversationID, "C0001")
 
 	root := domain.Message{TS: ts("1700000100.000100"), Author: domain.UserAuthor(user), Text: "hi"}
-	check(t, "plain message", FromMessage(root, nil),
+	check(t, "plain message", FromMessage(root, nil, nil),
 		`{"ts":"1700000100.000100","author":"U0001","text":"hi"}`)
 
 	reply := domain.Message{TS: ts("1700000200.000200"), ThreadTS: root.TS, Author: domain.BotAuthor(must(t, domain.ParseBotID, "B0001")),
 		Text: "ok", Edited: ts("1700000300.000300")}
-	check(t, "reply with reactions", FromMessage(reply, []store.Reaction{{Emoji: "+1", Users: []domain.UserID{user}}}),
+	check(t, "reply with reactions", FromMessage(reply, []store.Reaction{{Emoji: "+1", Users: []domain.UserID{user}}}, nil),
 		`{"ts":"1700000200.000200","threadTS":"1700000100.000100","author":"B0001","text":"ok","edited":"1700000300.000300","reactions":[{"emoji":"+1","users":["U0001"]}]}`)
 
 	threadRoot := root
 	threadRoot.ThreadTS, threadRoot.ReplyCount, threadRoot.LatestReply = root.TS, 2, ts("1700000400.000400")
-	check(t, "thread root", FromMessage(threadRoot, nil),
+	check(t, "thread root", FromMessage(threadRoot, nil, nil),
 		`{"ts":"1700000100.000100","threadTS":"1700000100.000100","author":"U0001","text":"hi","replyCount":2,"latestReply":"1700000400.000400"}`)
 
 	// The download URL never reaches clients: they ask files.fetch.
@@ -58,7 +58,7 @@ func TestShapes(t *testing.T) {
 		{ID: must(t, domain.ParseFileID, "F0001"), Name: "a.png", Title: "A", MIMEType: "image/png", Size: 42, DownloadURL: "https://files.slack.com/secret"},
 		{ID: must(t, domain.ParseFileID, "F0002"), Name: "doc"},
 	}
-	check(t, "message with files", FromMessage(withFiles, nil),
+	check(t, "message with files", FromMessage(withFiles, nil, nil),
 		`{"ts":"1700000100.000100","author":"U0001","text":"hi","files":[`+
 			`{"id":"F0001","name":"a.png","title":"A","mimetype":"image/png","size":42},`+
 			`{"id":"F0002","name":"doc","size":0}]}`)
@@ -79,8 +79,25 @@ func TestShapes(t *testing.T) {
 
 	check(t, "user", FromUser(domain.User{ID: user, Name: "ana", RealName: "Ana Pérez"}),
 		`{"id":"U0001","name":"ana","realName":"Ana Pérez"}`) // non-ASCII on purpose
-	check(t, "search hit", FromSearchHit(domain.SearchHit{Conversation: conv, Message: root}),
+	check(t, "search hit", FromSearchHit(domain.SearchHit{Conversation: conv, Message: root}, nil),
 		`{"conv":"C0001","message":{"ts":"1700000100.000100","author":"U0001","text":"hi"}}`)
+}
+
+// HTML is filled by the renderer the caller passes, from Text.
+func TestHTML(t *testing.T) {
+	ts := must(t, domain.ParseTS, "1700000100.000100")
+	conv := must(t, domain.ParseConversationID, "C0001")
+	team := must(t, domain.ParseTeamID, "T0001")
+	msg := domain.Message{TS: ts, Text: "*hi*"}
+	html := func(mrkdwn string) string { return "<p>" + mrkdwn + "</p>" }
+	m := `{"ts":"1700000100.000100","text":"*hi*","html":"\u003cp\u003e*hi*\u003c/p\u003e"}`
+
+	check(t, "message", FromMessage(msg, nil, html), m)
+	check(t, "search hit", FromSearchHit(domain.SearchHit{Conversation: conv, Message: msg}, html), `{"conv":"C0001","message":`+m+`}`)
+	check(t, "message.created", FromEvent(domain.MessageCreated{Team: team, Conversation: conv, Message: msg}, html),
+		`{"team":"T0001","conv":"C0001","message":`+m+`}`)
+	check(t, "message.updated", FromEvent(domain.MessageUpdated{Team: team, Conversation: conv, Message: msg}, html),
+		`{"team":"T0001","conv":"C0001","message":`+m+`}`)
 }
 
 func TestSummarize(t *testing.T) {
@@ -137,6 +154,6 @@ func TestFromEventCoversEveryEvent(t *testing.T) {
 			`{"team":"T0001","conv":"C0001","threadTS":"1700000100.000100","text":"wip"}`},
 		{domain.DraftChanged{Team: team, Conversation: conv}, `{"team":"T0001","conv":"C0001","text":""}`},
 	} {
-		check(t, tc.ev.Topic(), FromEvent(tc.ev), tc.want)
+		check(t, tc.ev.Topic(), FromEvent(tc.ev, nil), tc.want)
 	}
 }
