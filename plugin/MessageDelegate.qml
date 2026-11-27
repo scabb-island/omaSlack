@@ -192,8 +192,9 @@ Column {
 
         FileThumb {
           required property var modelData
-          Layout.preferredWidth: Math.min(implicitWidth, body.width)
+          Layout.preferredWidth: Math.min(implicitWidth, maxWidth)
           Layout.preferredHeight: implicitHeight
+          maxWidth: body.width
           service: root.service
           team: root.team
           file: modelData

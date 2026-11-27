@@ -1,4 +1,5 @@
 import QtQuick
+import qs.Commons
 import "../.." as Plugin
 
 // The bar icon builds with a Service, draws what lib/badges.js decides for
@@ -57,6 +58,10 @@ Item {
     check(main.visible && main.label === "3", "main badge: " + main.label)
     check(channel.visible && channel.label === "4", "channel badge: " + channel.label)
     check(icon.implicitWidth > bare, "the badges get no room")
+    var glyphRight = button.width / 2 + Style.bar.iconSize / 2
+    check(main.x >= glyphRight && channel.x >= glyphRight, "a badge covers the glyph: x " + main.x + ", glyph ends at " + glyphRight)
+    check(main.y + main.height <= channel.y, "the badges overlap each other")
+    check(icon.implicitWidth >= main.x + main.width && icon.implicitWidth >= channel.x + channel.width, "a badge sticks out of the icon")
     check(button.tooltipText.indexOf("Acme: 2 DMs, 1 mention, 4 channels") >= 0, "tooltip: " + button.tooltipText)
     icon.showChannelBadge = false
     check(!channel.visible, "the channel badge ignores showChannelBadge")

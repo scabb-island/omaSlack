@@ -241,6 +241,21 @@ TestCase {
     compare(Store.userName(s, "T2", "U1"), "U1")
   }
 
+  // users.info names people (U…, W…) only: the daemon refuses a whole
+  // batch with any other ID in it, so nothing else may be asked.
+  function test_only_user_ids_are_asked_for_a_name() {
+    verify(Store.isUserID("U0CM6B9CKJ7"))
+    verify(Store.isUserID("W0123ABCD"))
+    verify(!Store.isUserID("B0ALMQAKL6Q"))
+    verify(!Store.isUserID(""))
+    verify(!Store.isUserID(undefined))
+  }
+
+  // A bot author (B…) has no users.info name: a neutral label, never its ID.
+  function test_bot_authors_read_as_bot() {
+    compare(Store.userName(Store.empty(), "T1", "B0ALMQAKL6Q"), "Bot")
+  }
+
   function test_conversation_names() {
     var s = Store.applyConversations(Store.empty(), "T1", [
       conv("C1", "channel", { name: "general" }),

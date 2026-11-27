@@ -307,9 +307,20 @@ function unread(state) {
   })
 }
 
+// isUserID: a person's ID (U…, W…), the only kind users.info names. The
+// daemon refuses a whole users.info call with any other ID in it.
+function isUserID(id) { return typeof id === "string" && /^[UW][A-Z0-9]+$/.test(id) }
+
+// The label of a bot author (B…): users.info cannot name bots, and the
+// daemon sends only the bot's ID.
+var BOT_LABEL = "Bot"
+
+// userName: the name users.info gave, a bot's neutral label, or the ID
+// itself until the name arrives.
 function userName(state, team, user) {
   var names = state.users[team]
-  return (names && names[user]) || user
+  if (names && names[user]) return names[user]
+  return /^B[A-Z0-9]+$/.test(user || "") ? BOT_LABEL : user
 }
 
 // conversationName: #channel (public or private), the person of a DM, or

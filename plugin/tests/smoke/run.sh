@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Runs the view smoke tests (tests/smoke/*Smoke.qml) in an offscreen
-# quickshell against the installed omarchy-shell. Exits 1 on any failure.
+# quickshell against the installed omarchy-shell. Exits 1 on any failure,
+# and on any binding loop Qt logs while they run.
 set -euo pipefail
 
 plugin=$(cd "$(dirname "$0")/../.." && pwd)
@@ -32,6 +33,13 @@ grep -o "SMOKE \(PASS\|FAIL\).*" "$log" || true
 if ! grep -q "SMOKE DONE" "$log"; then
   echo "smoke: the harness did not finish; quickshell log:" >&2
   cat "$log" >&2
+  exit 1
+fi
+# A binding loop only logs a warning (the location is on the next line),
+# but it means a binding was skipped: fail on it too.
+if grep -q "Binding loop detected" "$log"; then
+  echo "smoke: binding loops detected:" >&2
+  grep -A1 "Binding loop detected" "$log" >&2
   exit 1
 fi
 ! grep -q "SMOKE FAIL" "$log"

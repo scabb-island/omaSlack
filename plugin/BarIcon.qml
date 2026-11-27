@@ -60,13 +60,26 @@ Item {
   })
   readonly property bool hidden: view.hidden
 
-  readonly property real badgesX: Math.round(button.width / 2 + Style.bar.iconSize / 2 - Style.spaceReal(2))
-  readonly property real badgesWidth: Math.max(mainBadge.visible ? mainBadge.width : 0,
-                                               channelBadge.visible ? channelBadge.width : 0)
+  // Where the badges go (lib/badges.js layout): beside the glyph, stacked
+  // and centered on the bar. Which badges show comes from the view, not
+  // from the badges' visible, which also follows this icon's own.
+  readonly property var shownBadges: [mainBadge, channelBadge].filter(function(b) { return b.label !== "" })
+  readonly property var badgeLayout: Badges.layout({
+    slotWidth: button.width,
+    height: root.height,
+    iconSize: Style.bar.iconSize,
+    gap: Style.spaceReal(1),
+    badges: shownBadges.map(function(b) { return { width: b.width, height: b.height } })
+  })
+
+  function badgeY(badge) {
+    var i = shownBadges.indexOf(badge)
+    return i >= 0 ? badgeLayout.ys[i] : 0
+  }
 
   visible: !hidden
   implicitWidth: hidden ? 0
-    : (button.vertical ? button.implicitWidth : Math.max(button.implicitWidth, badgesX + badgesWidth))
+    : (button.vertical ? button.implicitWidth : Math.max(button.implicitWidth, badgeLayout.width))
   implicitHeight: button.implicitHeight
 
   BarIconButton {
@@ -121,8 +134,8 @@ Item {
     fontFamily: root.bar ? root.bar.fontFamily : Style.font.family
     label: root.view.mainText
     fill: root.bar ? root.bar.urgent : Commons.Color.urgent
-    x: root.badgesX
-    y: Math.round(root.height / 2 - height + Style.spaceReal(1))
+    x: root.badgeLayout.x
+    y: root.badgeY(mainBadge)
   }
 
   // Channels and threads: quieter, in the bar's own foreground.
@@ -132,7 +145,7 @@ Item {
     fontFamily: root.bar ? root.bar.fontFamily : Style.font.family
     label: root.view.channelText
     fill: root.bar ? root.bar.barForeground : Commons.Color.foreground
-    x: root.badgesX
-    y: Math.round(root.height / 2 + Style.spaceReal(1))
+    x: root.badgeLayout.x
+    y: root.badgeY(channelBadge)
   }
 }
