@@ -64,6 +64,7 @@
 - [ ] 3.5 Images with kitty, sixel or half-block
 - [ ] 3.6 Theme from Omarchy's `omaslack.toml` + reload on SIGUSR1
 - [ ] 3.7 Golden view tests
+- [ ] 3.8 Daemon methods the clients need to show names: `users.info{team, ids[]}`, the other person of each DM in `conversations.list` (`user`), `emoji.list{team}` and `typing.send{team, conv}`
 
 ## M4 — QML UI MVP
 - [x] 4.1 Spike: Quickshell `Socket` versus the `ctl --stream` bridge. A direct `Socket` won (see `docs/spikes/m4.1-quickshell-socket.md`)

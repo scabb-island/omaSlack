@@ -2,6 +2,7 @@ package syncengine
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
@@ -261,3 +262,18 @@ func (w *writer) clearDraft(ctx context.Context, conv domain.ConversationID, thr
 	}
 	return w.setDraft(ctx, conv, thread, "")
 }
+
+// Users, Emoji and SendTyping (task 3.8) pass through to the provider's
+// optional interface (provider.UserDirectory, provider.EmojiLister,
+// provider.TypingSender) through the budget at Interactive priority.
+// Missing interface or capability: an error wrapping domain.ErrUnsupported.
+
+func (e *Engine) Users(ctx context.Context, ids []domain.UserID) ([]domain.User, error) {
+	return nil, errTODO38
+}
+
+func (e *Engine) Emoji(ctx context.Context) (map[string]string, error) { return nil, errTODO38 }
+
+func (e *Engine) SendTyping(ctx context.Context, conv domain.ConversationID) error { return errTODO38 }
+
+var errTODO38 = errors.New("syncengine: not implemented yet (task 3.8)")

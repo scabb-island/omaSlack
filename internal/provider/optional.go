@@ -113,3 +113,18 @@ type FileUploader interface {
 type FileDownloader interface {
 	DownloadFile(ctx context.Context, f domain.File, w io.Writer, max int64) (int64, error)
 }
+
+// UserDirectory resolves user IDs to people, for names in messages,
+// mentions and direct-message titles (task 3.8). Unknown IDs are left out
+// of the result, not an error. Implementations cache: clients ask for the
+// same few people over and over.
+type UserDirectory interface {
+	Users(ctx context.Context, ids []domain.UserID) ([]domain.User, error)
+}
+
+// EmojiLister lists the workspace's custom emoji (task 3.8), declared by
+// the custom_emoji capability: name (no colons) to an image URL, or
+// "alias:<name>" for an alias.
+type EmojiLister interface {
+	Emoji(ctx context.Context) (map[string]string, error)
+}

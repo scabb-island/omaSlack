@@ -38,6 +38,7 @@ type Conversation struct {
 	Latest   TS     // newest message, zero when unknown or empty
 	LastRead TS     // the user's read marker, zero when never read
 	Mentions int    // unread mentions of the user, when the provider knows them
+	User     UserID // the other person of a DirectMessage; zero otherwise or when unknown
 }
 
 // Unread reports whether the conversation has a message newer than the

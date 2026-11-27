@@ -54,6 +54,9 @@ type Actions interface {
 	EndDND(ctx context.Context) error
 	UploadFiles(ctx context.Context, conv domain.ConversationID, thread domain.TS, paths []string, caption string) ([]domain.File, error)
 	FetchFile(ctx context.Context, id domain.FileID) (string, error)
+	Users(ctx context.Context, ids []domain.UserID) ([]domain.User, error)
+	Emoji(ctx context.Context) (map[string]string, error)
+	SendTyping(ctx context.Context, conv domain.ConversationID) error
 }
 
 // The real implementations satisfy the contracts.
@@ -107,6 +110,9 @@ type Focuser interface {
 //	reactions.remove{team, conv, ts, emoji}            → null
 //	files.upload{team, conv, threadTS?, paths, caption?} → {files: []wire.File}
 //	files.fetch{team, fileId}                          → {localPath}
+//	users.info{team, ids[]}                            → []wire.User (unknown IDs left out; task 3.8)
+//	emoji.list{team}                                   → wire.EmojiList (needs custom_emoji; task 3.8)
+//	typing.send{team, conv}                            → null (needs typing; task 3.8)
 //	drafts.get{team, conv, threadTS?}                  → {text}
 //	drafts.set{team, conv, threadTS?, text}            → null
 //	search.messages{team, query, limit?}               → []wire.SearchHit
