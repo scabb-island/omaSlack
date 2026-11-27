@@ -228,6 +228,16 @@ TestCase {
     compare(W.parsePayload(undefined), null)
   }
 
+  // ---- ui.viewing -----------------------------------------------------------------
+
+  function test_viewing_reports_the_open_conversation_and_thread() {
+    compare(W.viewing(true, true, "T1", "C1", ""), { team: "T1", conv: "C1", focused: true })
+    compare(W.viewing(true, false, "T1", "C1", "1.0"), { team: "T1", conv: "C1", focused: false, threadTS: "1.0" })
+    compare(W.viewing(false, true, "T1", "C1", "1.0"), {})
+    compare(W.viewing(true, true, "", "", ""), {})
+    compare(W.viewing(true, undefined, "T1", "C1", ""), { team: "T1", conv: "C1", focused: false })
+  }
+
   // ---- keyboard focus -------------------------------------------------------------
 
   function test_panes_move_left_and_right_and_tab_wraps() {

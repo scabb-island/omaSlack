@@ -302,3 +302,16 @@ function escape(focus) {
   out.dismiss = true
   return out
 }
+
+// ---- ui.viewing -------------------------------------------------------------------
+
+// viewing is ui.viewing's params for what the window shows (task 5.1), so
+// the daemon does not notify messages on screen: the open conversation
+// and thread while the window is open, focused while it has the keyboard;
+// {} when it shows nothing.
+function viewing(opened, active, team, conv, threadTS) {
+  if (!opened || !team || !conv) return {}
+  var p = { team: team, conv: conv, focused: !!active }
+  if (threadTS) p.threadTS = threadTS
+  return p
+}
