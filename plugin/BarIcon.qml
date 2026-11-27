@@ -19,9 +19,8 @@ Item {
 
   property QtObject bar: null
   property var service: null
-  property bool showChannelBadge: true
-  // "dms-and-mentions" or "all": what the main badge counts.
-  property string unreadScope: "dms-and-mentions"
+  // "all" or "dms-and-mentions": what lights the unread dot.
+  property string unreadScope: Badges.DEFAULT_SCOPE
   property bool hideWhenEmpty: false
 
   signal leftClicked()
@@ -54,7 +53,6 @@ Item {
     summary: service ? service.summary : null,
     dnd: service ? service.dnd : ({}),
     nowSeconds: nowSeconds,
-    showChannelBadge: showChannelBadge,
     unreadScope: unreadScope,
     hideWhenEmpty: hideWhenEmpty
   })

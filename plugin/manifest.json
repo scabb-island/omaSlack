@@ -5,7 +5,7 @@
   "version": "0.0.1",
   "author": "Scabb Island",
   "license": "MIT",
-  "description": "Slack for Omarchy, from the bar and from the terminal, on one local daemon: unread badges, a quick-view panel with quick replies, and a full window.",
+  "description": "Slack for Omarchy, from the bar and from the terminal, on one local daemon: an unread dot, a quick-view panel with quick replies, and a full window.",
   "kinds": [
     "service",
     "bar-widget",
@@ -19,7 +19,7 @@
   },
   "barWidget": {
     "displayName": "omaslack",
-    "description": "Slack unread badges and quick access to the omaslack window and terminal client.",
+    "description": "A Slack unread dot and quick access to the omaslack window and terminal client.",
     "category": "Communication",
     "aliases": [
       "slack",
@@ -30,29 +30,27 @@
     "allowMultiple": false,
     "defaultSection": "right",
     "defaults": {
-      "showChannelBadge": true,
-      "unreadScope": "dms-and-mentions",
+      "unreadScope": "all",
       "openWith": "window",
       "hideWhenEmpty": false
     },
     "schema": [
       {
-        "key": "showChannelBadge",
-        "type": "boolean",
-        "label": "Channel badge",
-        "defaultValue": true,
-        "description": "Show a second badge for unread channels and threads."
-      },
-      {
         "key": "unreadScope",
         "type": "enum",
-        "label": "Main badge counts",
+        "label": "What lights the dot",
         "options": [
-          "dms-and-mentions",
-          "all"
+          {
+            "value": "all",
+            "label": "Everything"
+          },
+          {
+            "value": "dms-and-mentions",
+            "label": "DMs and mentions"
+          }
         ],
-        "defaultValue": "dms-and-mentions",
-        "description": "What the main badge counts: DMs and mentions aimed at you, or every unread conversation."
+        "defaultValue": "all",
+        "description": "Which unread conversations light the dot on the icon: every one, or only DMs and mentions aimed at you. The tooltip and the panel always list every count."
       },
       {
         "key": "openWith",

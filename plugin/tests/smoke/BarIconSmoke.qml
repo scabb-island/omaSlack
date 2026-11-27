@@ -53,6 +53,7 @@ Item {
     var bare = icon.implicitWidth
 
     // Unread DMs and channels: both badges, and the icon makes room.
+    icon.unreadScope = "dms-and-mentions"
     var c = counts(2, 1, 4, 0)
     s.summary = { workspaces: { T1: c }, total: c }
     check(main.visible && main.label === "3", "main badge: " + main.label)
@@ -63,9 +64,9 @@ Item {
     check(main.y + main.height <= channel.y, "the badges overlap each other")
     check(icon.implicitWidth >= main.x + main.width && icon.implicitWidth >= channel.x + channel.width, "a badge sticks out of the icon")
     check(button.tooltipText.indexOf("Acme: 2 DMs, 1 mention, 4 channels") >= 0, "tooltip: " + button.tooltipText)
-    icon.showChannelBadge = false
-    check(!channel.visible, "the channel badge ignores showChannelBadge")
-    icon.showChannelBadge = true
+    icon.unreadScope = "all"
+    check(main.label === "7" && !channel.visible, "scope all: " + main.label + " / " + channel.label)
+    icon.unreadScope = "dms-and-mentions"
 
     // A sign-in expired: alert, and never hidden.
     icon.hideWhenEmpty = true

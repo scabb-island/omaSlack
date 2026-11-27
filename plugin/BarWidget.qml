@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import qs.Commons
 import qs.Ui
+import "lib/badges.js" as Badges
 
 // The bar entry point: the icon with its badges (BarIcon.qml, task 4.3) and
 // the quick-view popup (QuickPanel.qml, task 4.4) under it. Left click
@@ -25,9 +26,10 @@ Panel {
   // Widget settings (manifest barWidget.schema). The shell keeps
   // barWidget.defaults only as registry metadata: `settings` holds just what
   // shell.json sets (omarchy-bar set ar.scabb.omaslack <key> <value>), so
-  // these fallbacks must stay equal to the manifest defaults.
-  readonly property bool showChannelBadge: setting("showChannelBadge", true)
-  readonly property string unreadScope: setting("unreadScope", "dms-and-mentions")
+  // these fallbacks must stay equal to the manifest defaults. unreadScope's
+  // lives in lib/badges.js (DEFAULT_SCOPE), which also maps the retired
+  // showChannelBadge.
+  readonly property string unreadScope: Badges.scopeSetting(settings)
   readonly property string openWith: setting("openWith", "window")
   readonly property bool hideWhenEmpty: setting("hideWhenEmpty", false)
 
@@ -42,7 +44,6 @@ Panel {
     anchors.fill: parent
     bar: root.bar
     service: root.service
-    showChannelBadge: root.showChannelBadge
     unreadScope: root.unreadScope
     hideWhenEmpty: root.hideWhenEmpty
     onLeftClicked: root.toggle()

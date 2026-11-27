@@ -24,7 +24,6 @@ TestCase {
       summary: { workspaces: { T1: counts(0, 0, 0, 0) }, total: counts(0, 0, 0, 0) },
       dnd: {},
       nowSeconds: 1000,
-      showChannelBadge: true,
       unreadScope: "dms-and-mentions",
       hideWhenEmpty: false
     }
@@ -54,10 +53,47 @@ TestCase {
     compare(v.channelCount, 0, "the channel badge would count the same messages twice")
   }
 
-  function test_channel_badge_can_be_turned_off() {
-    var o = withCounts(counts(2, 1, 5, 3))
-    o.showChannelBadge = false
-    compare(view(o).channelCount, 0)
+  function test_scope_dms_and_mentions_leaves_channels_out_of_the_dot() {
+    var v = view(withCounts(counts(0, 0, 5, 3)))
+    verify(!v.dot, "channels lit the dot")
+    compare(v.channelCount, 8, "still counted, for the tooltip and panel")
+  }
+
+  function test_scope_all_lights_the_dot_for_channels_and_threads() {
+    var o = withCounts(counts(0, 0, 1, 0))
+    o.unreadScope = "all"
+    verify(view(o).dot, "a channel")
+    o = withCounts(counts(0, 0, 0, 1))
+    o.unreadScope = "all"
+    verify(view(o).dot, "a thread")
+  }
+
+  function test_unknown_scope_reads_as_everything() {
+    var o = withCounts(counts(0, 0, 1, 0))
+    o.unreadScope = "bogus"
+    verify(view(o).dot)
+  }
+
+  // ---- settings -------------------------------------------------------------
+
+  function test_scope_setting_defaults_to_everything() {
+    compare(Badges.DEFAULT_SCOPE, "all")
+    compare(Badges.scopeSetting({}), "all")
+    compare(Badges.scopeSetting(null), "all")
+    compare(Badges.scopeSetting({ unreadScope: null }), "all")
+  }
+
+  function test_scope_setting_keeps_a_saved_scope() {
+    compare(Badges.scopeSetting({ unreadScope: "dms-and-mentions" }), "dms-and-mentions")
+    compare(Badges.scopeSetting({ unreadScope: "all" }), "all")
+    compare(Badges.scopeSetting({ unreadScope: "bogus" }), "all")
+  }
+
+  function test_scope_setting_maps_a_retired_channel_badge_off() {
+    compare(Badges.scopeSetting({ showChannelBadge: false }), "dms-and-mentions")
+    compare(Badges.scopeSetting({ showChannelBadge: true }), "all")
+    compare(Badges.scopeSetting({ showChannelBadge: false, unreadScope: "all" }), "all",
+            "an explicit scope wins over the retired setting")
   }
 
   function test_badge_text() {
@@ -257,9 +293,9 @@ TestCase {
     verify(view({ hideWhenEmpty: true }).hidden)
     var o = withCounts(counts(0, 0, 1, 0))
     o.hideWhenEmpty = true
-    verify(!view(o).hidden, "a channel badge is something to show")
-    o.showChannelBadge = false
-    verify(view(o).hidden, "nothing the user asked to see")
+    verify(view(o).hidden, "a channel is outside the scope DMs and mentions")
+    o.unreadScope = "all"
+    verify(!view(o).hidden, "with the scope Everything a channel is something to show")
   }
 
   function test_never_hidden_on_errors() {

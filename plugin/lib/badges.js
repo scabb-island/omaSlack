@@ -42,7 +42,7 @@ function badgeText(n) {
 //
 // input: { hasService, connectionState, connectionError, everConnected,
 //          workspaces, summary, dnd, nowSeconds,
-//          showChannelBadge, unreadScope, hideWhenEmpty }
+//          unreadScope, hideWhenEmpty }
 // (everConnected: the Service reached "connected" at least once, so a lost
 // connection reads as reconnecting rather than as a daemon never started.)
 //
@@ -65,7 +65,7 @@ function view(input) {
     channelCount: badges.channel,
     mainText: badgeText(badges.main),
     channelText: badgeText(badges.channel),
-    hidden: !!input.hideWhenEmpty && look.hideable && !lost && badges.main === 0 && badges.channel === 0,
+    hidden: !!input.hideWhenEmpty && look.hideable && !lost && badges.main === 0,
     tooltip: daemonState ? daemonTooltip(daemonState, input) : workspacesTooltip(status, input)
   }
 }
@@ -118,12 +118,33 @@ function readCounts(raw) {
   return { dms: n(raw.dms), mentions: n(raw.mentions), channels: n(raw.channels), threads: n(raw.threads) }
 }
 
+// main: the unread conversations in scope (what lights the dot); channel:
+// the channels and threads left out of it. Any scope but "dms-and-mentions"
+// reads as "all", the default.
 function badgeCounts(input) {
   var c = readCounts(input.summary ? input.summary.total : null)
   var direct = c.dms + c.mentions
   var rest = c.channels + c.threads
-  if (input.unreadScope === "all") return { main: direct + rest, channel: 0 }
-  return { main: direct, channel: input.showChannelBadge ? rest : 0 }
+  if (input.unreadScope === "dms-and-mentions") return { main: direct, channel: rest }
+  return { main: direct + rest, channel: 0 }
+}
+
+// ---- settings -------------------------------------------------------------
+
+// The manifest's barWidget.defaults.unreadScope: the shell hands the widget
+// only what shell.json sets, so this must stay equal to it.
+var DEFAULT_SCOPE = "all"
+var SCOPES = ["all", "dms-and-mentions"]
+
+// scopeSetting reads the unread scope from the widget's shell.json entry.
+// A saved scope wins; otherwise a showChannelBadge: false saved by an
+// earlier version (the channel pill turned off) maps to "dms-and-mentions",
+// which is what that user saw lit.
+function scopeSetting(settings) {
+  settings = settings || {}
+  if (SCOPES.indexOf(settings.unreadScope) >= 0) return settings.unreadScope
+  if (settings.showChannelBadge === false) return "dms-and-mentions"
+  return DEFAULT_SCOPE
 }
 
 // ---- layout ---------------------------------------------------------------
