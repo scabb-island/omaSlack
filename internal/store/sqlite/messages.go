@@ -22,33 +22,34 @@ type execer interface {
 //     every timestamp, so an unedited copy never undoes an edit).
 //   - The deleted mark is never cleared, so a late create or edit cannot
 //     bring a deleted message back.
-//   - A version without a thread or an author keeps the stored ones: an
-//     edit's result (chat.update) does not always carry them, and a
-//     message never leaves its thread or changes hands.
+//   - A version without a thread, an author or an author name keeps the
+//     stored ones: an edit's result (chat.update) does not always carry
+//     them, and a message never leaves its thread or changes hands.
 //   - Likewise, a version without a reply count or latest reply keeps the
 //     stored ones: an edit, or a source that does not report replies,
 //     says nothing of them.
 const upsertMessage = `
-INSERT INTO messages (conv_id, ts, thread_ts, author, text, edited_ts, reply_count, latest_reply)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO messages (conv_id, ts, thread_ts, author, author_name, text, edited_ts, reply_count, latest_reply)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT (conv_id, ts) DO UPDATE SET
     thread_ts    = COALESCE(NULLIF(excluded.thread_ts, ''), messages.thread_ts),
     author       = COALESCE(NULLIF(excluded.author, ''), messages.author),
+    author_name  = COALESCE(NULLIF(excluded.author_name, ''), messages.author_name),
     text         = excluded.text,
     edited_ts    = excluded.edited_ts,
     reply_count  = COALESCE(NULLIF(excluded.reply_count, 0), messages.reply_count),
     latest_reply = COALESCE(NULLIF(excluded.latest_reply, ''), messages.latest_reply)
 WHERE excluded.edited_ts >= messages.edited_ts`
 
-// messageColumns are what every messages query reads, in messageRow's
+// messageColumns are what every messages query reads, in messageRow.targets'
 // order.
-const messageColumns = `ts, thread_ts, author, text, edited_ts, reply_count, latest_reply`
+const messageColumns = `ts, thread_ts, author, author_name, text, edited_ts, reply_count, latest_reply`
 
 // putMessage stores m and, when this version replaced the stored one
 // and carries files, its files. Run it in a transaction.
 func putMessage(ctx context.Context, ex execer, conv domain.ConversationID, m domain.Message) error {
 	res, err := ex.ExecContext(ctx, upsertMessage,
-		conv.String(), m.TS.String(), optTS(m.ThreadTS), m.Author.String(), m.Text, optTS(m.Edited),
+		conv.String(), m.TS.String(), optTS(m.ThreadTS), m.Author.String(), m.AuthorName, m.Text, optTS(m.Edited),
 		m.ReplyCount, optTS(m.LatestReply))
 	if err != nil || len(m.Files) == 0 {
 		return err
@@ -121,32 +122,18 @@ func (s *Store) queryMessages(ctx context.Context, conv domain.ConversationID, q
 
 // scanMessages runs a messages query and parses every row it returns.
 func (s *Store) scanMessages(ctx context.Context, query string, args ...any) ([]domain.Message, error) {
-	rows, err := s.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("store/sqlite: read messages: %w", err)
-	}
-	defer func() { _ = rows.Close() }()
-
-	var out []domain.Message
-	for rows.Next() {
-		var r messageRow
-		if err := rows.Scan(&r.ts, &r.threadTS, &r.author, &r.text, &r.editedTS, &r.replyCount, &r.latestReply); err != nil {
-			return nil, fmt.Errorf("store/sqlite: read messages: %w", err)
-		}
-		m, err := r.parse()
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, m)
-	}
-	return out, rows.Err()
+	return queryRows[domain.Message, messageRow](ctx, s.db, "messages", query, args...)
 }
 
 // messageRow is a messages row as stored: outside data until parsed.
 type messageRow struct {
-	ts, threadTS, author, text, editedTS string
-	replyCount                           int
-	latestReply                          string
+	ts, threadTS, author, authorName, text, editedTS string
+	replyCount                                       int
+	latestReply                                      string
+}
+
+func (r *messageRow) targets() []any {
+	return []any{&r.ts, &r.threadTS, &r.author, &r.authorName, &r.text, &r.editedTS, &r.replyCount, &r.latestReply}
 }
 
 func (r messageRow) parse() (domain.Message, error) {
@@ -159,7 +146,7 @@ func (r messageRow) parse() (domain.Message, error) {
 		return domain.Message{}, fmt.Errorf("store/sqlite: corrupt message %q: %w", r.ts, err)
 	}
 	return domain.Message{
-		TS: ts, ThreadTS: thread, Author: author, Text: r.text, Edited: edited,
+		TS: ts, ThreadTS: thread, Author: author, AuthorName: r.authorName, Text: r.text, Edited: edited,
 		ReplyCount: max(r.replyCount, 0), LatestReply: latest,
 	}, nil
 }

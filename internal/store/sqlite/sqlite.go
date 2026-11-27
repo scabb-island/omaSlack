@@ -118,3 +118,35 @@ func (s *Store) inTx(ctx context.Context, what string, fn func(*sql.Tx) error) e
 	}
 	return nil
 }
+
+// storedRow is a row type as stored: it scans into its fields (targets)
+// and is outside data until parsed into T.
+type storedRow[T, R any] interface {
+	*R
+	targets() []any
+	parse() (T, error)
+}
+
+// queryRows runs query and parses every row it returns as an R; what
+// names the rows in errors.
+func queryRows[T, R any, P storedRow[T, R]](ctx context.Context, db *sql.DB, what, query string, args ...any) ([]T, error) {
+	rows, err := db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("store/sqlite: read %s: %w", what, err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var out []T
+	for rows.Next() {
+		var r R
+		if err := rows.Scan(P(&r).targets()...); err != nil {
+			return nil, fmt.Errorf("store/sqlite: read %s: %w", what, err)
+		}
+		v, err := P(&r).parse()
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, v)
+	}
+	return out, rows.Err()
+}

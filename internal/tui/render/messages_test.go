@@ -51,6 +51,35 @@ func TestMessagesLayout(t *testing.T) {
 	}
 }
 
+// A bot's message shows the name Slack put on it, which beats whatever
+// the directory knows of its ID. One integration (one bot ID) posts under
+// many names, so a new name starts a new group. Only bots carry a name.
+func TestMessagesShowTheAuthorNameSlackSent(t *testing.T) {
+	msgs := []wire.Message{
+		{TS: at(26, 9, 0), Author: "B0HOOK", AuthorName: "deploybot", Text: "deploying"},
+		{TS: at(26, 9, 1), Author: "B0HOOK", AuthorName: "deploybot", Text: "deployed"},
+		{TS: at(26, 9, 2), Author: "B0HOOK", AuthorName: "alertbot", Text: "disk full"},
+		{TS: at(26, 9, 3), Author: "B0CI", AuthorName: "GitLab CI", Text: "build ok"},
+		// An app's bot user has a U… ID; the name still marks it a bot.
+		{TS: at(26, 9, 4), Author: "U0GH", AuthorName: "GitHub", Text: "PR opened"},
+	}
+	want := strings.Join([]string{
+		"── Today ───────────────────────",
+		"deploybot [bot]  09:00",
+		"  deploying",
+		"  deployed",
+		"alertbot [bot]  09:02",
+		"  disk full",
+		"GitLab CI [bot]  09:03",
+		"  build ok",
+		"GitHub [bot]  09:04",
+		"  PR opened",
+	}, "\n")
+	if got := readable(msgs, -1, 32); got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+}
+
 func TestMessagesYearAndBadTS(t *testing.T) {
 	msgs := []wire.Message{
 		{TS: "1700000000.000100", Author: "U0BOB", Text: "old"},

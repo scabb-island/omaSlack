@@ -53,7 +53,7 @@ func layouts(msgs []wire.Message, selected int, loc *time.Location) []messageLay
 			prev := out[i-1]
 			l.newDay = !sameDay(l.t, prev.t)
 			gap := l.t.Sub(prev.t)
-			l.grouped = !l.newDay && m.Author == msgs[i-1].Author && gap >= 0 && gap < groupWindow
+			l.grouped = !l.newDay && sameAuthor(m, msgs[i-1]) && gap >= 0 && gap < groupWindow
 		}
 		out[i] = l
 	}
@@ -153,10 +153,24 @@ func (p painter) message(m wire.Message, l messageLayout, width int) []string {
 	return lines
 }
 
+// sameAuthor: a and b come from the same author under the same name (one
+// integration posts under many names).
+func sameAuthor(a, b wire.Message) bool {
+	return a.Author == b.Author && a.AuthorName == b.AuthorName
+}
+
+// AuthorName is who wrote m, on one line: the name Slack put on the
+// message (a bot's), else the directory's name for its author, else the
+// author's ID ("" when m has no author).
+func AuthorName(m wire.Message, d Directory) string {
+	return cmp.Or(oneLine(m.AuthorName), oneLine(d.UserName(m.Author)), oneLine(m.Author))
+}
+
 func (p painter) header(m wire.Message, t time.Time) string {
-	name := cmp.Or(oneLine(p.d.UserName(m.Author)), oneLine(m.Author), "unknown")
+	name := cmp.Or(AuthorName(m, p.d), "unknown")
 	h := p.base.Bold(true).Render(name)
-	if strings.HasPrefix(m.Author, "B") {
+	// Only bots carry a name of their own, whatever their ID.
+	if m.AuthorName != "" || strings.HasPrefix(m.Author, "B") {
 		h += p.space(1) + p.muted().Render("[bot]")
 	}
 	return h + p.space(2) + p.muted().Render(t.Format("15:04"))

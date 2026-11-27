@@ -43,21 +43,11 @@ func TestUsageListsEverySubcommand(t *testing.T) {
 	}
 }
 
-func TestUsageMarksOnlyPlaceholders(t *testing.T) {
+// Every subcommand is implemented: the usage marks none as pending.
+func TestUsageMarksNothingPending(t *testing.T) {
 	_, out, _ := run("help")
-	lines := map[string]string{}
-	for _, l := range strings.Split(out, "\n") {
-		if f := strings.Fields(l); len(f) > 0 {
-			lines[f[0]] = l
-		}
-	}
-	if !strings.HasSuffix(lines["doctor"], "(not implemented yet, M5)") {
-		t.Errorf("doctor line does not say it is pending: %q", lines["doctor"])
-	}
-	for _, name := range []string{"version", "tui"} {
-		if strings.Contains(lines[name], "not implemented") {
-			t.Errorf("%s line claims it is pending: %q", name, lines[name])
-		}
+	if strings.Contains(out, "not implemented") {
+		t.Errorf("usage marks a subcommand as pending:\n%s", out)
 	}
 }
 
@@ -84,18 +74,5 @@ func TestUnknownCommand(t *testing.T) {
 	code, _, errOut := run("frobnicate")
 	if code != ExitUsage || !strings.Contains(errOut, `unknown command "frobnicate"`) {
 		t.Errorf("code=%d stderr=%q", code, errOut)
-	}
-}
-
-func TestPlaceholdersSayWhichMilestone(t *testing.T) {
-	cases := map[string]string{"doctor": "M5"}
-	for name, milestone := range cases {
-		code, _, errOut := run(name)
-		if code != ExitNotImplemented {
-			t.Errorf("%s: exit code = %d, want %d", name, code, ExitNotImplemented)
-		}
-		if !strings.Contains(errOut, milestone) {
-			t.Errorf("%s: stderr %q does not name %s", name, errOut, milestone)
-		}
 	}
 }

@@ -73,29 +73,11 @@ func (s *Store) File(ctx context.Context, id domain.FileID) (domain.File, error)
 
 // filesOf returns the files of the message at ts, in order; nil for none.
 func (s *Store) filesOf(ctx context.Context, conv domain.ConversationID, ts domain.TS) ([]domain.File, error) {
-	rows, err := s.db.QueryContext(ctx, `
+	return queryRows[domain.File, fileRow](ctx, s.db, "files", `
 		SELECT `+fileColumns+` FROM message_files JOIN files USING (file_id)
 		WHERE message_files.conv_id = ? AND message_files.ts = ?
 		ORDER BY message_files.position`,
 		conv.String(), ts.String())
-	if err != nil {
-		return nil, fmt.Errorf("store/sqlite: read files: %w", err)
-	}
-	defer func() { _ = rows.Close() }()
-
-	var out []domain.File
-	for rows.Next() {
-		var r fileRow
-		if err := rows.Scan(r.targets()...); err != nil {
-			return nil, fmt.Errorf("store/sqlite: read files: %w", err)
-		}
-		f, err := r.parse()
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, f)
-	}
-	return out, rows.Err()
 }
 
 // withFiles fills in the files of each message of msgs, of conv.

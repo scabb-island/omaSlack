@@ -43,6 +43,21 @@ func TestMessagesParseIntoDomainMessages(t *testing.T) {
 		// Apps posting as a person send both; the person is the author.
 		"user and bot": {`{"user":"U0002","bot_id":"B0001","ts":"1700000100.000100"}`,
 			domain.Message{TS: ts("1700000100.000100"), Author: author("U0002")}},
+		// A legacy integration (incoming webhook) names each message with
+		// username; that per-message name beats the bot's own.
+		"legacy bot_message": {`{"type":"message","subtype":"bot_message","bot_id":"B0001","username":"deploybot",` +
+			`"bot_profile":{"id":"B0001","name":"Incoming WebHooks"},"text":"deployed","ts":"1700000100.000100"}`,
+			domain.Message{TS: ts("1700000100.000100"), Author: author("B0001"), AuthorName: "deploybot", Text: "deployed"}},
+		// An app's bot user posts as itself: Slack sends its bot user, its
+		// bot ID and the bot's profile, whose name is what Slack shows.
+		"app bot": {`{"type":"message","user":"U0BOT","bot_id":"B0002","app_id":"A0001",` +
+			`"bot_profile":{"id":"B0002","deleted":false,"name":"GitHub","updated":1700000000,"app_id":"A0001",` +
+			`"icons":{"image_36":"https://a.slack-edge.com/x/36.png"},"team_id":"T0001"},"text":"PR opened","ts":"1700000100.000100"}`,
+			domain.Message{TS: ts("1700000100.000100"), Author: author("U0BOT"), AuthorName: "GitHub", Text: "PR opened"}},
+		// Only a message posted through a bot (bot_id) carries a name; a
+		// person's is resolved by clients, whatever else it holds.
+		"person": {`{"user":"U0002","username":"ignored","ts":"1700000100.000100"}`,
+			domain.Message{TS: ts("1700000100.000100"), Author: author("U0002")}},
 		"edited reply": {`{"user":"U0002","ts":"1700000300.000300","thread_ts":"1700000100.000100","edited":{"ts":"1700000400.000000"}}`,
 			domain.Message{TS: ts("1700000300.000300"), ThreadTS: ts("1700000100.000100"), Author: author("U0002"), Edited: ts("1700000400.000000")}},
 		"thread root": {`{"user":"U0002","ts":"1700000100.000100","thread_ts":"1700000100.000100","reply_count":3,"latest_reply":"1700000500.000500"}`,

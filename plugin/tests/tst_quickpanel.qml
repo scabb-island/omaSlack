@@ -81,6 +81,16 @@ TestCase {
     compare(p[1].text, "third")
   }
 
+  // A line keeps the name Slack put on a bot's message, so the panel
+  // names it without users.info.
+  function test_preview_keeps_a_bots_name() {
+    var p = QP.preview([{ ts: "1.0", author: "B1", authorName: "deploybot", text: "deployed" }],
+                       function(u) { return u }, 3, 80)
+    compare(p[0].author, "B1")
+    compare(p[0].authorName, "deploybot")
+    compare(QP.preview([{ ts: "1.0", author: "U1", text: "hi" }], function(u) { return u }, 3, 80)[0].authorName, "")
+  }
+
   function test_preview_skips_empty_messages_and_names_unknown_authors() {
     var p = QP.preview([{ ts: "1.0", text: "  " }, { ts: "2.0", text: "file only", author: "" }],
                        function(u) { return u }, 3, 80)
