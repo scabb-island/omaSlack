@@ -1,0 +1,8 @@
+/usr/bin/omaslack
+/usr/lib/systemd/user/omaslack.service
+/usr/share/applications/omaslack.desktop
+/usr/share/licenses/omaslack-bin/LICENSE
+/usr/share/licenses/omaslack-bin/THIRD_PARTY_NOTICES.md
+/usr/share/omaslack/hypr/omaslack.lua
+/usr/share/omaslack/omaslack.toml.tpl
+/usr/share/omaslack/theme-set.hook

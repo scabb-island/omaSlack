@@ -50,13 +50,14 @@ type userKey struct{ team, user string }
 // Model is the root bubbletea model. Everything it shows comes from st;
 // the rest is view state: mode, focus, selections, compose.
 type Model struct {
-	client client.Client
-	st     *State
-	keys   Keys
-	theme  theme.Theme
-	images image.Protocol
-	now    func() time.Time
-	loc    *time.Location
+	client  client.Client
+	st      *State
+	keys    Keys
+	theme   theme.Theme
+	images  image.Protocol
+	now     func() time.Time
+	refresh func(team string) tea.Cmd
+	loc     *time.Location
 
 	width, height int
 	mode          mode
@@ -106,6 +107,10 @@ func newModel(o Options) *Model {
 		sel: map[string]string{}, open: map[string]string{},
 		marked: map[convKey]string{}, asked: map[userKey]time.Time{}, without: map[string]bool{},
 		media: newMedia(o),
+	}
+	m.refresh = o.Refresh
+	if m.refresh == nil {
+		m.refresh = defaultRefresh
 	}
 	if m.now == nil {
 		m.now = time.Now

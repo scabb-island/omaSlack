@@ -23,10 +23,9 @@ const (
 	addInternalApp = "omaslack auth add --provider internal-app"
 	startKeyring   = "start a Secret Service such as gnome-keyring, then " + addInternalApp + " (or desktop-session) again"
 	addAnySession  = "sign in to Slack in the desktop app or a browser, then omaslack auth add --provider desktop-session; or " + addInternalApp
-	// The package ships the theme files here (spec aur-packaging,
-	// "Installed file layout"). Until `omaslack setup` (task 6.1a) copies
-	// them, doctor suggests copying them by hand.
-	sharedDir = "/usr/share/omaslack"
+	// setup copies the theme files the package ships into the home
+	// directory (spec aur-packaging, "Per-user setup").
+	runSetup = "omaslack setup"
 )
 
 func checkDaemon(h Hello, err error) Result {
@@ -183,7 +182,7 @@ func checkTemplate(p Probes) Result {
 	const name = "theme template"
 	path := p.Paths.Template
 	return checkInstalled(p, name, path, func(File) Result { return ok(name, path) },
-		warn(name, path+" is missing", "install -Dm644 "+sharedDir+"/omaslack.toml.tpl "+path))
+		warn(name, path+" is missing", runSetup))
 }
 
 func checkHook(p Probes) Result {
@@ -194,7 +193,7 @@ func checkHook(p Probes) Result {
 			return warn(name, path+" is not executable, so Omarchy skips it", "chmod +x "+path)
 		}
 		return ok(name, path)
-	}, warn(name, path+" is missing", "install -Dm755 "+sharedDir+"/theme-set.hook "+path))
+	}, warn(name, path+" is missing", runSetup))
 }
 
 func checkRendered(p Probes) Result {

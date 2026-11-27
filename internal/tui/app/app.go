@@ -35,6 +35,10 @@ type Options struct {
 
 	Now func() time.Time // the clock; nil means time.Now
 	Loc *time.Location   // time zone for timestamps; nil means local
+
+	// Refresh renews an expired desktop-session workspace (Keys.Renew). Nil
+	// runs `omaslack auth refresh <team>`; tests inject their own.
+	Refresh func(team string) tea.Cmd
 }
 
 // New returns the root model (task 3.1).

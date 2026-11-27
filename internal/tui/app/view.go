@@ -385,7 +385,8 @@ func (m *Model) modeColor() color.Color {
 // connection is the active workspace's connection state, colored; or that
 // the daemon itself is gone.
 func (m *Model) connection() string {
-	state, fg := m.st.Workspace(m.team).State, m.theme.Warning
+	w := m.st.Workspace(m.team)
+	state, fg := w.State, m.theme.Warning
 	switch {
 	case m.gone:
 		state, fg = "daemon gone", m.theme.Error
@@ -394,7 +395,11 @@ func (m *Model) connection() string {
 	case state == "disconnected" || state == "auth_expired":
 		fg = m.theme.Error
 	}
-	return lipgloss.NewStyle().Foreground(fg).Render("● " + state)
+	line := "● " + state
+	if w.State == "auth_expired" && w.Provider == "desktop-session" {
+		line += " (C-r to renew)"
+	}
+	return lipgloss.NewStyle().Foreground(fg).Render(line)
 }
 
 // applyTheme styles compose from the theme; the panes read m.theme as

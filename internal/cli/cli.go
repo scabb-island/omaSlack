@@ -19,6 +19,7 @@ import (
 	"gitlab.com/scabb-island/omaslack/internal/provider/desktopsession/auth"
 	"gitlab.com/scabb-island/omaslack/internal/rpc"
 	"gitlab.com/scabb-island/omaslack/internal/rpcclient"
+	"gitlab.com/scabb-island/omaslack/internal/setup"
 	"gitlab.com/scabb-island/omaslack/internal/tui/app"
 	"gitlab.com/scabb-island/omaslack/internal/version"
 )
@@ -50,6 +51,9 @@ type Env struct {
 	// Browsers lists the Chromium browsers whose Slack web session can be
 	// read as a desktop-session source. Nil means none are offered.
 	Browsers func() []BrowserSession
+	// Sources lists the desktop-session sources auth refresh re-reads (the
+	// Slack desktop app and browser profiles). Nil means auth.LocalSources.
+	Sources func() []auth.Source
 	// SlackAPIURL is Slack's Web API base URL, ending in "/".
 	SlackAPIURL string
 	// DialDaemon connects to the daemon as omaslack ctl. Nil means
@@ -61,6 +65,9 @@ type Env struct {
 	// DoctorProbes reads the system for omaslack doctor. Nil means
 	// doctor.SystemProbes with Keyring.
 	DoctorProbes func() doctor.Probes
+	// SetupSystem is what omaslack setup reads, writes and runs. Nil means
+	// setup.OS, this machine.
+	SetupSystem func() setup.System
 }
 
 // BrowserSession is one browser offered as a desktop-session source: its
@@ -91,6 +98,7 @@ func commands() map[string]command {
 		"ctl":     {summary: "call a daemon RPC method or stream its events", run: runCtl},
 		"auth":    {summary: "add, list or remove Slack workspaces", run: runAuth},
 		"doctor":  {summary: "check the installation and report problems", run: runDoctor},
+		"setup":   {summary: "set omaslack up for this user (theme, hook, service)", run: runSetup},
 		"version": {summary: "print version information", run: runVersion},
 	}
 }

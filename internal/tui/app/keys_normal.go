@@ -52,6 +52,7 @@ func (m *Model) normalActions() []action {
 		{k.Open, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.enter() }},
 		{k.Workspace, func(m *Model, k tea.KeyPressMsg) tea.Cmd { return m.switchWorkspace(int(k.Code - '1')) }},
 		{k.Finder, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.openFinder() }},
+		{k.Renew, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.renew() }},
 		{k.Sidebar, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { m.toggleSidebar(); return nil }},
 		{k.Narrower, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { m.resizeSidebar(-sidebarStep); return nil }},
 		{k.Wider, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { m.resizeSidebar(sidebarStep); return nil }},
