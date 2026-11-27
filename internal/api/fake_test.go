@@ -325,7 +325,29 @@ func author(s string) domain.Author { return domain.UserAuthor(user(s)) }
 // credentials: provider.ErrAuthExpired, wrapped.
 var errExpired = fmt.Errorf("syncengine: %w", fmt.Errorf("chat.postMessage: invalid_auth: %w", provider.ErrAuthExpired))
 
-// Task 3.8 stubs: the methods arrive with that task's agent.
-func (e *fakeEngine) Users(context.Context, []domain.UserID) ([]domain.User, error) { return nil, nil }
-func (e *fakeEngine) Emoji(context.Context) (map[string]string, error)              { return nil, nil }
-func (e *fakeEngine) SendTyping(context.Context, domain.ConversationID) error       { return nil }
+// directory is who the fake engines can name.
+var directory = map[domain.UserID]domain.User{
+	user("U0ANA"): {ID: user("U0ANA"), Name: "ana", RealName: "Ana Pérez", DisplayName: "anita"}, // é: intentional non-ASCII
+	user("U0BOB"): {ID: user("U0BOB"), Name: "bob", RealName: "Bob Stone"},
+}
+
+// Users answers the people of directory among ids, in their order.
+func (e *fakeEngine) Users(_ context.Context, ids []domain.UserID) ([]domain.User, error) {
+	err := e.record("Users %v", ids)
+	out := []domain.User{}
+	for _, id := range ids {
+		if u, ok := directory[id]; ok {
+			out = append(out, u)
+		}
+	}
+	return out, err
+}
+
+func (e *fakeEngine) Emoji(context.Context) (map[string]string, error) {
+	err := e.record("Emoji")
+	return map[string]string{"partyparrot": "https://emoji.slack-edge.com/T0ACME/partyparrot/abc.gif", "shipit": "alias:squirrel"}, err
+}
+
+func (e *fakeEngine) SendTyping(_ context.Context, conv domain.ConversationID) error {
+	return e.record("SendTyping %s", conv)
+}

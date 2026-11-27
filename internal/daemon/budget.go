@@ -9,6 +9,7 @@ var (
 	tier1 = ratebudget.Limit{PerMinute: 1, Burst: 3}
 	tier2 = ratebudget.Limit{PerMinute: 20, Burst: 5}
 	tier3 = ratebudget.Limit{PerMinute: 50, Burst: 10}
+	tier4 = ratebudget.Limit{PerMinute: 100, Burst: 20}
 	// chat.postMessage is "special": about one message per second per
 	// channel.
 	postLimit = ratebudget.Limit{PerMinute: 60, Burst: 5}
@@ -37,6 +38,14 @@ var slackLimits = map[string]ratebudget.Limit{
 	"users.setPresence":     tier2,
 	"dnd.setSnooze":         tier2,
 	"dnd.endSnooze":         tier2,
+	// Names: users.info is tier 4, and most calls never reach Slack (the
+	// provider answers from its directory), so clients rendering a page
+	// of messages are not held back.
+	"users.info": tier4,
+	"emoji.list": tier2,
+	// typing is a socket frame; clients repeat it every few seconds
+	// while the user types, in one conversation at a time.
+	"typing": tier3,
 }
 
 // newBudget is one workspace's budget: Slack's limits are per workspace,

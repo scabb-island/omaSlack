@@ -56,7 +56,7 @@ func acmeStore() *fakeStore {
 	s.convs = []domain.Conversation{
 		{ID: conv("C0GENERAL"), Kind: domain.Channel, Name: "general", Latest: ts("1700000300.000000"), LastRead: ts("1700000100.000000"), Mentions: 1},
 		{ID: conv("C0RANDOM"), Kind: domain.Channel, Name: "random", Latest: ts("1700000050.000000"), LastRead: ts("1700000050.000000")},
-		{ID: conv("D0ANA"), Kind: domain.DirectMessage, Latest: ts("1700000400.000000"), LastRead: ts("1700000390.000000")},
+		{ID: conv("D0ANA"), Kind: domain.DirectMessage, Latest: ts("1700000400.000000"), LastRead: ts("1700000390.000000"), User: user("U0ANA")},
 		{ID: conv("G0TEAM"), Kind: domain.GroupMessage, Latest: ts("1700000500.000000"), LastRead: ts("1700000500.000000")},
 	}
 	general := conv("C0GENERAL")
@@ -174,6 +174,7 @@ func methodNames() []string {
 		"reactions.add", "reactions.remove",
 		"files.upload", "files.fetch",
 		"drafts.get", "drafts.set",
+		"users.info", "emoji.list", "typing.send",
 		"search.messages", "users.search",
 		"presence.set", "dnd.snooze", "dnd.end",
 		"unread.summary", "ui.focus",

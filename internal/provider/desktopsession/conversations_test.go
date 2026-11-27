@@ -36,7 +36,7 @@ func TestConversationsJoinTheListWithClientCounts(t *testing.T) {
 		// Never read: Slack's zero marker is the zero TS.
 		{ID: conv("G0001"), Kind: domain.GroupMessage, Name: "mpdm-alice--bob--me-1",
 			Latest: ts("1700000500.000500"), Mentions: 1},
-		{ID: conv("D0001"), Kind: domain.DirectMessage,
+		{ID: conv("D0001"), Kind: domain.DirectMessage, User: parse(t, domain.ParseUserID, "U0002"),
 			Latest: ts("1700000700.000700"), LastRead: ts("1700000600.000600"), Mentions: 1},
 	}
 	if !reflect.DeepEqual(got, want) {

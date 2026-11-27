@@ -83,13 +83,14 @@ type Signer func(form url.Values, h http.Header)
 // WebAPI calls Slack's Web API for one workspace. Create it with
 // NewWebAPI; it is safe for concurrent use.
 type WebAPI struct {
-	url  string
-	http *http.Client
-	sign Signer
-	caps domain.Capabilities
-	log  *slog.Logger
-	now  func() time.Time // the local clock; tests replace it
-	dir  directory        // the users SearchUsers searches
+	url   string
+	http  *http.Client
+	sign  Signer
+	caps  domain.Capabilities
+	log   *slog.Logger
+	now   func() time.Time          // the local clock; tests replace it
+	dir   cached[*userIndex]        // the users SearchUsers searches and Users names
+	emoji cached[map[string]string] // the custom emoji Emoji lists
 }
 
 // NewWebAPI returns a Web API client that posts to base (which ends in

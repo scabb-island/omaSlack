@@ -1,0 +1,59 @@
+[
+  {
+    "name": "tells the conversation",
+    "params": {
+      "team": "T0ACME",
+      "conv": "D0ANA"
+    },
+    "calls": [
+      "T0ACME SendTyping D0ANA"
+    ],
+    "result": null
+  },
+  {
+    "name": "provider without typing",
+    "params": {
+      "team": "T0BETA",
+      "conv": "C0ALERTS"
+    },
+    "error": {
+      "code": -32002,
+      "message": "capability not supported by this provider: typing"
+    }
+  },
+  {
+    "name": "missing conv",
+    "params": {
+      "team": "T0ACME"
+    },
+    "error": {
+      "code": -32602,
+      "message": "conv: missing"
+    }
+  },
+  {
+    "name": "bad conv ID",
+    "params": {
+      "team": "T0ACME",
+      "conv": "U0ANA"
+    },
+    "error": {
+      "code": -32602,
+      "message": "conv: invalid Slack ID: \"U0ANA\" is not a conversation ID"
+    }
+  },
+  {
+    "name": "credentials expired",
+    "params": {
+      "team": "T0EXPIRED",
+      "conv": "D0ANA"
+    },
+    "calls": [
+      "T0EXPIRED SendTyping D0ANA"
+    ],
+    "error": {
+      "code": -32003,
+      "message": "auth_expired"
+    }
+  }
+]

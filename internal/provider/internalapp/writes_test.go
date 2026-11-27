@@ -104,6 +104,23 @@ func TestSearchUsersSearchesTheDirectory(t *testing.T) {
 	}
 }
 
+func TestNamesAndEmojiComeFromTheWebAPI(t *testing.T) {
+	f := newFakeSlack(t, map[string]http.HandlerFunc{
+		"users.list": okJSON(readFixture(t, "users.list.json")),
+		"emoji.list": okJSON([]byte(`{"ok":true,"emoji":{"shipit":"alias:squirrel"}}`)),
+	})
+	p, _ := newTestProvider(t, f)
+
+	users, err := p.Users(context.Background(), []domain.UserID{mustUser(t, "U0003")})
+	if err != nil || len(users) != 1 || users[0].Name != "juana" {
+		t.Errorf("Users() = %+v, %v; want juana", users, err)
+	}
+	emoji, err := p.Emoji(context.Background())
+	if err != nil || emoji["shipit"] != "alias:squirrel" {
+		t.Errorf("Emoji() = %v, %v; want shipit", emoji, err)
+	}
+}
+
 func TestWritesReportSlackErrorsTyped(t *testing.T) {
 	f := newFakeSlack(t, map[string]http.HandlerFunc{
 		"chat.update":     okJSON([]byte(`{"ok":false,"error":"invalid_auth"}`)),
