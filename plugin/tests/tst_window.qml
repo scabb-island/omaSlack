@@ -117,9 +117,12 @@ TestCase {
   function test_reactions_count_users_and_mark_your_own() {
     var chips = W.reactionChips([{ emoji: "+1", users: ["U1", "U2"] }, { emoji: "tada", users: ["U3"] }], "U3")
     compare(chips.length, 2)
-    compare(chips[0].label, ":+1: 2")
+    // Known emoji show as the character (test data: emoji on purpose);
+    // unknown and custom ones keep their :name:.
+    compare(chips[0].label, "👍 2")
+    compare(W.reactionChips([{ emoji: "partyparrot", users: ["U1"] }], "U1")[0].label, ":partyparrot: 1")
     compare(chips[0].mine, false)
-    compare(chips[1].label, ":tada: 1")
+    compare(chips[1].label, "🎉 1")
     compare(chips[1].mine, true)
     compare(W.reactionChips(undefined, "U1").length, 0)
   }
