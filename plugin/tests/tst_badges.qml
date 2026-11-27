@@ -2,7 +2,7 @@ import QtQuick
 import QtTest
 import "../lib/badges.js" as Badges
 
-// lib/badges.js: what the bar icon shows (badges, state, tooltip, hidden)
+// lib/badges.js: what the bar icon shows (unread dot, state, tooltip, hidden)
 // for a given Service state and widget settings.
 TestCase {
   name: "Badges"
@@ -37,20 +37,20 @@ TestCase {
 
   function view(over) { return Badges.view(input(over)) }
 
-  // ---- badges -------------------------------------------------------------
+  // ---- counts -------------------------------------------------------------
 
-  function test_main_badge_counts_dms_and_mentions() {
+  function test_scope_dms_and_mentions_counts_dms_and_mentions() {
     var v = view(withCounts(counts(2, 1, 5, 3)))
     compare(v.mainCount, 3)
     compare(v.channelCount, 8)
   }
 
-  function test_scope_all_puts_everything_in_the_main_badge() {
+  function test_scope_all_counts_everything() {
     var o = withCounts(counts(2, 1, 5, 3))
     o.unreadScope = "all"
     var v = view(o)
     compare(v.mainCount, 11)
-    compare(v.channelCount, 0, "the channel badge would count the same messages twice")
+    compare(v.channelCount, 0, "nothing is left out of the scope")
   }
 
   function test_scope_dms_and_mentions_leaves_channels_out_of_the_dot() {
@@ -96,13 +96,6 @@ TestCase {
             "an explicit scope wins over the retired setting")
   }
 
-  function test_badge_text() {
-    compare(Badges.badgeText(0), "")
-    compare(Badges.badgeText(7), "7")
-    compare(Badges.badgeText(99), "99")
-    compare(Badges.badgeText(100), "99+")
-  }
-
   function test_malformed_summary_counts_as_nothing_unread() {
     var v = view({ summary: { total: { dms: "x", mentions: -2 } } })
     compare(v.mainCount, 0)
@@ -110,7 +103,7 @@ TestCase {
     compare(view({ summary: null }).mainCount, 0)
   }
 
-  function test_no_badges_without_the_daemon() {
+  function test_no_counts_without_the_daemon() {
     var o = withCounts(counts(2, 1, 5, 3))
     o.connectionState = "unavailable"
     var v = view(o)
@@ -209,7 +202,7 @@ TestCase {
     verify(v.tooltip.indexOf("protocol 2 not supported") >= 0, v.tooltip)
   }
 
-  function test_workspace_reconnecting_keeps_the_badges() {
+  function test_workspace_reconnecting_keeps_the_counts() {
     var states = ["connecting", "disconnected"]
     for (var i = 0; i < states.length; i++) {
       var o = withCounts(counts(1, 0, 0, 0))
@@ -288,7 +281,7 @@ TestCase {
 
   // ---- hideWhenEmpty ------------------------------------------------------
 
-  function test_hidden_only_when_on_and_nothing_to_badge() {
+  function test_hidden_only_when_on_and_nothing_in_scope() {
     verify(!view({}).hidden, "off by default")
     verify(view({ hideWhenEmpty: true }).hidden)
     var o = withCounts(counts(0, 0, 1, 0))
@@ -334,37 +327,43 @@ TestCase {
   // ---- layout ---------------------------------------------------------------
 
   // A horizontal bar slot as the shell sizes it at the default scale: a
-  // 21 px slot, 26 px tall, a 12 px glyph in its middle, 1 px gaps.
-  function place(badges) {
-    return Badges.layout({ slotWidth: 21, height: 26, iconSize: 12, gap: 1, badges: badges })
+  // 21 px slot, 26 px tall, a 12 px glyph in its middle, and an 8 px dot
+  // (6 px plus its 1 px ring).
+  function place(over) {
+    var input = { slotWidth: 21, height: 26, iconSize: 12, dotSize: 8 }
+    for (var k in over) input[k] = over[k]
+    return Badges.layout(input)
   }
 
-  function test_layout_without_badges_is_the_bare_slot() {
-    var l = place([])
-    compare(l.width, 21)
-    compare(l.ys, [])
+  function test_layout_puts_the_dot_on_the_glyphs_top_right_corner() {
+    var l = place({})
+    // The glyph spans 4.5..16.5 across and 7..19 down; the dot overlaps
+    // it by 55 % across and 35 % down, on whole pixels:
+    // x = round(16.5 - 4.4) = 12, y = round(7 - 2.8) = 4.
+    compare(l.x, 12)
+    compare(l.y, 4)
   }
 
-  function test_layout_puts_badges_beside_the_glyph_not_over_it() {
-    var l = place([{ width: 12, height: 12 }])
-    // The glyph ends at (21 + 12) / 2 = 16.5; the badge starts a gap later.
-    verify(l.x >= 16.5 + 1, "badge at " + l.x)
-    compare(l.width, l.x + 12)
+  function test_layout_never_grows_the_slot() {
+    compare(place({}).width, 21)
+    compare(place({ slotWidth: 40 }).width, 40)
   }
 
-  function test_layout_centers_a_single_badge_on_the_bar() {
-    compare(place([{ width: 12, height: 12 }]).ys, [7])
-  }
-
-  function test_layout_stacks_two_badges_centered_as_a_group() {
-    var l = place([{ width: 12, height: 12 }, { width: 17, height: 12 }])
-    // 12 + 1 + 12 = 25 tall, so the pair starts half a pixel down.
-    compare(l.ys, [1, 14])
-    compare(l.width, l.x + 17)
-  }
-
-  function test_layout_never_narrows_the_slot() {
-    var l = Badges.layout({ slotWidth: 40, height: 26, iconSize: 12, gap: 1, badges: [{ width: 4, height: 12 }] })
-    compare(l.width, 40)
+  function test_layout_vertical_stays_inside_the_slot() {
+    // Vertical bars at 1.0, 1.2 and 2.0, and a slot barely wider than the
+    // glyph: the dot never sticks out.
+    var slots = [
+      { slotWidth: 26, height: 21, iconSize: 12, dotSize: 8 },
+      { slotWidth: 31, height: 25, iconSize: 14, dotSize: 9 },
+      { slotWidth: 52, height: 42, iconSize: 24, dotSize: 14 },
+      { slotWidth: 14, height: 12, iconSize: 12, dotSize: 8 }
+    ]
+    for (var i = 0; i < slots.length; i++) {
+      var l = Badges.layout(slots[i])
+      var tag = JSON.stringify(slots[i]) + " -> " + JSON.stringify(l)
+      verify(l.x >= 0 && l.x + slots[i].dotSize <= slots[i].slotWidth, tag)
+      verify(l.y >= 0 && l.y + slots[i].dotSize <= slots[i].height, tag)
+      compare(l.width, slots[i].slotWidth, tag)
+    }
   }
 }
