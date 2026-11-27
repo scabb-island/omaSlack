@@ -14,13 +14,17 @@ import (
 
 // Message is one message.
 type Message struct {
-	TS        string     `json:"ts"`
-	ThreadTS  string     `json:"threadTS,omitempty"`
-	Author    string     `json:"author,omitempty"`
-	Text      string     `json:"text"`
-	Edited    string     `json:"edited,omitempty"`
-	Reactions []Reaction `json:"reactions,omitempty"`
-	Files     []File     `json:"files,omitempty"`
+	TS       string `json:"ts"`
+	ThreadTS string `json:"threadTS,omitempty"`
+	Author   string `json:"author,omitempty"`
+	Text     string `json:"text"`
+	Edited   string `json:"edited,omitempty"`
+	// A thread root's replies: how many (omitted when none or unknown)
+	// and the newest one's ts (omitted when unknown).
+	ReplyCount  int        `json:"replyCount,omitempty"`
+	LatestReply string     `json:"latestReply,omitempty"`
+	Reactions   []Reaction `json:"reactions,omitempty"`
+	Files       []File     `json:"files,omitempty"`
 }
 
 // File is one file attached to a message: what a client shows. Its bytes
@@ -89,6 +93,9 @@ func FromMessage(m domain.Message, reactions []store.Reaction) Message {
 		Author:   m.Author.String(),
 		Text:     m.Text,
 		Edited:   optTS(m.Edited),
+
+		ReplyCount:  m.ReplyCount,
+		LatestReply: optTS(m.LatestReply),
 	}
 	for _, r := range reactions {
 		out.Reactions = append(out.Reactions, Reaction{Emoji: r.Emoji, Users: ids(r.Users)})

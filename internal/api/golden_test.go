@@ -64,7 +64,7 @@ func acmeStore() *fakeStore {
 	root := ts("1700000200.000000")
 	s.add(general,
 		domain.Message{TS: ts("1700000100.000000"), Author: author("U0ANA"), Text: "hello"},
-		domain.Message{TS: root, ThreadTS: root, Author: author("U0BOB"), Text: "thread root"},
+		domain.Message{TS: root, ThreadTS: root, Author: author("U0BOB"), Text: "thread root", ReplyCount: 2, LatestReply: ts("1700000220.000000")},
 		domain.Message{TS: ts("1700000210.000000"), ThreadTS: root, Author: author("U0ANA"), Text: "first reply"},
 		domain.Message{TS: ts("1700000220.000000"), ThreadTS: root, Author: author("U0BOB"), Text: "second reply"},
 		domain.Message{TS: ts("1700000300.000000"), Author: author("U0ANA"), Text: "latest", Edited: ts("1700000310.000000"),
