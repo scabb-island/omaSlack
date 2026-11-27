@@ -37,7 +37,7 @@ const (
 // thread pane takes the messages' place when the main area is narrower
 // than minThreadSplit.
 func (m *Model) View() tea.View {
-	v := tea.NewView(m.screen())
+	v := tea.NewView(m.frame())
 	v.AltScreen = true
 	v.WindowTitle = "omaslack"
 	return v
@@ -286,8 +286,8 @@ func (m *Model) messageTail(msgs []wire.Message, sel string, w, h int) []string 
 	}
 	o := render.Options{Theme: m.theme, Width: w, Now: m.now(), Loc: m.loc}
 	dir := directory{st: m.st, team: m.team}
-	all := render.Messages(msgs, m.selectedIndex(sel, selected), dir, o)
-	end := len(render.Messages(msgs[:selected+1], -1, dir, o))
+	all := m.withImages(render.Messages(msgs, m.selectedIndex(sel, selected), dir, o), w)
+	end := len(m.withImages(render.Messages(msgs[:selected+1], -1, dir, o), w))
 	end = min(max(end, min(h, len(all))), len(all))
 	lines := all[max(end-h, 0):end]
 	return append(make([]string, max(h-len(lines), 0)), lines...)

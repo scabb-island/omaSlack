@@ -55,6 +55,7 @@ func (m *Model) normalActions() []action {
 		{k.Help, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { m.help = true; return nil }},
 		{k.Quit, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.quit() }},
 		{k.OpenFile, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.openFile() }},
+		{k.Images, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.toggleImages() }},
 	}
 }
 

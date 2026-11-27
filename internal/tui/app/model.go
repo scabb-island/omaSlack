@@ -137,7 +137,8 @@ func (m *Model) Init() tea.Cmd {
 }
 
 // Update applies one message: a key, a size, a daemon result or event.
-func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *Model) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
+	defer func() { cmd = tea.Batch(cmd, m.imagesAfter(msg)) }() // inline images (images.go)
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		return m, m.key(msg)
