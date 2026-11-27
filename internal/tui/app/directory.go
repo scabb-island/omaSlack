@@ -33,5 +33,6 @@ func (d directory) Emoji(name string) (string, bool) {
 	return "", false
 }
 
-// Self is not known yet: hello does not say who the signed-in user is.
-func (d directory) Self() string { return "" }
+// Self is the signed-in user, as hello reported it; "" while the daemon
+// does not know.
+func (d directory) Self() string { return d.st.Workspace(d.team).Self }
