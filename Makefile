@@ -19,7 +19,7 @@ QMLLINT       ?= /usr/lib/qt6/bin/qmllint
 QML_IMPORTS   := .cache/qml-imports
 QMLTESTRUNNER ?= /usr/lib/qt6/bin/qmltestrunner
 
-.PHONY: all build test test-race vet lint check qmllint qmltest plugin-validate specs local snapshot clean
+.PHONY: all build test test-race vet lint check qmllint qmltest plugin-validate specs local snapshot aur-check clean
 
 all: check
 
@@ -69,6 +69,13 @@ local: check test-race qmllint qmltest plugin-validate specs
 # identity, so it is skipped here.
 snapshot:
 	goreleaser release --snapshot --clean --skip=sign
+
+# The omaslack-bin PKGBUILD from a snapshot, checked in a clean
+# archlinux:base-devel container with podman: .SRCINFO, namcap, makepkg,
+# the installed file list, and that nothing is written to $HOME. Local
+# only, never in CI.
+aur-check:
+	packaging/aur/check.sh
 
 # ── ub-mode quality gates (local only, never in CI) ──────────────────────────
 # crapper, dryer and mutator (github.com/unclebob) are installed by mise from
