@@ -39,26 +39,10 @@ func SystemProbes(openKeyring func(context.Context) (keyring.ClosableStore, erro
 		Service:        func(ctx context.Context) (Unit, error) { return service(ctx, output) },
 		Stat:           stat,
 		Keyring:        openKeyring,
-		SessionSources: sessionSources,
+		SessionSources: auth.SignedInSources,
 		Plugins:        func(ctx context.Context) ([]Plugin, error) { return plugins(ctx, output) },
 		Shell:          func(ctx context.Context) (Shell, error) { return shell(ctx, exec.LookPath, output) },
 	}
-}
-
-// sessionSources names the desktop-session sources signed in to Slack on
-// this machine, reading only plaintext tokens, so it never prompts for the
-// keyring (SignedIn).
-func sessionSources() []string {
-	var names []string
-	if dir, err := auth.FindDesktopDir(); err == nil && (auth.Desktop{Dir: dir}).SignedIn() {
-		names = append(names, "the Slack desktop app")
-	}
-	for _, b := range auth.FindBrowsers() {
-		if b.SignedIn() {
-			names = append(names, b.Name)
-		}
-	}
-	return names
 }
 
 func output(ctx context.Context, name string, args ...string) (string, error) {

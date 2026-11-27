@@ -205,7 +205,7 @@ func (a adder) sessionSources() []sessionSource {
 		if listed, err := a.env.DesktopWorkspaces(a.ctx); err != nil {
 			fmt.Fprintf(a.env.Stdout, "Cannot use the Slack desktop app: %v\n", err)
 		} else {
-			sources = append(sources, sessionSource{"the Slack desktop app", listed})
+			sources = append(sources, sessionSource{auth.DesktopSourceName, listed})
 		}
 	}
 	if a.env.Browsers != nil {

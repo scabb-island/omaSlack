@@ -127,11 +127,16 @@ so running two of them means two notifications per message.
   app's option to stay in the notification area when its window is
   closed (its name and place change between Slack versions; on Linux it
   is under Preferences → Advanced), or remove the tray widget's entry.
-- The `desktop-session` provider signs in with the official app's
-  session. Signing out of the app, or Slack revoking that session, signs
-  omaslack out of that workspace too (`omaslack doctor` then shows it as
-  `auth_expired`). The `internal-app` provider has its own tokens and
-  does not depend on the app.
+- The `desktop-session` provider reuses a session you are already signed
+  in to — in the official Slack app or in a Chromium browser (Brave,
+  Chrome, Chromium, Edge) at `app.slack.com`. `omaslack auth add
+  --provider desktop-session` lists the sources it finds and reads the
+  one you pick, so you need neither the official app nor a Slack app of
+  your own; `omaslack doctor` shows which sources are available. Signing
+  out there, or Slack revoking the session, signs omaslack out of that
+  workspace too (`omaslack doctor` then shows it as `auth_expired`): add
+  the workspace again to reuse a fresh session. The `internal-app`
+  provider has its own tokens and does not depend on either.
 
 ### Other Slack plugins for the Omarchy shell
 
