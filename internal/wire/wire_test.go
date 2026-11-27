@@ -48,6 +48,11 @@ func TestShapes(t *testing.T) {
 	check(t, "reply with reactions", FromMessage(reply, []store.Reaction{{Emoji: "+1", Users: []domain.UserID{user}}}, nil),
 		`{"ts":"1700000200.000200","threadTS":"1700000100.000100","author":"B0001","text":"ok","edited":"1700000300.000300","reactions":[{"emoji":"+1","users":["U0001"]}]}`)
 
+	byBot := reply
+	byBot.AuthorName = "deploybot"
+	check(t, "bot message with its name", FromMessage(byBot, nil, nil),
+		`{"ts":"1700000200.000200","threadTS":"1700000100.000100","author":"B0001","authorName":"deploybot","text":"ok","edited":"1700000300.000300"}`)
+
 	threadRoot := root
 	threadRoot.ThreadTS, threadRoot.ReplyCount, threadRoot.LatestReply = root.TS, 2, ts("1700000400.000400")
 	check(t, "thread root", FromMessage(threadRoot, nil, nil),
