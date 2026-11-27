@@ -104,8 +104,10 @@
 - [ ] 6.1a `omaslack setup` for per-user setup (theme template, hook, user service), so the package never writes to `$HOME`
 - [ ] 6.1b `make aur-check`: namcap, `.SRCINFO` and a clean build in `archlinux:base-devel` (local only)
 - [ ] 6.1c Release job publishes to the AUR only on `vX.Y.Z` tags, with the SSH key in a protected, masked variable
-- [ ] 6.1d Plugin: detect `omaslack-bin` with `omarchy-pkg-present`, check the protocol, and offer install/update through `omarchy-launch-floating-terminal-with-presentation omarchy-pkg-aur-add omaslack-bin`
-- [ ] 6.2 Plugin README with install and removal instructions, `LICENSE` and `preview.png`
+- [x] 6.1d Plugin: detect `omaslack-bin` with `omarchy-pkg-present`, check the protocol, and offer install/update through `omarchy-launch-floating-terminal-with-presentation omarchy-pkg-aur-add omaslack-bin`
+  - `plugin/lib/install.js` turns a probe (package, user service, `omaslack version` protocol) into install, update, update-plugin, restart, setup or start; the Service runs it after each failed attempt (`setupNeed`, `runSetupAction()`) and asks an incompatible daemon again every 30 s. Update runs `yay -S --needed omaslack-bin` and restarts the service, because `omarchy-pkg-aur-add` skips installed packages (spec updated).
+- [x] 6.2 Plugin README with install and removal instructions, `LICENSE` and `preview.png`
+  - `preview.png` is rendered offscreen from sample data by `plugin/tests/preview/run.sh`. `omarchy plugin add` and the marketplace both expect `manifest.json` at a repository root, so the README installs from a clone plus a symlink until the plugin has its own repository (6.3).
 - [ ] 6.3 Marketplace submission (`SUBMISSION.md`), with `installation.mode: manual` if needed
 - [ ] 6.4 `openspec archive add-omaslack-v1`, then `update-bar-unread-indicator` (it modifies v1's requirements)
 - [x] 6.5 M6 contracts: file layout with the window rule, signed releases (cosign keyless on `checksums.txt`), the `omaslack setup` requirement; first release `v0.1.0` (plugin manifest 0.1.0)
