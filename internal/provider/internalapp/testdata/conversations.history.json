@@ -16,6 +16,18 @@
       "type": "message",
       "subtype": "bot_message",
       "bot_id": "B0001",
+      "username": "deploybot",
+      "bot_profile": {
+        "id": "B0001",
+        "deleted": false,
+        "name": "Incoming WebHooks",
+        "updated": 1700000000,
+        "app_id": "A0001",
+        "icons": {
+          "image_36": "https://a.slack-edge.com/80588/img/services/outgoing-webhook_36.png"
+        },
+        "team_id": "T0001"
+      },
       "text": "deploy finished",
       "ts": "1700000200.000200"
     },

@@ -33,9 +33,10 @@ func TestHistoryReturnsTheParsedMessagesNewestFirst(t *testing.T) {
 			Edited:   mustTS(t, "1700000400.000000"),
 		},
 		{
-			TS:     mustTS(t, "1700000200.000200"),
-			Author: mustAuthor(t, "B0001"),
-			Text:   "deploy finished",
+			TS:         mustTS(t, "1700000200.000200"),
+			Author:     mustAuthor(t, "B0001"),
+			AuthorName: "deploybot",
+			Text:       "deploy finished",
 		},
 		{
 			TS:          mustTS(t, "1700000100.000100"),

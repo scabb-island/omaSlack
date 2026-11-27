@@ -204,7 +204,7 @@ FocusScope {
     var team = key.split("/")[0]
     // Read so the binding re-runs when users.info answers.
     var revision = s.messagesRevision
-    return revision < 0 ? [] : hit.lines.map(function(l) { return { author: l.author ? s.userName(team, l.author) : "", text: l.text } })
+    return revision < 0 ? [] : hit.lines.map(function(l) { return { author: s.authorName(team, l), text: l.text } })
   }
 
   QtObject {

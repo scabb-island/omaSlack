@@ -1,5 +1,6 @@
 .pragma library
 .import "actions.js" as A
+.import "store.js" as Store
 
 // The full window's navigation logic (task 4.5): the conversation finder
 // and the compose autocomplete, pure so qmltestrunner covers it (tests/tst_nav.qml). It follows the
@@ -405,7 +406,8 @@ function escapeHtml(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").r
 // searchRows: search.messages's hits ([wire.SearchHit]) of one workspace as
 // the result list shows them: { key, conv, ts, root (the top-level
 // message: the thread's root for a reply), where (the conversation, as
-// the finder names it), who, seconds (epoch, for the date), html }.
+// the finder names it), who (the bot's name Slack sent, else
+// userName), seconds (epoch, for the date), html }.
 // convs are the workspace's conversations; nameOf(conv) and userName(user)
 // are the Service's, bound to the workspace.
 function searchRows(hits, convs, nameOf, userName) {
@@ -419,7 +421,7 @@ function searchRows(hits, convs, nameOf, userName) {
       ts: m.ts,
       root: m.threadTS || m.ts,
       where: finderTitle(kinds[h.conv] || "channel", nameOf(h.conv)),
-      who: userName(m.author) || m.author || "",
+      who: Store.authorName(m, userName) || m.author || "",
       seconds: parseInt(m.ts, 10) || 0,
       html: m.html || escapeHtml(m.text || "")
     }

@@ -10,9 +10,13 @@ type Message struct {
 	TS       TS
 	ThreadTS TS // zero when the message is not part of a thread
 	Author   Author
-	Text     string // Slack mrkdwn, as received
-	Edited   TS     // zero when never edited
-	Files    []File // attachments in Slack's order; nil for none
+	// AuthorName is the name Slack puts on the message itself when a bot
+	// posted it (a legacy integration's username, else the bot's profile
+	// name); empty for people, whom clients name from their user ID.
+	AuthorName string
+	Text       string // Slack mrkdwn, as received
+	Edited     TS     // zero when never edited
+	Files      []File // attachments in Slack's order; nil for none
 
 	// A thread root's replies: how many (0 when none or unknown) and the
 	// newest one's ts (zero when unknown). Replies leave both zero.
