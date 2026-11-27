@@ -6,8 +6,11 @@ package theme
 import (
 	"context"
 	"errors"
+	"fmt"
 	"image/color"
+	"io/fs"
 	"os"
+	"path/filepath"
 
 	"charm.land/lipgloss/v2"
 )
@@ -52,11 +55,83 @@ type Paths struct {
 // ErrNoTheme means neither file exists; callers use Default.
 var ErrNoTheme = errors.New("theme: no Omarchy theme found")
 
-// DefaultPaths resolves Paths from $HOME (task 3.6).
-func DefaultPaths() (Paths, error) { return Paths{}, errTODO }
+// DefaultPaths resolves Paths from $HOME (task 3.6). It ignores
+// $XDG_STATE_HOME on purpose: Omarchy always renders its themes under
+// $HOME/.local/state/omarchy, whatever XDG says.
+func DefaultPaths() (Paths, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return Paths{}, fmt.Errorf("theme: %w", err)
+	}
+	return pathsFrom(home)
+}
 
-// Load reads the theme from p (task 3.6).
-func Load(p Paths) (Theme, error) { return Theme{}, errTODO }
+func pathsFrom(home string) (Paths, error) {
+	if home == "" {
+		return Paths{}, errors.New("theme: no home directory")
+	}
+	dir := filepath.Join(home, ".local", "state", "omarchy", "current", "theme")
+	return Paths{
+		OmaslackTOML: filepath.Join(dir, "omaslack.toml"),
+		ColorsTOML:   filepath.Join(dir, "colors.toml"),
+	}, nil
+}
+
+// Load reads the theme from p (task 3.6): omaslack.toml if it exists,
+// else colors.toml mapped onto the roles (see roles). A role the file does
+// not set keeps its Default value; a set but invalid color is an error
+// naming the file and the key. ErrNoTheme means neither file exists.
+func Load(p Paths) (Theme, error) {
+	if t, err := loadFile(p.OmaslackTOML, omaslackKeys); !errors.Is(err, fs.ErrNotExist) {
+		return t, err
+	}
+	if t, err := loadFile(p.ColorsTOML, colorsKeys); !errors.Is(err, fs.ErrNotExist) {
+		return t, err
+	}
+	return Theme{}, ErrNoTheme
+}
+
+func loadFile(path string, keys func(role) []string) (Theme, error) {
+	if path == "" {
+		return Theme{}, fs.ErrNotExist
+	}
+	data, err := os.ReadFile(path) // #nosec G304 -- the user's own theme file
+	if err != nil {
+		return Theme{}, err
+	}
+	t, err := fromValues(parseFlatTOML(string(data)), keys)
+	if err != nil {
+		return Theme{}, fmt.Errorf("theme: %s: %w", path, err)
+	}
+	return t, nil
+}
+
+// fromValues starts from Default and sets each role from the first of its
+// keys that values holds.
+func fromValues(values map[string]string, keys func(role) []string) (Theme, error) {
+	t := Default()
+	for _, r := range roles {
+		k, v, ok := firstSet(values, keys(r))
+		if !ok {
+			continue
+		}
+		c, err := parseColor(v)
+		if err != nil {
+			return Theme{}, fmt.Errorf("%s: %w", k, err)
+		}
+		*r.field(&t) = c
+	}
+	return t, nil
+}
+
+func firstSet(values map[string]string, keys []string) (key, value string, ok bool) {
+	for _, k := range keys {
+		if v, ok := values[k]; ok {
+			return k, v, true
+		}
+	}
+	return "", "", false
+}
 
 // Watch reloads the theme on every signal received on sigs (SIGUSR1 in
 // production) and sends each successfully loaded theme on the returned
@@ -67,5 +142,3 @@ func Watch(ctx context.Context, load func() (Theme, error), sigs <-chan os.Signa
 	go func() { <-ctx.Done(); close(ch) }()
 	return ch
 }
-
-var errTODO = errors.New("theme: not implemented yet (task 3.6)")
