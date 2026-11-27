@@ -3,6 +3,7 @@ import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
 import "lib/badges.js" as Badges
+import "lib/contrast.js" as C
 
 // The bar icon (task 4.3): follows the bar's color, one badge for DMs and
 // mentions aimed at the user and one for channels and threads, the
@@ -59,7 +60,6 @@ Item {
   })
   readonly property bool hidden: view.hidden
 
-  readonly property color badgeText: Commons.Color.background
   readonly property real badgesX: Math.round(button.width / 2 + Style.bar.iconSize / 2 - Style.spaceReal(2))
   readonly property real badgesWidth: Math.max(mainBadge.visible ? mainBadge.width : 0,
                                                channelBadge.visible ? channelBadge.width : 0)
@@ -91,7 +91,8 @@ Item {
     id: badge
     property string label: ""
     property color fill
-    property color textColor
+    // Background or text color, whichever reads on the fill.
+    property color textColor: C.textOn(fill, Commons.Color.background, Commons.Color.foreground)
     property string fontFamily: Style.font.family
     visible: label !== ""
     color: fill
@@ -117,7 +118,6 @@ Item {
   Badge {
     id: mainBadge
     objectName: "mainBadge"
-    textColor: root.badgeText
     fontFamily: root.bar ? root.bar.fontFamily : Style.font.family
     label: root.view.mainText
     fill: root.bar ? root.bar.urgent : Commons.Color.urgent
@@ -129,7 +129,6 @@ Item {
   Badge {
     id: channelBadge
     objectName: "channelBadge"
-    textColor: root.badgeText
     fontFamily: root.bar ? root.bar.fontFamily : Style.font.family
     label: root.view.channelText
     fill: root.bar ? root.bar.barForeground : Commons.Color.foreground

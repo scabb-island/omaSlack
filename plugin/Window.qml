@@ -6,6 +6,7 @@ import qs.Commons as Commons
 import qs.Ui
 import "lib/window.js" as W
 import "lib/nav.js" as N
+import "lib/contrast.js" as C
 
 // The full window (task 4.5): a FloatingWindow with the fixed title
 // "omaslack" (for Hyprland rules), with the workspace and conversation
@@ -20,7 +21,8 @@ import "lib/nav.js" as N
 // pane has the keyboard) and every Service call; the parts draw and
 // report. Pure logic lives in lib/window.js (tests/tst_window.qml).
 //
-// Keys (PanelKeyCatcher, while no composer has the keyboard):
+// Keys (keyFront for Ctrl+K, /, ? and 1–9, then the PanelKeyCatcher;
+// while no composer or overlay has the keyboard):
 //   Tab / Shift+Tab   next / previous pane (sidebar, messages, thread)
 //   h l, ← →          pane to the left / right
 //   j k, ↓ ↑          move in the pane's list (up past the oldest message
@@ -52,7 +54,7 @@ import "lib/nav.js" as N
 // reactions picker (r) opens in `overlays` and calls service.react; search
 // (/) and the finder (Ctrl+K) open in `overlays` and end in
 // selectConversation(team, conv, ts); compose autocomplete and attachments
-// hook into Composer (keyFilter, insertText, input).
+// hook into Composer (addKeyFilter, insertText, input).
 Item {
   id: root
 
@@ -77,8 +79,13 @@ Item {
   // The pane with the keyboard: "sidebar", "messages" or "thread".
   property string pane: "sidebar"
   property int sidebarIndex: -1
-  // The last error of an action, shown at the bottom.
+  // The status line at the bottom: the last error of an action (status,
+  // until something replaces it), or a short note on what just happened
+  // (info: "Message deleted.", set with inform(), gone after infoDelay
+  // ms), as the TUI's status line.
   property string status: ""
+  property string info: ""
+  property int infoDelay: 4000
   // The newest ts this window sent to conversations.markRead.
   property string marked: ""
 
@@ -130,6 +137,20 @@ Item {
   function currentMessage() {
     if (pane === "sidebar") return null
     return paneList(pane).currentMessage()
+  }
+
+  function inform(text) {
+    info = text
+    status = ""
+    infoTimer.restart()
+  }
+
+  onStatusChanged: if (status !== "") { info = ""; infoTimer.stop() }
+
+  Timer {
+    id: infoTimer
+    interval: root.infoDelay
+    onTriggered: root.info = ""
   }
 
   function failed(what) {
@@ -226,6 +247,11 @@ Item {
     openInDaemon()
   }
 
+  // The sidebar shows a cursor whenever it can: on the first conversation
+  // until the user moves it, so the pane with the keyboard always shows
+  // where it is.
+  onSidebarRowsChanged: if (sidebarIndex < 0) sidebarIndex = W.step(sidebarRows, -1, 1)
+
   function indexOfRow(key) {
     for (var i = 0; i < sidebarRows.length; i++) if (sidebarRows[i].key === key) return i
     return -1
@@ -289,7 +315,9 @@ Item {
 
   // ---- keyboard --------------------------------------------------------------------
 
-  function focusKeys() { keys.forceActiveFocus() }
+  // The window's keys: keyFront (Ctrl+K, /, ?, 1–9) then, for what it
+  // leaves, the PanelKeyCatcher around it.
+  function focusKeys() { keyFront.forceActiveFocus() }
 
   function compose(paneName) {
     var name = paneName === "thread" && threadOpen ? "thread" : "messages"
@@ -326,7 +354,6 @@ Item {
   }
 
   function textKey(t, modifiers) {
-    if (navKey(t, modifiers)) return
     if (t === "i") compose(pane)
     else if (t === "g" && pane !== "sidebar") paneList(pane).toTop()
     else if (t === "G" && pane !== "sidebar") paneList(pane).toBottom()
@@ -356,9 +383,11 @@ Item {
     mentionTokens = next
   }
 
-  // navKey runs Ctrl+K, /, ? and 1–9; false for any other key.
-  function navKey(t, modifiers) {
-    var k = N.navKey(t, (modifiers & Qt.ControlModifier) !== 0)
+  // navKey runs Ctrl+K, Ctrl+T, /, ? and 1–9; false for any other key.
+  // keyFront calls it before the PanelKeyCatcher, whose j/k would
+  // otherwise take Ctrl+K when it arrives as the letter k.
+  function navKey(key, t, modifiers) {
+    var k = N.navKey(key, t, (modifiers & Qt.ControlModifier) !== 0)
     if (!k) return false
     if (k.action === "finder") finder.show("")
     else if (k.action === "search") searchOverlay.open(searchTeam())
@@ -443,8 +472,8 @@ Item {
     visible: root.opened
     title: "omaslack"
     color: Commons.Color.background
-    implicitWidth: 1100
-    implicitHeight: 720
+    implicitWidth: Style.space(1100)
+    implicitHeight: Style.space(720)
 
     // The compositor closed the window: tell the shell.
     onVisibleChanged: if (!visible && root.opened) root.dismiss()
@@ -463,9 +492,16 @@ Item {
       onDeleteRequested: actions.askDelete()
       onTextKey: function(t, modifiers) { root.textKey(t, modifiers) }
 
+      Item {
+        id: keyFront
+        objectName: "windowKeys"
+        focus: true
+        Keys.onPressed: function(event) { if (root.navKey(event.key, event.text, event.modifiers)) event.accepted = true }
+      }
+
       RowLayout {
         anchors.fill: parent
-        anchors.bottomMargin: statusText.visible ? statusText.height : 0
+        anchors.bottomMargin: statusLine.visible ? statusLine.height : 0
         spacing: 0
 
         WindowSidebar {
@@ -564,16 +600,20 @@ Item {
         }
       }
 
+      // An error in the urgent color with a warning sign; a note in the
+      // text color with an info sign.
       Text {
-        id: statusText
-        visible: root.status !== ""
+        id: statusLine
+        objectName: "statusLine"
+        readonly property bool error: root.status !== ""
+        visible: error || root.info !== ""
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         padding: Style.spacing.md
         textFormat: Text.PlainText
-        text: root.status
-        color: Commons.Color.urgent
+        text: (error ? "󰀦  " + root.status : "󰋽  " + root.info)
+        color: error ? C.readable(Commons.Color.urgent, Commons.Color.background, root.foreground) : root.foreground
         font.family: root.fontFamily
         font.pixelSize: Style.font.bodySmall
         wrapMode: Text.WordWrap

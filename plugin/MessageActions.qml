@@ -4,9 +4,11 @@ import qs.Commons
 import qs.Commons as Commons
 import "lib/actions.js" as A
 import "lib/filecache.js" as Files
+import "lib/nav.js" as N
 
 // The window's message actions (task 4.5), with the TUI's keys: e edits
-// your own selected message in its pane's composer, D (and x, Delete)
+// your own selected message in its pane's composer (people and channels
+// by name, saved back as mentions, as a composed message is), D (and x, Delete)
 // deletes it after an inline y/n, r opens the reaction picker, o opens
 // the message's file (a chooser when it has several), reaction chips and
 // files react to clicks, and ":attach <path> [caption]" sent from a
@@ -46,6 +48,8 @@ Item {
 
   function self() { return window.selfUser(window.team) }
   function say(text) { window.status = text }
+  // inform: a note on what just happened, in the window's status line.
+  function inform(text) { window.inform(text) }
   function failed(what) { return function(err) { root.say(err ? what + ": " + (err.message || err.code) : "") } }
 
   function selected() {
@@ -74,7 +78,19 @@ Item {
     var m = window.currentMessage()
     var why = A.ownMessage(m, self(), "edit")
     say(why)
-    if (why === "") window.paneComposer(window.pane).startEdit(m.ts, A.editText(m.text))
+    if (why === "") window.paneComposer(window.pane).startEdit(m.ts, displayText(m.text))
+  }
+
+  // displayText: a message's text as the composer shows it (lib/nav.js
+  // toDisplay), its mentions added to the window's tokens so the save
+  // sends them back as mentions.
+  function displayText(text) {
+    var team = window.team
+    var shown = N.toDisplay(String(text || ""),
+      function(id) { var n = service.userName(team, id); return n !== id ? n : "" },
+      function(id) { var c = window.conversation(team, id); return c && c.name ? c.name : "" })
+    for (var k in shown.tokens) window.addMentionToken(k, shown.tokens[k])
+    return shown.text
   }
 
   // submit handles what a composer sends when it is not a plain message:
@@ -91,7 +107,7 @@ Item {
     var t = composer.target
     var ts = composer.editTS
     if (text.trim() === "") { say("An edit cannot be empty; to delete the message, press D."); return }
-    service.edit(t.team, t.conv, ts, text.trim(), function(err) {
+    service.edit(t.team, t.conv, ts, N.toWire(text.trim(), window.mentionTokens), function(err) {
       if (err) { root.say("Could not edit: " + (err.message || err.code)); return }
       root.say("")
       if (composer.editTS === ts) composer.cancelEdit()
@@ -113,7 +129,11 @@ Item {
   function deleteConfirmed() {
     var p = pending
     done()
-    if (p) service.remove(p.team, p.conv, p.ts, failed("Could not delete"))
+    if (!p) return
+    service.remove(p.team, p.conv, p.ts, function(err) {
+      if (err) root.say("Could not delete: " + (err.message || err.code))
+      else root.inform("Message deleted.")
+    })
   }
 
   // ---- reactions -------------------------------------------------------------------
@@ -179,7 +199,7 @@ Item {
   function openOne(file) {
     if (!A.can(window.workspace(window.team), "files")) { say("This workspace cannot download files (no files capability)."); return }
     var name = A.fileName(file)
-    say("")
+    inform("Opening " + name + "…")
     Files.path(service, window.team, file.id, function(path) {
       if (path === "") root.say("Could not download " + name + ".")
       else root.opener(A.fileUrl(path))
@@ -194,9 +214,11 @@ Item {
     var params = { team: t.team, conv: t.conv, paths: [attach.path] }
     if (t.threadTS) params.threadTS = t.threadTS
     if (attach.caption !== "") params.caption = attach.caption
-    say("")
+    var name = attach.path.replace(/^.*\//, "")
+    inform("Uploading " + name + "…")
     service.call("files.upload", params, function(err) {
       if (err) { root.say("Could not attach " + attach.path + ": " + (err.message || err.code)); return }
+      root.inform("Uploaded " + name + ".")
       composer.clear()
     })
   }
@@ -227,6 +249,6 @@ Item {
     foreground: root.foreground
     fontFamily: root.fontFamily
     onConfirmed: root.deleteConfirmed()
-    onCanceled: root.done()
+    onCanceled: { root.done(); root.inform("Kept the message.") }
   }
 }

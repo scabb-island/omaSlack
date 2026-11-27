@@ -6,6 +6,7 @@ import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
 import "lib/nav.js" as N
+import "lib/contrast.js" as C
 
 // The compose autocomplete of one Composer, as the TUI's: typing @ offers
 // people (users.search, debounced), # the workspace's channels and : the
@@ -13,7 +14,7 @@ import "lib/nav.js" as N
 // sits over the window (put this in its overlay layer) right above the
 // text cursor. While it shows, it takes the composer's ↑/↓ (Ctrl+P/
 // Ctrl+N), Tab and Enter (pick) and Esc (close; it stays closed on that
-// word) through Composer.keyFilter.
+// word) through a Composer key filter.
 //
 // Picking replaces the word with the suggestion's display text and a
 // space ("@Ana ") and emits tokenPicked(display, wire) for a person or a
@@ -61,15 +62,15 @@ Item {
     anchorPoint = Qt.point(Math.max(0, Math.min(p.x, parent.width - popup.width)), p.y)
   }
 
-  Component.onCompleted: if (composer) composer.keyFilter = root.keyFilter
+  Component.onCompleted: if (composer) composer.addKeyFilter(root.keyFilter)
 
   // Edits and cursor moves refresh the popup; text the composer loads
   // itself (a draft, a cleared field) does not open it, and leaving the
   // field closes it.
   Connections {
     target: root.composer ? root.composer.input : null
-    function onTextChanged() { if (!root.composer._loading) Qt.callLater(root.refresh) }
-    function onCursorPositionChanged() { if (!root.composer._loading) Qt.callLater(root.refresh) }
+    function onTextChanged() { if (!root.composer.loading) Qt.callLater(root.refresh) }
+    function onCursorPositionChanged() { if (!root.composer.loading) Qt.callLater(root.refresh) }
     function onActiveFocusChanged() { if (!root.composer.input.activeFocus) root.reset() }
   }
 
@@ -204,7 +205,7 @@ Item {
         Layout.bottomMargin: Style.spacing.xs
         textFormat: Text.PlainText
         text: (root.completion.trig ? N.POPUP_TITLES[root.completion.trig.sign] : "") + " · Tab picks"
-        color: Qt.darker(root.foreground, 1.4)
+        color: C.muted(root.foreground, Commons.Color.popups.background)
         font.family: root.fontFamily
         font.pixelSize: Style.font.caption
       }

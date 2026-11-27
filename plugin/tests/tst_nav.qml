@@ -266,16 +266,18 @@ TestCase {
   // ---- window keys ---------------------------------------------------------------
 
   function test_nav_keys() {
-    compare(N.navKey("\u000b", true), { action: "finder" }) // Ctrl+K
-    compare(N.navKey("\u0014", true), { action: "finder" }) // Ctrl+T
-    compare(N.navKey("k", true), { action: "finder" })
-    compare(N.navKey("/", false), { action: "search" })
-    compare(N.navKey("?", false), { action: "help" })
-    compare(N.navKey("1", false), { action: "workspace", index: 0 })
-    compare(N.navKey("9", false), { action: "workspace", index: 8 })
-    compare(N.navKey("0", false), null)
-    compare(N.navKey("1", true), null)
-    compare(N.navKey("x", false), null)
+    compare(N.navKey(Qt.Key_K, "\u000b", true), { action: "finder" }) // Ctrl+K as a control character
+    compare(N.navKey(Qt.Key_K, "k", true), { action: "finder" }) // and as the letter
+    compare(N.navKey(Qt.Key_T, "\u0014", true), { action: "finder" }) // Ctrl+T
+    compare(N.navKey(Qt.Key_T, "t", true), { action: "finder" })
+    compare(N.navKey(Qt.Key_K, "k", false), null)
+    compare(N.navKey(Qt.Key_Slash, "/", false), { action: "search" })
+    compare(N.navKey(Qt.Key_Question, "?", false), { action: "help" })
+    compare(N.navKey(Qt.Key_1, "1", false), { action: "workspace", index: 0 })
+    compare(N.navKey(Qt.Key_9, "9", false), { action: "workspace", index: 8 })
+    compare(N.navKey(Qt.Key_0, "0", false), null)
+    compare(N.navKey(Qt.Key_1, "1", true), null)
+    compare(N.navKey(Qt.Key_X, "x", false), null)
   }
 
   readonly property var rows: [

@@ -20,7 +20,12 @@ import "omaslack/tests/smoke" as Smokes
 ShellRoot {
   T.FakeService { id: fake }
 
-  Component.onCompleted: {
+  // Smokes start once the config has loaded: quickshell creates the
+  // windows of objects made after that at once, so their keyboard focus
+  // and key events are real (tests/smoke/KeyDriver.qml).
+  Component.onCompleted: Qt.callLater(runAll)
+
+  function runAll() {
     var names = String(Quickshell.env("OMASLACK_SMOKE") || "").split(",").filter(function(n) { return n !== "" })
     for (var i = 0; i < names.length; i++) {
       var name = names[i]

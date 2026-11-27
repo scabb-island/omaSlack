@@ -51,6 +51,7 @@ ActionCard {
       id: row
       required property var modelData
       required property int index
+      objectName: "fileRow" + index
       width: parent ? parent.width : 0
       implicitHeight: Style.spacing.popupRowHeight
       hasCursor: index === root.currentIndex

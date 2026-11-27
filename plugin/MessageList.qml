@@ -181,13 +181,13 @@ ListView {
     toEnd()
   }
 
-  // moveCursor by dy rows; from no cursor, up selects the newest message.
-  // Up past the oldest loads older history.
+  // moveCursor by dy rows; from no cursor (the view follows the newest
+  // message), either way selects the newest. Up past the oldest loads
+  // older history.
   function moveCursor(dy) {
     if (count === 0) return
     if (currentIndex < 0) {
-      if (dy < 0) currentIndex = count - 1
-      else return
+      currentIndex = count - 1
     } else if (dy < 0 && currentIndex === 0) {
       loadOlder()
       return

@@ -78,7 +78,7 @@
 - [x] 4.3 `BarWidget.qml`: icon, DM and mention badges, connection state and tooltip
 - [x] 4.4 `Panel.qml`: unread list with quick reply
 - [x] 4.5 `Window.qml` (`FloatingWindow`): sidebar, messages, threads, compose, reactions and attachments
-- [ ] 4.6 Full keyboard navigation and styles only from `Style`
+- [x] 4.6 Full keyboard navigation and styles only from `Style`
 - [x] 4.7 Manifest `schema[]` for settings
 - [x] 4.8 `qmltestrunner` tests for the models
 - [x] 4.9 Daemon-side rich text: mrkdwn parsed once in a shared `internal/mrkdwn` package (also used by the TUI renderer) and rendered to the HTML subset Qt's `Text.RichText` draws, in `wire.Message.html` for history, replies and message events

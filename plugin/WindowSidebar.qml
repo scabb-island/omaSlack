@@ -6,6 +6,7 @@ import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
 import "lib/window.js" as W
+import "lib/contrast.js" as C
 
 // The window's sidebar: each workspace with its Unread, Channels and
 // Direct messages sections (rows of W.sidebarRows), unread conversations
@@ -31,7 +32,11 @@ ListView {
   signal pointed(int index)
 
   property var rowByKey: ({})
-  readonly property color dim: Qt.darker(foreground, 1.4)
+  // Secondary text, and the badge's fill and text, readable on the window's
+  // background on light and dark themes (lib/contrast.js).
+  readonly property color dim: C.muted(root.foreground, Commons.Color.background)
+  readonly property color urgentText: C.readable(Commons.Color.urgent, Commons.Color.background, root.foreground)
+  readonly property color badgeText: C.textOn(Commons.Color.accent, Commons.Color.background, root.foreground)
 
   model: KeyedModel { id: keyed }
   clip: true
@@ -88,7 +93,7 @@ ListView {
           visible: text !== ""
           textFormat: Text.PlainText
           text: item.row.state && item.row.state !== "connected" ? item.row.state.replace("_", " ") : ""
-          color: item.row.state === "auth_expired" ? Commons.Color.urgent : root.dim
+          color: item.row.state === "auth_expired" ? root.urgentText : root.dim
           font.family: root.fontFamily
           font.pixelSize: Style.font.caption
         }
@@ -109,6 +114,7 @@ ListView {
     // A conversation.
     CursorSurface {
       id: convRow
+      objectName: "convRow"
       visible: item.row.type === "conv"
       width: parent.width
       implicitHeight: convName.implicitHeight + Style.spacing.xs * 2
@@ -157,7 +163,7 @@ ListView {
           anchors.centerIn: parent
           textFormat: Text.PlainText
           text: item.row.badge || ""
-          color: Commons.Color.background
+          color: root.badgeText
           font.family: root.fontFamily
           font.pixelSize: Style.font.caption
           font.bold: true

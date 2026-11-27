@@ -6,6 +6,7 @@ import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
 import "lib/nav.js" as N
+import "lib/contrast.js" as C
 
 // The window's key help (?): every key, in the sections of lib/nav.js
 // HELP, laid out in columns. Any key or a click closes it, as in the TUI.
@@ -107,7 +108,7 @@ FocusScope {
                   Layout.preferredWidth: Style.space(90)
                   textFormat: Text.PlainText
                   text: keyRow.modelData[0]
-                  color: Commons.Color.accent
+                  color: C.readable(Commons.Color.accent, Commons.Color.popups.background, root.foreground)
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.body
                   font.bold: true
@@ -130,7 +131,7 @@ FocusScope {
       Text {
         textFormat: Text.PlainText
         text: "Press any key to close."
-        color: Qt.darker(root.foreground, 1.4)
+        color: C.muted(root.foreground, Commons.Color.popups.background)
         font.family: root.fontFamily
         font.pixelSize: Style.font.caption
       }

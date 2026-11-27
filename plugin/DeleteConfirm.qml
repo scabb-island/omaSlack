@@ -4,6 +4,7 @@ import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
 import "lib/actions.js" as A
+import "lib/contrast.js" as C
 
 // The inline "Delete this message? y/n" bar at the bottom of the window,
 // as the TUI asks in its status line: y (or the Delete button) confirms,
@@ -69,7 +70,7 @@ FocusScope {
 
       Button {
         text: "Delete"
-        foreground: Commons.Color.urgent
+        foreground: C.readable(Commons.Color.urgent, Commons.Color.popups.background, root.foreground)
         bordered: true
         fontFamily: root.fontFamily
         onClicked: root.answer(true)
