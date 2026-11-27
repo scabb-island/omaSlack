@@ -15,7 +15,7 @@ var GLYPH_DND = String.fromCodePoint(0xF04B2)          // md-sleep
 
 var START_HINT = "Start it with: systemctl --user start omaslack\n"
   + "or run omaslack daemon in a terminal."
-var SIGN_IN_HINT = "Sign in again with: omaslack auth add"
+var SIGN_IN_HINT = "Renew it from the window, or sign in again with: omaslack auth add"
 
 // The state glyph and tooltip header of each status. dimmed: the daemon
 // does not answer; alert: the user has to act; hideable: hideWhenEmpty may
