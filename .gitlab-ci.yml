@@ -18,7 +18,7 @@ workflow:
     - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
 
 default:
   interruptible: true
@@ -70,14 +70,32 @@ check:
     - golangci-lint run ./...
     - go test ./...
 
+# Releases: GitLab release with signed checksums, then the AUR package
+# (packaging/release.sh). Only on vX.Y.Z tags. The AUR key (AUR_SSH_KEY, a
+# protected and masked variable, base64 on one line) is readable only by
+# protected tags, so branch and MR pipelines never see it, and they never
+# run this job.
 release:
   stage: release
   image:
-    name: goreleaser/goreleaser:v2.20.2
+    name: goreleaser/goreleaser:v2.20.2@sha256:1c96a03548de3545dc7030310ed03ebe22b4f0e80d93974c108de795bd129fa8
     entrypoint: [""]
   rules:
-    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+  # A release half done is worse than a slow one.
+  interruptible: false
+  timeout: 20m
   variables:
     GIT_DEPTH: "0"
+    # The image's Go is 1.27; build and test with the Go 1.26 that mise.toml
+    # and the check job use (go fetches that toolchain). PNG output, and so
+    # the TUI's golden images, differ between the two.
+    GOTOOLCHAIN: go1.26.11
+    COSIGN_VERSION: "3.1.4"
+    COSIGN_SHA256: "424e2c97d0b45fd7a6b608a87f090f35633f4c23ece5f092d48bba11aaf4bbfa"
+  # OIDC token for cosign keyless signing (cosign reads SIGSTORE_ID_TOKEN).
+  id_tokens:
+    SIGSTORE_ID_TOKEN:
+      aud: sigstore
   script:
-    - goreleaser release --clean
+    - packaging/release.sh
