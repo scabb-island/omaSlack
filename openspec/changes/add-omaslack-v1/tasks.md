@@ -59,7 +59,8 @@
 ## M3 — TUI MVP
 - [x] 3.1 Layout: workspace rail, sidebar, messages, thread and compose
 - [x] 3.2 NORMAL, INSERT and COMMAND modes, with slk-compatible keys
-- [ ] 3.3 Conversation finder, search and reaction picker
+- [x] 3.3 Conversation finder, search and reaction picker
+  - Ctrl+k/Ctrl+t: fuzzy finder over the conversations of every workspace (`rankConversations`: match kind first, then unread/mentions, then the newest). It opens existing conversations only; opening new DMs and joining channels needs daemon methods v1 does not have. `/` or `:search <query>` runs `search.messages`; a hit opens its conversation with the message selected, asking `messages.history{before: ts + 1µs}` until the hit arrives (the daemon loads one older page per call, so up to 10 calls); a `messages.around`-style method would make that one call. `r` or `:react <name>` toggles a reaction; it removes only once `Directory.Self` is known, until then it always adds. Recent emoji are remembered per session, not across runs.
 - [x] 3.4 mrkdwn rendering, mentions, emoji and day separators
   - Notes for 3.1 and 3.5: the app's `render.Directory` must resolve bot (`B…`) IDs in `UserName` too, and `Emoji` only for custom emoji (standard ones come from `render.StandardEmoji`). Image file rows carry an `omaslack-image:<id>` OSC 8 link on their `[image]` tag; `render.ImageFileID(line)` finds them so 3.5 can draw the image below. `wire.Message` has no reply count, so thread roots show "↳ thread", not "N replies". `Messages` takes about 20 ms for 1000 messages, so render on changes, not on every frame.
 - [x] 3.5 Images with kitty, sixel or half-block
