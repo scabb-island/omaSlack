@@ -250,4 +250,41 @@ TestCase {
       verify(v.hidden, v.status)
     }
   }
+
+  // ---- layout ---------------------------------------------------------------
+
+  // A horizontal bar slot as the shell sizes it at the default scale: a
+  // 21 px slot, 26 px tall, a 12 px glyph in its middle, 1 px gaps.
+  function place(badges) {
+    return Badges.layout({ slotWidth: 21, height: 26, iconSize: 12, gap: 1, badges: badges })
+  }
+
+  function test_layout_without_badges_is_the_bare_slot() {
+    var l = place([])
+    compare(l.width, 21)
+    compare(l.ys, [])
+  }
+
+  function test_layout_puts_badges_beside_the_glyph_not_over_it() {
+    var l = place([{ width: 12, height: 12 }])
+    // The glyph ends at (21 + 12) / 2 = 16.5; the badge starts a gap later.
+    verify(l.x >= 16.5 + 1, "badge at " + l.x)
+    compare(l.width, l.x + 12)
+  }
+
+  function test_layout_centers_a_single_badge_on_the_bar() {
+    compare(place([{ width: 12, height: 12 }]).ys, [7])
+  }
+
+  function test_layout_stacks_two_badges_centered_as_a_group() {
+    var l = place([{ width: 12, height: 12 }, { width: 17, height: 12 }])
+    // 12 + 1 + 12 = 25 tall, so the pair starts half a pixel down.
+    compare(l.ys, [1, 14])
+    compare(l.width, l.x + 17)
+  }
+
+  function test_layout_never_narrows_the_slot() {
+    var l = Badges.layout({ slotWidth: 40, height: 26, iconSize: 12, gap: 1, badges: [{ width: 4, height: 12 }] })
+    compare(l.width, 40)
+  }
 }

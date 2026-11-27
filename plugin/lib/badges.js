@@ -123,6 +123,30 @@ function badgeCounts(input) {
   return { main: direct, channel: input.showChannelBadge ? rest : 0 }
 }
 
+// ---- layout ---------------------------------------------------------------
+
+// layout places the shown badges beside the glyph, never over it: they
+// start a gap after the glyph's right edge and stack top to bottom,
+// centered on the bar as a group, so a lone badge sits level with the
+// glyph. The slot grows only by the widest badge.
+//
+// input: { slotWidth, height, iconSize, gap, badges: [{ width, height }] }
+// (the button's width and height, the glyph's size, the spacing, and the
+// badges that show, top first)
+// returns: { width, x, ys } (the icon's width, the badges' left edge and
+// each badge's top)
+function layout(input) {
+  var badges = input.badges || []
+  var x = Math.round((input.slotWidth + input.iconSize) / 2 + input.gap)
+  if (badges.length === 0) return { width: input.slotWidth, x: x, ys: [] }
+  var total = input.gap * (badges.length - 1)
+  var widest = 0
+  badges.forEach(function(b) { total += b.height; widest = Math.max(widest, b.width) })
+  var y = Math.round((input.height - total) / 2)
+  var ys = badges.map(function(b) { var top = y; y += b.height + input.gap; return top })
+  return { width: Math.max(input.slotWidth, x + widest), x: x, ys: ys }
+}
+
 // ---- tooltip --------------------------------------------------------------
 
 function daemonTooltip(status, input) {
