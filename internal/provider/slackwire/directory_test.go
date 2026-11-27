@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -90,6 +91,26 @@ func TestUnknownUsersAreLeftOutAndNotAskedForAgain(t *testing.T) {
 	}
 	if asked := usersInfoCalls(s); len(asked) != 1 {
 		t.Errorf("users.info asked for %v, want W0404 once", asked)
+	}
+}
+
+func TestALookupAnsweringSomeoneElseIsLeftOut(t *testing.T) {
+	for name, body := range map[string]string{
+		"another user":   `{"ok":true,"user":{"id":"W0008","name":"other"}}`,
+		"a broken entry": `{"ok":true,"user":{"id":"nope","name":"broken"}}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			api, s, logs := fakeSlack(t, withUsersInfo(body))
+			for range 2 {
+				got, err := api.Users(context.Background(), userIDs(t, "W0009"))
+				if err != nil || len(got) != 0 {
+					t.Fatalf("Users() = %+v, %v; want nobody", got, err)
+				}
+			}
+			if asked := usersInfoCalls(s); len(asked) != 1 || !strings.Contains(logs.String(), "W0009") {
+				t.Errorf("users.info asked for %v, logs %q; want W0009 once, logged", asked, logs)
+			}
+		})
 	}
 }
 
