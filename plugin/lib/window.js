@@ -32,7 +32,7 @@ function byAttention(a, b) {
   return byName(a, b)
 }
 
-function convRow(team, c, nameOf) {
+function convRow(team, c, nameOf, presence) {
   return {
     type: "conv",
     key: team + "/" + c.id,
@@ -44,14 +44,16 @@ function convRow(team, c, nameOf) {
     unread: !!c.unread || c.mentions > 0,
     mentions: c.mentions || 0,
     latest: c.latest || "",
-    badge: QP.badge({ mentions: c.mentions || 0 })
+    badge: QP.badge({ mentions: c.mentions || 0 }),
+    // A DM's other person: "active", "away", or "" while unknown.
+    presence: (c.kind === "im" && c.user && presence[c.user]) || ""
   }
 }
 
 // workspaceRows: the workspace header, then its non-empty sections.
-function workspaceRows(w, convs, counts, nameOf) {
+function workspaceRows(w, convs, counts, nameOf, presence) {
   var buckets = [[], [], []]
-  convs.forEach(function(c) { buckets[sectionOf(c)].push(convRow(w.team, c, nameOf)) })
+  convs.forEach(function(c) { buckets[sectionOf(c)].push(convRow(w.team, c, nameOf, presence || {})) })
   buckets[0].sort(byAttention)
   buckets[1].sort(byName)
   buckets[2].sort(byName)
@@ -72,15 +74,17 @@ function workspaceRows(w, convs, counts, nameOf) {
 // the daemon's order, then any other team with conversations) with its
 // Unread, Channels and Direct messages sections. Rows have type
 // "workspace", "section" or "conv"; only "conv" rows take the cursor.
-// nameOf(team, conv) is service.conversationName.
-function sidebarRows(workspaces, conversations, summary, nameOf) {
+// nameOf(team, conv) is service.conversationName; presence is
+// service.presence (optional), for the dot of DM rows.
+function sidebarRows(workspaces, conversations, summary, nameOf, presence) {
   var list = (workspaces || []).slice()
   var convs = conversations || {}
   var known = list.map(function(w) { return w.team })
   for (var t in convs) if (known.indexOf(t) < 0) list.push({ team: t, name: t })
   var counts = (summary && summary.workspaces) || {}
   var out = []
-  list.forEach(function(w) { out = out.concat(workspaceRows(w, convs[w.team] || [], counts[w.team], nameOf)) })
+  var who = presence || {}
+  list.forEach(function(w) { out = out.concat(workspaceRows(w, convs[w.team] || [], counts[w.team], nameOf, who[w.team])) })
   return out
 }
 
