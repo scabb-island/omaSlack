@@ -39,7 +39,9 @@ import (
 // dnd_updated_user (other people's schedules, with no snooze in them), thread_marked
 // (the domain has no per-thread read marker yet), reconnect_url (the sync
 // engine reconnects with a fresh URL), goodbye (the server closes the
-// socket right after it, which ends the stream), and every other frame.
+// socket right after it, which ends the stream), pong (Slack's answer to
+// the provider's keepalive ping: it only restarts the read deadline, like
+// any frame), and every other frame.
 
 // frame holds the fields of every frame mapped here: slackwire's, plus
 // the ones only the web client's socket sends.
