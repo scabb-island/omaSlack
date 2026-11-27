@@ -14,6 +14,9 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 		m.help = false
 		return nil
 	}
+	if m.media.chooser != nil {
+		return m.chooserKey(k)
+	}
 	switch m.mode {
 	case insertMode:
 		return m.insertKey(k)
@@ -51,6 +54,7 @@ func (m *Model) normalActions() []action {
 		{k.Back, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.back() }},
 		{k.Help, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { m.help = true; return nil }},
 		{k.Quit, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.quit() }},
+		{k.OpenFile, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.openFile() }},
 	}
 }
 
@@ -226,6 +230,8 @@ func (m *Model) runCommand(line string) tea.Cmd {
 		return nil
 	case "open":
 		return m.openByName(strings.TrimSpace(arg))
+	case "attach":
+		return m.attach(arg)
 	}
 	m.setError("Not a command: " + name)
 	return nil

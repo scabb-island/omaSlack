@@ -31,6 +31,7 @@ type Options struct {
 	Theme  theme.Theme
 	Themes <-chan theme.Theme // reloaded themes (theme.Watch); nil for none
 	Images image.Protocol
+	Opener Opener // opens downloaded files; nil means xdg-open
 
 	Now func() time.Time // the clock; nil means time.Now
 	Loc *time.Location   // time zone for timestamps; nil means local

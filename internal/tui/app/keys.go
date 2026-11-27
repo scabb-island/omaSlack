@@ -14,6 +14,7 @@ type Keys struct {
 	Open, Workspace          key.Binding // NORMAL: open a conversation or thread; 1–9
 	Sidebar, Narrower, Wider key.Binding // NORMAL: show, hide and resize the sidebar
 	Send, Newline            key.Binding // INSERT
+	OpenFile, Images, Attach key.Binding // files: o and I in NORMAL, Ctrl+o in INSERT
 }
 
 // DefaultKeys is the key map omaslack ships with.
@@ -43,6 +44,9 @@ func DefaultKeys() Keys {
 		Quit:      b([]string{"q", "ctrl+c"}, "q", "quit"),
 		Send:      b([]string{"enter"}, "Enter", "send"),
 		Newline:   b([]string{"alt+enter", "ctrl+j"}, "A-Enter/C-j", "new line"),
+		OpenFile:  b([]string{"o"}, "o", "open the message's file (xdg-open)"),
+		Images:    b([]string{"I"}, "I", "show or hide inline images"),
+		Attach:    b([]string{"ctrl+o"}, "C-o", "attach a file (:attach)"),
 	}
 }
 
@@ -60,6 +64,7 @@ func (k Keys) groups() []helpGroup {
 		{"Conversations", []key.Binding{k.Open, k.Workspace, k.Finder, k.Sidebar, k.Narrower, k.Wider}},
 		{"Modes", []key.Binding{k.Insert, k.Command, k.Back, k.Help, k.Quit}},
 		{"Compose (INSERT)", []key.Binding{k.Send, k.Newline, k.Back}},
+		{"Files", []key.Binding{k.OpenFile, k.Images, k.Attach}},
 	}
 }
 
@@ -68,4 +73,5 @@ var commandHelp = [][2]string{
 	{":q", "quit"},
 	{":open <name>", "open a conversation by name (#general, @ana)"},
 	{":help", "this help"},
+	{":attach <path>", "send a file here; any text after it is the caption"},
 }

@@ -82,6 +82,8 @@ type Model struct {
 	without    map[string]bool       // optional methods the daemon cannot do
 	lastTyping time.Time
 	actions    []action
+
+	media media // files and inline images (media.go)
 }
 
 // action is what a NORMAL mode key does.
@@ -99,6 +101,7 @@ func newModel(o Options) *Model {
 		now: o.Now, loc: o.Loc, sidebarWidth: defaultSidebarWidth,
 		sel: map[string]string{}, open: map[string]string{},
 		marked: map[convKey]string{}, asked: map[userKey]time.Time{}, without: map[string]bool{},
+		media: newMedia(o),
 	}
 	if m.now == nil {
 		m.now = time.Now

@@ -52,6 +52,9 @@ func (m *Model) screen() string {
 	if m.help {
 		body = m.helpView(h)
 	}
+	if m.media.chooser != nil {
+		body = m.chooserView(h)
+	}
 	return body + "\n" + m.statusBar()
 }
 
@@ -395,12 +398,10 @@ func (m *Model) helpView(h int) string {
 	}
 	lines = append(lines, lipgloss.NewStyle().Bold(true).Render("Commands (COMMAND)"))
 	for _, c := range commandHelp {
-		lines = append(lines, "  "+key.Render(fmt.Sprintf("%-14s", c[0]))+c[1])
+		lines = append(lines, "  "+key.Render(fmt.Sprintf("%-16s", c[0]))+c[1])
 	}
 	lines = append(lines, "", m.muted("Press any key to close."))
-	w := min(m.width, 64)
-	box := m.box("Help", lines, w, min(h, len(lines)+2), true)
-	return lipgloss.Place(m.width, h, lipgloss.Center, lipgloss.Center, box)
+	return lipgloss.Place(m.width, h, lipgloss.Center, lipgloss.Center, m.helpBox(lines, h))
 }
 
 // applyTheme styles compose from the theme; the panes read m.theme as
