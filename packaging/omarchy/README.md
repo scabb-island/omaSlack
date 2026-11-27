@@ -2,8 +2,8 @@
 
 How omaslack fits into Omarchy: the TUI theme, the launcher entry, the
 shortcuts, the window rule, and living next to other Slack clients.
-`omaslack doctor` checks most of it and prints the command that fixes
-each problem.
+`omaslack setup` installs the per-user files, and `omaslack doctor`
+checks most of it and prints the command that fixes each problem.
 
 | File | Installed to | What it does |
 | --- | --- | --- |
@@ -12,11 +12,54 @@ each problem.
 | `hypr/omaslack.lua` | `~/.config/hypr/omaslack.lua`, loaded from `hyprland.lua` | Floats and centers the plugin's window |
 | `../desktop/omaslack.desktop` | `/usr/share/applications/omaslack.desktop` | Launcher entry that opens or focuses the TUI |
 
-The package ships the theme files under `/usr/share/omaslack/` (the
-hook as `theme-set.hook`), and `omaslack setup` (task 6.1a) copies them
-into the user's home, because a package must not write to `$HOME`.
-Until then they can be copied by hand; `omaslack doctor` prints the
-exact commands.
+The package ships these files under `/usr/share/omaslack/` (the hook
+as `theme-set.hook`, the rule as `hypr/omaslack.lua`) and never writes
+to `$HOME`. `omaslack setup` does the per-user part.
+
+## Setup
+
+Run it once per user, after installing the package:
+
+```bash
+omaslack setup                 # theme template, hook, theme render, user service
+omaslack setup --window-rule   # the same, plus the Hyprland window rule
+omaslack setup --dry-run       # print what it would do, change nothing
+```
+
+It copies the template and the hook to the paths in the table above,
+renders the current theme once with `omarchy-theme-refresh` (only when
+the template changed or was never rendered), and runs
+`systemctl --user enable --now omaslack`. Each step prints `OK`, `WARN`
+or `FAIL`, as `omaslack doctor` does, and the exit code is 1 only when
+a step failed.
+
+- **Your changes are kept.** Setup records the checksum of every file it
+  writes in `$XDG_STATE_HOME/omaslack/setup.json` (by default
+  `~/.local/state/omaslack/setup.json`). A file it installed and you did
+  not touch is updated to the packaged version; a file you changed is
+  left alone, and setup prints a `diff -u` command to compare it with
+  the new version.
+- **Running it again changes nothing**: every step reports "already in
+  place".
+- **`--window-rule`** copies the rule to `~/.config/hypr/omaslack.lua`.
+  Setup never edits your Hyprland config, so it prints the line to add
+  to `~/.config/hypr/hyprland.lua` (see [Window rule](#window-rule)) and
+  reports `OK` once that file loads it.
+- **`--remove`** disables and stops the service and removes the template,
+  hook and window rule if you did not change them (changed ones are kept
+  and listed). It keeps your credentials and data, and prints how to
+  remove them: `omaslack auth remove <team-id>` for each workspace in
+  `omaslack auth list`, and `rm -rf ~/.local/share/omaslack` (or
+  `$XDG_DATA_HOME/omaslack`). Run it before `pacman -Rns omaslack-bin`;
+  after it, the files setup installed are still recognized from the
+  manifest.
+- **`--from <dir>`** takes the files from another directory instead of
+  `/usr/share/omaslack`. A checkout's `packaging/` directory works too,
+  so a development build can be set up without the package:
+  `go run ./cmd/omaslack setup --from packaging --dry-run`.
+
+`omaslack doctor` suggests `omaslack setup` when the template or the
+hook is missing.
 
 ## Theme
 
@@ -98,16 +141,22 @@ o.window({ class = "^org\\.quickshell$", title = "^omaslack$" }, { float = true,
 
 It is written for Hyprland's Lua config (Hyprland 0.56 and later, as
 Omarchy ships it) and uses Omarchy's `o.window` helper, so floating
-workspaces know the window floats on its own. To use it, copy it to
-`~/.config/hypr/omaslack.lua` and add this line to
+workspaces know the window floats on its own.
+
+`omaslack setup --window-rule` copies it to `~/.config/hypr/omaslack.lua`.
+Omarchy's Hyprland bootstrap (`$OMARCHY_PATH/default/hypr/bootstrap.lua`)
+puts `~/.config/?.lua` on Lua's module path, so `hyprland.lua` loads that
+file as the module `hypr.omaslack`. Add this line to
 `~/.config/hypr/hyprland.lua`, after `require("default.hypr.omarchy")`:
 
 ```lua
-require("hypr.omaslack")
+if package.searchpath("hypr.omaslack", package.path) then require("hypr.omaslack") end
 ```
 
-Or paste the `o.window(...)` line itself at the end of `hyprland.lua`.
-`omaslack setup` (task 6.1a) will install it.
+The guard keeps the config loading if the rule is removed later
+(`omaslack setup --remove`); a plain `require("hypr.omaslack")` works
+too while the file exists. Or paste the `o.window(...)` line itself at
+the end of `hyprland.lua` and skip the copy.
 
 ## Coexistence with other Slack clients
 

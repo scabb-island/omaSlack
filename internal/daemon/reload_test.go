@@ -103,3 +103,20 @@ func TestAWorkspaceThatCannotRestartIsUnlisted(t *testing.T) {
 	h.reloadNow()
 	eventually(t, "T0ACME unlisted", func() bool { return len(listTeams(t, c)) == 0 })
 }
+
+// TestWorkspacesReloadMethodTriggersAReload checks that the RPC method does
+// the same as a SIGHUP, so auth add/refresh take effect without systemd.
+func TestWorkspacesReloadMethodTriggersAReload(t *testing.T) {
+	h := newHarness(t)
+	h.addTeam("T0ACME")
+	h.start()
+	c := h.dial()
+
+	h.addTeam("T0NEW")
+	if ack := call[wire.ReloadAck](t, c, "workspaces.reload", nil); !ack.Reloading {
+		t.Fatalf("workspaces.reload ack = %+v", ack)
+	}
+	eventually(t, "T0NEW listed after workspaces.reload", func() bool {
+		return slices.Equal(listTeams(t, c), []string{"T0ACME", "T0NEW"})
+	})
+}

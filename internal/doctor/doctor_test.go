@@ -362,9 +362,9 @@ func TestTheme(t *testing.T) {
 		detail, fix string
 	}{
 		"missing template": {check: "theme template", path: paths.Template, status: Warn, detail: "missing",
-			fix: "install -Dm644 /usr/share/omaslack/omaslack.toml.tpl " + paths.Template},
+			fix: "omaslack setup"},
 		"missing hook": {check: "theme hook", path: paths.Hook, status: Warn, detail: "missing",
-			fix: "install -Dm755 /usr/share/omaslack/theme-set.hook " + paths.Hook},
+			fix: "omaslack setup"},
 		"hook not executable": {check: "theme hook", path: paths.Hook, file: &File{Mode: 0o644, UID: me},
 			status: Warn, detail: "not executable", fix: "chmod +x " + paths.Hook},
 		"not rendered": {check: "theme rendered", path: paths.Rendered, status: Warn,

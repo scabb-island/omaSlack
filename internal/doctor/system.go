@@ -36,7 +36,7 @@ func SystemProbes(openKeyring func(context.Context) (keyring.ClosableStore, erro
 		Paths:          paths,
 		UID:            os.Getuid(),
 		Hello:          func(ctx context.Context) (Hello, error) { return dialHello(ctx, paths.Socket) },
-		Service:        func(ctx context.Context) (Unit, error) { return service(ctx, output) },
+		Service:        func(ctx context.Context) (Unit, error) { return ReadService(ctx, output) },
 		Stat:           stat,
 		Keyring:        openKeyring,
 		SessionSources: auth.SignedInSources,
@@ -78,7 +78,9 @@ func parseHello(raw []byte) (Hello, error) {
 	return h, nil
 }
 
-func service(ctx context.Context, run Output) (Unit, error) {
+// ReadService reads omaslack.service's state with systemctl --user show, run
+// through run.
+func ReadService(ctx context.Context, run Output) (Unit, error) {
 	out, err := run(ctx, "systemctl", "--user", "show", "omaslack", "--property=LoadState,ActiveState,UnitFileState")
 	if err != nil {
 		return Unit{}, err
