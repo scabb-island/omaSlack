@@ -16,6 +16,6 @@
 - [x] 3.2 `doctor`: tests
 
 ## Close-out
-- [ ] 4.1 Live test against Scabb Island from the user's Brave profile; confirm `auth test`/daemon connect and nothing is marked read
-- [ ] 4.2 `docs`/`packaging/omarchy/README.md`: note browser as a session source; remove the throwaway `spikes/browser-session`
-- [ ] 4.3 `make local` green (check, lint, qml, OpenSpec validate --strict)
+- [x] 4.1 Live test against Scabb Island from the user's Brave profile; confirm `auth test`/daemon connect and nothing is marked read
+- [x] 4.2 `docs`/`packaging/omarchy/README.md`: note browser as a session source; remove the throwaway `spikes/browser-session`
+- [x] 4.3 `make local` green (check, lint, qml, OpenSpec validate --strict)
