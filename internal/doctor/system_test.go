@@ -31,11 +31,11 @@ const showUnit = "systemctl --user show omaslack --property=LoadState,ActiveStat
 
 func TestServiceReadsSystemctlShow(t *testing.T) {
 	run := fakeOutput(map[string]string{showUnit: "LoadState=loaded\nActiveState=active\nUnitFileState=enabled\nOther=x\n"}, nil)
-	u, err := service(context.Background(), run)
+	u, err := ReadService(context.Background(), run)
 	if want := (Unit{Load: "loaded", Active: "active", UnitFile: "enabled"}); err != nil || u != want {
 		t.Fatalf("service = %+v, %v; want %+v", u, err, want)
 	}
-	_, err = service(context.Background(), fakeOutput(nil, map[string]error{showUnit: errors.New("no bus")}))
+	_, err = ReadService(context.Background(), fakeOutput(nil, map[string]error{showUnit: errors.New("no bus")}))
 	if err == nil {
 		t.Fatal("a failing systemctl: want an error")
 	}

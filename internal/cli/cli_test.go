@@ -36,7 +36,7 @@ func TestHelpGoesToStdout(t *testing.T) {
 
 func TestUsageListsEverySubcommand(t *testing.T) {
 	_, out, _ := run("help")
-	for _, name := range []string{"auth", "ctl", "daemon", "doctor", "tui", "version"} {
+	for _, name := range []string{"auth", "ctl", "daemon", "doctor", "setup", "tui", "version"} {
 		if !strings.Contains(out, "  "+name+" ") {
 			t.Errorf("usage does not list %q:\n%s", name, out)
 		}

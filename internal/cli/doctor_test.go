@@ -64,7 +64,7 @@ func TestDoctorWarningsDoNotFail(t *testing.T) {
 	// Spec omarchy-integration, "Missing hook": a warning with the
 	// command that reinstalls it.
 	wantIn(t, "stdout", out, "WARN  theme hook", "/home/me/.config/omarchy/hooks/theme-set.d/omaslack is missing",
-		"fix: install -Dm755 /usr/share/omaslack/theme-set.hook", "OK    daemon", "WARN  credentials")
+		"fix: omaslack setup", "OK    daemon", "WARN  credentials")
 }
 
 func TestDoctorFailsWhenACheckFails(t *testing.T) {
