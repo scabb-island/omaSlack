@@ -11,7 +11,7 @@ TestCase {
   FakeService { id: fake }
 
   readonly property var properties: [
-    "pluginId", "socketPath", "connectionState", "daemonAvailable", "connectionError",
+    "pluginId", "socketPath", "shell", "connectionState", "daemonAvailable", "connectionError",
     "workspaces", "summary", "conversations", "dnd", "messagesRevision"
   ]
   readonly property var functions: [
@@ -24,7 +24,7 @@ TestCase {
 
   function test_properties() {
     for (var i = 0; i < properties.length; i++)
-      verify(fake[properties[i]] !== undefined, properties[i])
+      verify(properties[i] in fake, properties[i])
   }
 
   function test_functions() {
