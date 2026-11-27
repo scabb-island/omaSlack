@@ -67,7 +67,7 @@ func (o *opened) open(path string) error {
 }
 
 // openGeneral opens #general with a fake opener.
-func openGeneral(t *testing.T, f *client.Fake) (*harness, *opened) {
+func openGeneralWithFiles(t *testing.T, f *client.Fake) (*harness, *opened) {
 	t.Helper()
 	h := newHarness(t, f, 120, 40)
 	o := &opened{}
@@ -79,7 +79,7 @@ func openGeneral(t *testing.T, f *client.Fake) (*harness, *opened) {
 }
 
 func TestOpenFileFetchesItAndOpensTheLocalPath(t *testing.T) {
-	h, o := openGeneral(t, filesDaemon(t, []wire.File{report()}, nil))
+	h, o := openGeneralWithFiles(t, filesDaemon(t, []wire.File{report()}, nil))
 	h.keys("o")
 	if p := h.lastCall("files.fetch"); p["team"] != "T1" || p["fileId"] != "F1" {
 		t.Fatalf("files.fetch %v", p)
@@ -95,7 +95,7 @@ func TestOpenFileFetchesItAndOpensTheLocalPath(t *testing.T) {
 func TestOpenFileOfTheSelectedMessage(t *testing.T) {
 	msgs := generalMessages()
 	msgs[1].Files = []wire.File{notes()}
-	h, o := openGeneral(t, filesDaemon(t, nil, map[string]client.Handler{
+	h, o := openGeneralWithFiles(t, filesDaemon(t, nil, map[string]client.Handler{
 		"conversations.open": client.Result(openResult{Messages: msgs}),
 	}))
 	h.keys("k", "o") // "standup at 10?"
@@ -105,7 +105,7 @@ func TestOpenFileOfTheSelectedMessage(t *testing.T) {
 }
 
 func TestOpenFileWithoutFiles(t *testing.T) {
-	h, o := openGeneral(t, filesDaemon(t, nil, nil))
+	h, o := openGeneralWithFiles(t, filesDaemon(t, nil, nil))
 	h.keys("o")
 	if !h.m.statusIsError || h.count("files.fetch") != 0 || len(o.paths) != 0 {
 		t.Fatalf("status %q, calls %v", h.m.status, h.calls())
@@ -113,7 +113,7 @@ func TestOpenFileWithoutFiles(t *testing.T) {
 }
 
 func TestOpenFileThatCannotBeDownloaded(t *testing.T) {
-	h, o := openGeneral(t, filesDaemon(t, []wire.File{report()}, map[string]client.Handler{
+	h, o := openGeneralWithFiles(t, filesDaemon(t, []wire.File{report()}, map[string]client.Handler{
 		"files.fetch": func(json.RawMessage) (any, error) {
 			return nil, &rpc.Error{Code: rpc.CodeInvalidParams, Message: "fileId: Slack offers no download for this file"}
 		},
@@ -125,7 +125,7 @@ func TestOpenFileThatCannotBeDownloaded(t *testing.T) {
 }
 
 func TestOpenFileWhenTheOpenerFails(t *testing.T) {
-	h, o := openGeneral(t, filesDaemon(t, []wire.File{report()}, nil))
+	h, o := openGeneralWithFiles(t, filesDaemon(t, []wire.File{report()}, nil))
 	o.err = errors.New("xdg-open: not found")
 	h.keys("o")
 	if !h.m.statusIsError || !strings.Contains(h.m.status, "xdg-open: not found") {
@@ -146,7 +146,7 @@ func TestOpenFileWithoutTheFilesCapability(t *testing.T) {
 }
 
 func TestOpenFileChooser(t *testing.T) {
-	h, o := openGeneral(t, filesDaemon(t, []wire.File{report(), notes()}, nil))
+	h, o := openGeneralWithFiles(t, filesDaemon(t, []wire.File{report(), notes()}, nil))
 	h.keys("o")
 	if h.count("files.fetch") != 0 || !strings.Contains(h.screen(), "Open which file?") {
 		t.Fatalf("no chooser, calls %v:\n%s", h.calls(), h.screen())
@@ -171,7 +171,7 @@ func TestOpenFileChooser(t *testing.T) {
 func TestAttachUploadsAnAbsolutePathWithCaption(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	h, _ := openGeneral(t, filesDaemon(t, nil, nil))
+	h, _ := openGeneralWithFiles(t, filesDaemon(t, nil, nil))
 	h.keys(":")
 	h.typeText("attach ~/cat.png look at this")
 	h.keys("enter")
@@ -192,7 +192,7 @@ func TestAttachRelativeAndQuotedPaths(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	h, _ := openGeneral(t, filesDaemon(t, nil, nil))
+	h, _ := openGeneralWithFiles(t, filesDaemon(t, nil, nil))
 	h.keys(":")
 	h.typeText(`attach "my notes.txt"`)
 	h.keys("enter")
@@ -203,7 +203,7 @@ func TestAttachRelativeAndQuotedPaths(t *testing.T) {
 }
 
 func TestAttachInTheThread(t *testing.T) {
-	h, _ := openGeneral(t, filesDaemon(t, nil, nil))
+	h, _ := openGeneralWithFiles(t, filesDaemon(t, nil, nil))
 	h.keys("enter", ":") // the thread of the newest message, focused
 	h.typeText("attach /tmp/a.png")
 	h.keys("enter")
@@ -213,7 +213,7 @@ func TestAttachInTheThread(t *testing.T) {
 }
 
 func TestAttachFromInsertMode(t *testing.T) {
-	h, _ := openGeneral(t, filesDaemon(t, nil, nil))
+	h, _ := openGeneralWithFiles(t, filesDaemon(t, nil, nil))
 	h.keys("i")
 	h.typeText("draft")
 	h.send(tea.KeyPressMsg{Code: 'o', Mod: tea.ModCtrl})
@@ -226,7 +226,7 @@ func TestAttachFromInsertMode(t *testing.T) {
 }
 
 func TestAttachErrors(t *testing.T) {
-	h, _ := openGeneral(t, filesDaemon(t, nil, map[string]client.Handler{
+	h, _ := openGeneralWithFiles(t, filesDaemon(t, nil, map[string]client.Handler{
 		"files.upload": func(json.RawMessage) (any, error) {
 			return nil, &rpc.Error{Code: rpc.CodeInvalidParams, Message: "paths: /tmp/nope does not exist"}
 		},

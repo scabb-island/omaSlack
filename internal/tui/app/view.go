@@ -55,6 +55,9 @@ func (m *Model) screen() string {
 	if m.media.chooser != nil {
 		body = m.chooserView(h)
 	}
+	if m.pick.open != nil {
+		body = m.pickerView(h)
+	}
 	return body + "\n" + m.statusBar()
 }
 
@@ -94,7 +97,7 @@ func (m *Model) mainView(w, h int) string {
 	default:
 		panes = m.threadView(w, top)
 	}
-	return panes + "\n" + m.composeView(w, composeH)
+	return m.withPopup(panes, w) + "\n" + m.composeView(w, composeH)
 }
 
 // rail lists the workspaces: their number (the 1–9 key), their initials
@@ -328,6 +331,9 @@ func (m *Model) composeView(w, h int) string {
 	if m.target.thread != "" {
 		title = "Reply in thread · " + title
 	}
+	if m.cx.edit != nil {
+		title = "Editing a message · Enter saves · Esc cancels"
+	}
 	lines := strings.Split(m.compose.View(), "\n")
 	return m.box(title, lines, w, h, m.mode == insertMode)
 }
@@ -383,25 +389,6 @@ func (m *Model) connection() string {
 		fg = m.theme.Error
 	}
 	return lipgloss.NewStyle().Foreground(fg).Render("● " + state)
-}
-
-// helpView is the key map, generated from Keys, and the commands.
-func (m *Model) helpView(h int) string {
-	key := lipgloss.NewStyle().Foreground(m.theme.Accent).Bold(true)
-	var lines []string
-	for _, g := range m.keys.groups() {
-		lines = append(lines, lipgloss.NewStyle().Bold(true).Render(g.title))
-		for _, b := range g.keys {
-			lines = append(lines, "  "+key.Render(fmt.Sprintf("%-12s", b.Help().Key))+b.Help().Desc)
-		}
-		lines = append(lines, "")
-	}
-	lines = append(lines, lipgloss.NewStyle().Bold(true).Render("Commands (COMMAND)"))
-	for _, c := range commandHelp {
-		lines = append(lines, "  "+key.Render(fmt.Sprintf("%-16s", c[0]))+c[1])
-	}
-	lines = append(lines, "", m.muted("Press any key to close."))
-	return lipgloss.Place(m.width, h, lipgloss.Center, lipgloss.Center, m.helpBox(lines, h))
 }
 
 // applyTheme styles compose from the theme; the panes read m.theme as

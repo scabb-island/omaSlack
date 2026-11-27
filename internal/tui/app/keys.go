@@ -10,11 +10,15 @@ type Keys struct {
 	Insert, Back, Command, Help     key.Binding
 	Finder, Quit                    key.Binding
 
-	PrevPane, Top, Bottom    key.Binding // NORMAL: more movement
-	Open, Workspace          key.Binding // NORMAL: open a conversation or thread; 1–9
-	Sidebar, Narrower, Wider key.Binding // NORMAL: show, hide and resize the sidebar
-	Send, Newline            key.Binding // INSERT
-	OpenFile, Images, Attach key.Binding // files: o and I in NORMAL, Ctrl+o in INSERT
+	PrevPane, Top, Bottom               key.Binding // NORMAL: more movement
+	Open, Workspace                     key.Binding // NORMAL: open a conversation or thread; 1–9
+	Sidebar, Narrower, Wider            key.Binding // NORMAL: show, hide and resize the sidebar
+	Send, Newline                       key.Binding // INSERT
+	OpenFile, Images, Attach            key.Binding // files: o and I in NORMAL, Ctrl+o in INSERT
+	Search, React                       key.Binding // NORMAL: search messages; react to the selected message
+	ListDown, ListUp, Pick              key.Binding // lists: finder, search results, reactions
+	Edit, Delete, Reply                 key.Binding // NORMAL: on the selected message
+	Suggest, Accept, NextItem, PrevItem key.Binding // INSERT: the autocomplete popup
 }
 
 // DefaultKeys is the key map omaslack ships with.
@@ -33,7 +37,7 @@ func DefaultKeys() Keys {
 		PrevPane:  b([]string{"shift+tab"}, "S-Tab", "previous pane"),
 		Open:      b([]string{"enter"}, "Enter", "open conversation / thread of message"),
 		Workspace: b([]string{"1", "2", "3", "4", "5", "6", "7", "8", "9"}, "1–9", "switch workspace"),
-		Finder:    b([]string{"ctrl+k", "ctrl+t"}, "C-k/C-t", "find a conversation (coming soon)"),
+		Finder:    b([]string{"ctrl+k", "ctrl+t"}, "C-k/C-t", "find a conversation in any workspace"),
 		Sidebar:   b([]string{"ctrl+b"}, "C-b", "show or hide the sidebar"),
 		Narrower:  b([]string{"<"}, "<", "narrower sidebar"),
 		Wider:     b([]string{">"}, ">", "wider sidebar"),
@@ -47,6 +51,18 @@ func DefaultKeys() Keys {
 		OpenFile:  b([]string{"o"}, "o", "open the message's file (xdg-open)"),
 		Images:    b([]string{"I"}, "I", "show or hide inline images"),
 		Attach:    b([]string{"ctrl+o"}, "C-o", "attach a file (:attach)"),
+		Search:    b([]string{"/"}, "/", "search messages in this workspace"),
+		React:     b([]string{"r"}, "r", "react to the selected message"),
+		ListDown:  b([]string{"down", "ctrl+n", "ctrl+j"}, "↓/C-n", "next (j too in search results)"),
+		ListUp:    b([]string{"up", "ctrl+p", "ctrl+k"}, "↑/C-p", "previous (k too in search results)"),
+		Pick:      b([]string{"enter"}, "Enter", "pick"),
+		Edit:      b([]string{"e"}, "e", "edit your message"),
+		Delete:    b([]string{"D"}, "D", "delete your message (asks y/n)"),
+		Reply:     b([]string{"R"}, "R", "reply in the message's thread"),
+		Suggest:   b([]string{"@", "#", ":"}, "@ # :", "suggest people, channels, emoji"),
+		Accept:    b([]string{"tab", "enter"}, "Tab/Enter", "pick the suggestion (Esc closes)"),
+		NextItem:  b([]string{"down", "ctrl+n"}, "↓/C-n", "next suggestion"),
+		PrevItem:  b([]string{"up", "ctrl+p"}, "↑/C-p", "previous suggestion"),
 	}
 }
 
@@ -65,6 +81,9 @@ func (k Keys) groups() []helpGroup {
 		{"Modes", []key.Binding{k.Insert, k.Command, k.Back, k.Help, k.Quit}},
 		{"Compose (INSERT)", []key.Binding{k.Send, k.Newline, k.Back}},
 		{"Files", []key.Binding{k.OpenFile, k.Images, k.Attach}},
+		{"Find, search, react", []key.Binding{k.Search, k.React, k.ListDown, k.ListUp, k.Pick}},
+		{"Messages (NORMAL)", []key.Binding{k.Edit, k.Delete, k.Reply}},
+		{"Autocomplete (INSERT)", []key.Binding{k.Suggest, k.Accept, k.NextItem, k.PrevItem}},
 	}
 }
 
@@ -74,4 +93,6 @@ var commandHelp = [][2]string{
 	{":open <name>", "open a conversation by name (#general, @ana)"},
 	{":help", "this help"},
 	{":attach <path>", "send a file here; any text after it is the caption"},
+	{":search <query>", "search messages in this workspace"},
+	{":react <emoji>", "react to the selected message (:react +1)"},
 }

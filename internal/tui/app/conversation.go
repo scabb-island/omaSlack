@@ -141,6 +141,7 @@ func (m *Model) retarget(t target) tea.Cmd {
 	if t == m.target {
 		return nil
 	}
+	m.cancelEdit() // compose must hold the draft before it is saved
 	save := m.saveDraft()
 	m.target = t
 	m.compose.SetValue(m.st.Draft(t))
@@ -186,6 +187,9 @@ func (m *Model) startInsert() tea.Cmd {
 // insertKey handles INSERT mode: Enter sends, Esc saves the draft and
 // goes back to NORMAL, anything else edits.
 func (m *Model) insertKey(k tea.KeyPressMsg) tea.Cmd {
+	if cmd, done := m.composeKey(k); done {
+		return cmd
+	}
 	switch {
 	case key.Matches(k, m.keys.Back):
 		m.mode = normalMode
@@ -203,9 +207,9 @@ func (m *Model) insertKey(k tea.KeyPressMsg) tea.Cmd {
 	var cmd tea.Cmd
 	m.compose, cmd = m.compose.Update(k)
 	if m.compose.Value() != before {
-		return tea.Batch(cmd, m.typing())
+		cmd = tea.Batch(cmd, m.typing())
 	}
-	return cmd
+	return tea.Batch(cmd, m.refreshCompletion())
 }
 
 // send sends what compose holds. Compose clears at once; a failed send
@@ -218,7 +222,7 @@ func (m *Model) send() tea.Cmd {
 	t := m.target
 	m.compose.Reset()
 	m.st.SetDraft(t, "") // the daemon clears it on send
-	sent := call(m.client, "messages.send", t.params("text", text), func(m *Model, msg wire.Message) tea.Cmd {
+	sent := call(m.client, "messages.send", t.params("text", toWire(text, m.mentionTokens())), func(m *Model, msg wire.Message) tea.Cmd {
 		m.st.PutMessages(t.team, t.conv, []wire.Message{msg})
 		return nil
 	})
