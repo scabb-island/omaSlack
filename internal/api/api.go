@@ -110,9 +110,9 @@ type Focuser interface {
 //	reactions.remove{team, conv, ts, emoji}            → null
 //	files.upload{team, conv, threadTS?, paths, caption?} → {files: []wire.File}
 //	files.fetch{team, fileId}                          → {localPath}
-//	users.info{team, ids[]}                            → []wire.User (unknown IDs left out; task 3.8)
-//	emoji.list{team}                                   → wire.EmojiList (needs custom_emoji; task 3.8)
-//	typing.send{team, conv}                            → null (needs typing; task 3.8)
+//	users.info{team, ids}                              → []wire.User (unknown IDs left out)
+//	emoji.list{team}                                   → wire.EmojiList
+//	typing.send{team, conv}                            → null
 //	drafts.get{team, conv, threadTS?}                  → {text}
 //	drafts.set{team, conv, threadTS?, text}            → null
 //	search.messages{team, query, limit?}               → []wire.SearchHit
@@ -138,6 +138,8 @@ type Focuser interface {
 //     (the daemon runs as the same user, but not in the client's working
 //     directory). caption is optional text. fileId is a Slack file ID
 //     (F...), from the files of a message.
+//   - ids: a non-empty array of user IDs (U... or W...), at most
+//     UsersInfoMaxIDs (100); more is -32602, not lowered.
 //
 // Behavior:
 //   - messages.history reads the cache; when it holds fewer than limit
@@ -148,9 +150,21 @@ type Focuser interface {
 //   - messages.replies opens the thread in the engine, then reads the
 //     cache.
 //   - search.messages needs domain.Search, presence.set needs
-//     domain.PresenceWrite, and files.upload and files.fetch need
-//     domain.Files; without it they answer -32002 and the engine is not
-//     called.
+//     domain.PresenceWrite, files.upload and files.fetch need
+//     domain.Files, emoji.list needs domain.CustomEmoji and typing.send
+//     needs domain.Typing; without it they answer -32002 and the engine is
+//     not called.
+//   - users.info answers the known people among ids, in the order asked
+//     and once each; an ID nobody knows is left out, not an error. The
+//     provider names them from its cached users.list directory (loaded
+//     once per 30 minutes, so the first call of a workspace waits for that
+//     load) and looks up at most 20 others per call with users.info; a
+//     client asks again for the ones still missing.
+//   - emoji.list answers the custom emoji by name (no colons): an image
+//     URL, or "alias:<name>" for an alias. The provider keeps it an hour.
+//   - typing.send tells the conversation the user is typing; Slack shows
+//     it for a few seconds, so clients repeat it while the user types.
+//     It needs the live connection: between reconnects it fails.
 //   - files.upload shares the files as one message (with caption as its
 //     text) and answers with the files as Slack stored them. The message
 //     itself arrives as a message.created event, carrying the same files.
@@ -177,6 +191,9 @@ func Methods(dir Directory, focus Focuser) rpc.Router {
 		"reactions.remove":       react(false),
 		"files.upload":           filesUpload,
 		"files.fetch":            filesFetch,
+		"users.info":             usersInfo,
+		"emoji.list":             emojiList,
+		"typing.send":            typingSend,
 		"drafts.get":             draftsGet,
 		"drafts.set":             draftsSet,
 		"search.messages":        searchMessages,

@@ -3,19 +3,23 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"maps"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 	"gitlab.com/scabb-island/omaslack/internal/rpc"
 	"gitlab.com/scabb-island/omaslack/internal/wire"
 )
 
-// Limits on how many items one call returns. A larger limit is lowered to
-// the maximum; a limit below 1 is -32602.
+// Limits on how many items one call returns or, for users.info, asks
+// about. A larger limit is lowered to the maximum; a limit below 1 is
+// -32602. More IDs than UsersInfoMaxIDs is -32602 instead: lowering would
+// silently leave people unnamed.
 const (
 	HistoryLimit    = 50  // messages.history default, and the page conversations.open returns
 	HistoryMaxLimit = 200 // messages.history maximum
 	SearchLimit     = 20  // search.messages and users.search default
 	SearchMaxLimit  = 100 // search.messages and users.search maximum
+	UsersInfoMaxIDs = 100 // users.info: more IDs in one call is -32602
 )
 
 // method answers one call from its parsed params.
@@ -277,7 +281,20 @@ func usersSearch(ctx context.Context, p *params) (any, error) {
 	if err := p.err(); err != nil {
 		return nil, err
 	}
-	users, err := w.Engine.SearchUsers(ctx, query, limit)
+	return fromUsers(w.Engine.SearchUsers(ctx, query, limit))
+}
+
+func usersInfo(ctx context.Context, p *params) (any, error) {
+	w := p.workspace()
+	ids := p.userIDs("ids", UsersInfoMaxIDs)
+	if err := p.err(); err != nil {
+		return nil, err
+	}
+	return fromUsers(w.Engine.Users(ctx, ids))
+}
+
+// fromUsers converts what the engine found; never nil, so none is [].
+func fromUsers(users []domain.User, err error) (any, error) {
 	if err != nil {
 		return nil, err
 	}
@@ -286,6 +303,28 @@ func usersSearch(ctx context.Context, p *params) (any, error) {
 		out = append(out, wire.FromUser(u))
 	}
 	return out, nil
+}
+
+func emojiList(ctx context.Context, p *params) (any, error) {
+	w := p.workspace()
+	if err := needs(p, w, domain.CustomEmoji); err != nil {
+		return nil, err
+	}
+	emoji, err := w.Engine.Emoji(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := wire.EmojiList{Emoji: map[string]string{}}
+	maps.Copy(out.Emoji, emoji)
+	return out, nil
+}
+
+func typingSend(ctx context.Context, p *params) (any, error) {
+	t := p.target()
+	if err := needs(p, t.w, domain.Typing); err != nil {
+		return nil, err
+	}
+	return nil, t.w.Engine.SendTyping(ctx, t.conv)
 }
 
 func presenceSet(ctx context.Context, p *params) (any, error) {
