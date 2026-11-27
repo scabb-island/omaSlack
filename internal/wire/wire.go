@@ -18,8 +18,8 @@ type Message struct {
 	ThreadTS string `json:"threadTS,omitempty"`
 	Author   string `json:"author,omitempty"`
 	// AuthorName is the name Slack puts on the message itself: a bot's
-	// username or bot_profile.name. Empty for people (clients resolve
-	// their IDs with users.info) until task 5.8 fills it.
+	// username, else its bot_profile.name. Empty for people (clients
+	// resolve their IDs with users.info). Clients show it when set.
 	AuthorName string `json:"authorName,omitempty"`
 	Text       string `json:"text"`
 	// HTML is Text rendered for Qt's Text.RichText (mrkdwn parsed in the
@@ -104,11 +104,12 @@ type HTMLFunc func(mrkdwn string) string
 // filled: html(Text), or nothing when html is nil.
 func FromMessage(m domain.Message, reactions []store.Reaction, html HTMLFunc) Message {
 	out := Message{
-		TS:       m.TS.String(),
-		ThreadTS: optTS(m.ThreadTS),
-		Author:   m.Author.String(),
-		Text:     m.Text,
-		Edited:   optTS(m.Edited),
+		TS:         m.TS.String(),
+		ThreadTS:   optTS(m.ThreadTS),
+		Author:     m.Author.String(),
+		AuthorName: m.AuthorName,
+		Text:       m.Text,
+		Edited:     optTS(m.Edited),
 
 		ReplyCount:  m.ReplyCount,
 		LatestReply: optTS(m.LatestReply),

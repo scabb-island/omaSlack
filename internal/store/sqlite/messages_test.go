@@ -155,9 +155,9 @@ func TestCorruptRowsAreNeverTrusted(t *testing.T) {
 	}
 }
 
-func TestBotAuthorsRoundTrip(t *testing.T) {
+func TestBotAuthorsAndTheirNamesRoundTrip(t *testing.T) {
 	s := openStore(t)
-	bot := domain.Message{TS: ts(t, "1700000001.000100"), Author: author(t, "B01"), Text: "deploy finished"}
+	bot := domain.Message{TS: ts(t, "1700000001.000100"), Author: author(t, "B01"), AuthorName: "deploybot", Text: "deploy finished"}
 	mustPutHistory(t, s, "C01", bot)
 
 	got := messages(t, s, "C01", zeroTS, 10)
@@ -166,5 +166,21 @@ func TestBotAuthorsRoundTrip(t *testing.T) {
 	}
 	if _, ok := got[0].Author.Bot(); !ok {
 		t.Error("the author came back as something other than a bot")
+	}
+}
+
+// An edit's result (chat.update) may come without the bot's name; the
+// message keeps the one it was posted with.
+func TestAVersionWithoutANameKeepsTheStoredOne(t *testing.T) {
+	s := openStore(t)
+	bot := domain.Message{TS: ts(t, "1700000001.000100"), Author: author(t, "B01"), AuthorName: "deploybot", Text: "deploying"}
+	mustPutHistory(t, s, "C01", bot)
+	edit := bot
+	edit.AuthorName, edit.Text, edit.Edited = "", "deployed", ts(t, "1700000009.000000")
+	mustPutHistory(t, s, "C01", edit)
+
+	got := messages(t, s, "C01", zeroTS, 10)
+	if len(got) != 1 || got[0].AuthorName != "deploybot" || got[0].Text != "deployed" {
+		t.Fatalf("Messages = %+v, want the edit named deploybot", got)
 	}
 }

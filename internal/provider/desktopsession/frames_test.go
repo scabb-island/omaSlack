@@ -19,7 +19,7 @@ func TestRecordedFramesMapToDomainEvents(t *testing.T) {
 		"message.json": {domain.MessageCreated{Team: team, Conversation: conv("C0001"),
 			Message: domain.Message{TS: ts("1700000600.000600"), Author: author("U0002"), Text: "hello <@U0001>"}}},
 		"message_bot.json": {domain.MessageCreated{Team: team, Conversation: conv("C0001"),
-			Message: domain.Message{TS: ts("1700000610.000610"), Author: author("B0001"), Text: "deploy finished"}}},
+			Message: domain.Message{TS: ts("1700000610.000610"), Author: author("B0001"), AuthorName: "deploybot", Text: "deploy finished"}}},
 		"message_thread_reply.json": {domain.MessageCreated{Team: team, Conversation: conv("C0001"),
 			Message: domain.Message{TS: ts("1700000620.000620"), ThreadTS: ts("1700000100.000100"), Author: author("U0002"), Text: "a reply"}}},
 		"message_file_share.json": {domain.MessageCreated{Team: team, Conversation: conv("C0001"),

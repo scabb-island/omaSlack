@@ -8,7 +8,7 @@
     {"ts": "1795639200.000300", "author": "U0YUKI", "text": "了解しました。明日の朝に確認します 🙏 これは折り返しが必要な長い日本語の文です。", "reactions": [{"emoji": "pray", "users": ["U0JOSE", "U0SELF"]}, {"emoji": "+1::skin-tone-4", "users": ["U0BOB"]}]},
     {"ts": "1795695300.000400", "author": "U0ALICE", "text": "<!here> standup in 5 :wave::skin-tone-2:"},
     {"ts": "1795695360.000500", "author": "U0ALICE", "text": "<@U0SELF> can you check <https://gitlab.com/scabb-island/omaslack/-/merge_requests/12|MR !12>? also cc <@U0BOB> and <!subteam^S0DEV|@devs>"},
-    {"ts": "1795695480.000600", "author": "B0CI", "text": "Pipeline passed on `main`:\n```\nok   internal/tui/render  0.21s\nok   internal/daemon      1.03s\n```", "reactions": [{"emoji": "partyparrot", "users": ["U0ALICE"]}, {"emoji": "shipit", "users": ["U0SELF"]}]},
+    {"ts": "1795695480.000600", "author": "B0CI", "authorName": "GitLab CI", "text": "Pipeline passed on `main`:\n```\nok   internal/tui/render  0.21s\nok   internal/daemon      1.03s\n```", "reactions": [{"emoji": "partyparrot", "users": ["U0ALICE"]}, {"emoji": "shipit", "users": ["U0SELF"]}]},
     {"ts": "1795696200.000700", "threadTS": "1795696200.000700", "replyCount": 2, "latestReply": "1795696500.000000", "author": "U0BOB", "text": "Screenshot of the new layout, thoughts?", "files": [{"id": "F0SHOT", "name": "layout.png", "mimetype": "image/png", "size": 482133}, {"id": "F0SPEC", "name": "layout-spec.pdf", "title": "Layout spec", "mimetype": "application/pdf", "size": 2311042}]},
     {"ts": "1795698120.000800", "author": "U0SELF", "text": "Looks great ~except~ the sidebar width &amp; the &lt;tab&gt; order. :100:"},
     {"ts": "1795704300.000900", "author": "U0ZED", "text": "who am I? (unknown user, :unknown_emoji:)"}

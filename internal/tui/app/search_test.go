@@ -21,6 +21,8 @@ func searchHits() []wire.SearchHit {
 	return []wire.SearchHit{
 		{Conv: "C2", Message: wire.Message{TS: tsOld, Author: "U1", Text: "the *standup* moved to 10"}},
 		{Conv: "C1", Message: wire.Message{TS: tsOldReply, ThreadTS: tsB, Author: "U2", Text: "standup notes are in the doc"}},
+		// A bot shows the name Slack put on its message, not its B… ID.
+		{Conv: "C1", Message: wire.Message{TS: tsOld, Author: "B9", AuthorName: "deploybot", Text: "standup bot reminder"}},
 	}
 }
 
@@ -55,7 +57,7 @@ func TestSearchListsHitsAndJumpsToAMonthOldMessage(t *testing.T) {
 	if p := h.lastCall("search.messages"); p["team"] != "T1" || p["query"] != "standup" {
 		t.Fatalf("search %v", p)
 	}
-	if !strings.Contains(h.screen(), "#random · Ana · 2023-10-15") {
+	if !strings.Contains(h.screen(), "#random · Ana · 2023-10-15") || !strings.Contains(h.screen(), "· deploybot ·") {
 		t.Fatalf("results:\n%s", h.screen())
 	}
 	h.keys("j", "k", "enter")

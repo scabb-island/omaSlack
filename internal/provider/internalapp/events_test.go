@@ -93,8 +93,8 @@ func TestRecordedReactionsOnFilesAreRefused(t *testing.T) {
 	}
 }
 
-func TestBotMessagesMapWithABotAuthor(t *testing.T) {
-	payload := `{"type":"event_callback","team_id":"T0001","event":{"type":"message","subtype":"bot_message","channel":"C0001","bot_id":"B0001","text":"deploy finished","ts":"1700000600.000600"}}`
+func TestBotMessagesMapWithABotAuthorAndItsName(t *testing.T) {
+	payload := `{"type":"event_callback","team_id":"T0001","event":{"type":"message","subtype":"bot_message","channel":"C0001","bot_id":"B0001","bot_profile":{"id":"B0001","name":"Deploys","app_id":"A0001","team_id":"T0001"},"text":"deploy finished","ts":"1700000600.000600"}}`
 	got, err := mapCallback(mustTeam(t, "T0001"), []byte(payload))
 	if err != nil {
 		t.Fatal(err)
@@ -102,7 +102,7 @@ func TestBotMessagesMapWithABotAuthor(t *testing.T) {
 	want := domain.MessageCreated{
 		Team:         mustTeam(t, "T0001"),
 		Conversation: mustConv(t, "C0001"),
-		Message:      domain.Message{TS: mustTS(t, "1700000600.000600"), Author: mustAuthor(t, "B0001"), Text: "deploy finished"},
+		Message:      domain.Message{TS: mustTS(t, "1700000600.000600"), Author: mustAuthor(t, "B0001"), AuthorName: "Deploys", Text: "deploy finished"},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("mapCallback() = %#v, want %#v", got, want)

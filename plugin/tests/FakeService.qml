@@ -1,4 +1,5 @@
 import QtQuick
+import "../lib/store.js" as Store
 
 // A stand-in for Service.qml in qmltestrunner tests of the views: the same
 // public API, with state the test sets directly and every call recorded.
@@ -52,6 +53,7 @@ Item {
   function hasMoreHistory(team, conv) { return !!moreHistory[team + "/" + conv] }
   function unreadConversations() { return unreadList }
   function userName(team, user) { return userNames[team + "/" + user] || user }
+  function authorName(team, message) { return Store.authorName(message, function(user) { return userName(team, user) }) }
   function conversationName(team, conv) {
     var list = conversations[team] || []
     for (var i = 0; i < list.length; i++) if (list[i].id === conv) return list[i].name || conv

@@ -256,6 +256,18 @@ TestCase {
     compare(Store.userName(Store.empty(), "T1", "B0ALMQAKL6Q"), "Bot")
   }
 
+  // A message names its author with what Slack put on it (a bot's
+  // authorName) before asking userName for the author's ID.
+  function test_author_name_prefers_the_name_slack_sent() {
+    var names = function(u) { return { U1: "Ana", B1: "Bot" }[u] || u }
+    compare(Store.authorName({ author: "B1", authorName: "deploybot" }, names), "deploybot")
+    compare(Store.authorName({ author: "U9", authorName: "GitHub" }, names), "GitHub")
+    compare(Store.authorName({ author: "U1" }, names), "Ana")
+    compare(Store.authorName({ author: "B1", authorName: "" }, names), "Bot")
+    compare(Store.authorName({ author: "" }, names), "")
+    compare(Store.authorName(null, names), "")
+  }
+
   function test_conversation_names() {
     var s = Store.applyConversations(Store.empty(), "T1", [
       conv("C1", "channel", { name: "general" }),

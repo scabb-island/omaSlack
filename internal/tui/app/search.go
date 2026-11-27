@@ -78,7 +78,7 @@ func (m *Model) hitLines(team string, hit wire.SearchHit) []string {
 	if c, ok := m.st.Conversation(team, hit.Conv); ok {
 		where = m.st.Title(team, c)
 	}
-	who := cmp.Or(dir.UserName(hit.Message.Author), hit.Message.Author)
+	who := render.AuthorName(hit.Message, dir)
 	head := lipgloss.NewStyle().Foreground(m.theme.Accent).Render(where) + m.muted(" · "+who+" · "+m.when(hit.Message.TS))
 	w := min(m.width, pickerWidth) - 6
 	text, _, _ := strings.Cut(render.Text(hit.Message.Text, dir, render.Options{Theme: m.theme, Width: w, Now: m.now(), Loc: m.loc}), "\n")
