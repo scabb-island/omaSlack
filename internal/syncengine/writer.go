@@ -99,6 +99,23 @@ func (w *writer) apply(ctx context.Context, ev domain.Event) error {
 		w.active[conv] = struct{}{}
 	}
 	w.pub.Publish(ev)
+	return w.countReply(ctx, ev)
+}
+
+// countReply counts a new reply on its cached thread root and tells
+// clients the root changed. The Store decides whether the reply is new
+// (store.Store.CountReply), so a replay or Slack's echo of the user's
+// own reply is not counted twice.
+func (w *writer) countReply(ctx context.Context, ev domain.Event) error {
+	mc, ok := ev.(domain.MessageCreated)
+	if !ok || !mc.Message.IsReply() {
+		return nil
+	}
+	root, counted, err := w.store.CountReply(ctx, mc.Conversation, mc.Message)
+	if err != nil || !counted {
+		return err
+	}
+	w.pub.Publish(domain.MessageUpdated{Team: w.team, Conversation: mc.Conversation, Message: root})
 	return nil
 }
 

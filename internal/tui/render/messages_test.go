@@ -94,6 +94,17 @@ func TestMessagesAttachments(t *testing.T) {
 	}
 }
 
+// A thread root says how many replies it has once the daemon knows.
+func TestThreadMarkCountsReplies(t *testing.T) {
+	for count, want := range map[int]string{0: "  ↳ thread", 1: "  ↳ 1 reply", 12: "  ↳ 12 replies"} {
+		msgs := []wire.Message{{TS: at(26, 10, 0), ThreadTS: at(26, 10, 0), Author: "U0BOB", Text: "root", ReplyCount: count}}
+		lines := strings.Split(readable(msgs, -1, 50), "\n")
+		if got := lines[len(lines)-1]; got != want {
+			t.Errorf("%d replies: %q, want %q", count, got, want)
+		}
+	}
+}
+
 func TestFileRowIsOneLine(t *testing.T) {
 	msgs := []wire.Message{{TS: at(26, 10, 0), Author: "U0BOB", Files: []wire.File{
 		{ID: "F2", Name: "a-very-long-file-name.png", MIMEType: "image/png", Size: 2048},

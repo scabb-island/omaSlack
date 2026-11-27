@@ -69,7 +69,7 @@ SQLite at `$XDG_DATA_HOME/omaslack/<workspace>.db`, WAL mode. Main tables:
 | `workspaces` | team_id | name, url, provider, connection state |
 | `users` | (team_id, user_id) | profile, avatar_path, presence |
 | `conversations` | (team_id, conv_id) | type, name, section, mute, `last_read`, `unread_count`, `mention_count` |
-| `messages` | (team_id, conv_id, ts) | `thread_ts`, author, mrkdwn text, `blocks_json`, `edited_ts`, `deleted` |
+| `messages` | (team_id, conv_id, ts) | `thread_ts`, author, mrkdwn text, `blocks_json`, `edited_ts`, `deleted`, `reply_count` and `latest_reply` (thread roots) |
 | `reactions` | (team_id, conv_id, ts, emoji, user) | |
 | `files` | (team_id, file_id) | metadata and cached `local_path` |
 | `drafts` | (team_id, conv_id, thread_ts) | **shared by the TUI and the UI** |
@@ -80,7 +80,8 @@ Slack remains the remote source of truth. The Store is a cache that can be rebui
 ### Local protocol (daemon-api)
 
 - Transport: unix socket `$XDG_RUNTIME_DIR/omaslack.sock` with 0600 permissions, NDJSON framing (one JSON object per line) and JSON-RPC 2.0.
-- Handshake: `hello{client, protocol: 1}` returns `{protocol, daemonVersion, workspaces[], capabilities}`. A major version mismatch gets error `-32001 incompatible_protocol`.
+- Handshake: `hello{client, protocol: 1}` returns `{protocol, daemonVersion, workspaces[], capabilities}`. Each workspace (also in `workspaces.list`) is `{team, name, self?, provider, capabilities[], state}`, where `self` is the signed-in user (from `auth.test`), omitted while unknown. A major version mismatch gets error `-32001 incompatible_protocol`.
+- Messages: every method and event carries a message as `{ts, threadTS?, author?, text, edited?, replyCount?, latestReply?, reactions?, files?}`. A thread root carries `replyCount` (omitted when 0 or unknown) and `latestReply` (the ts of its newest reply, omitted when unknown), from Slack's `reply_count` and `latest_reply`; when a reply arrives in real time, the daemon counts it on the root and sends `message.updated` for the root.
 - Methods (v1):
   - `workspaces.list`.
   - `conversations.list{team, filter}`, `conversations.open{team, conv}`, `conversations.close{team, conv}` (the client left it, so the engine stops treating it as open), `conversations.markRead{team, conv, ts}`.

@@ -38,7 +38,9 @@
           "ts": "1700000200.000000",
           "threadTS": "1700000200.000000",
           "author": "U0BOB",
-          "text": "thread root"
+          "text": "thread root",
+          "replyCount": 2,
+          "latestReply": "1700000220.000000"
         },
         {
           "ts": "1700000100.000000",
