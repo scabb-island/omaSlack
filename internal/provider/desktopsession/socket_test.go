@@ -254,3 +254,82 @@ func TestPingsKeepTheSocketAliveAndAreAnswered(t *testing.T) {
 		t.Errorf("first pong = %q, want the first ping's payload", got)
 	}
 }
+
+// pingFrom is one frame the fake socket read from the provider.
+type pingFrom struct {
+	Type string `json:"type"`
+	ID   int    `json:"id"`
+}
+
+// readPings reads the provider's frames into pings until the client
+// closes the socket, answering each ping with answer (nil: no answer).
+// It is the fake socket's only writer once it starts.
+func readPings(pings chan<- pingFrom, answer func(conn *websocket.Conn, n int, ping pingFrom)) func(*websocket.Conn) {
+	return func(conn *websocket.Conn) {
+		for n := 1; ; n++ {
+			var ping pingFrom
+			if err := conn.ReadJSON(&ping); err != nil {
+				return
+			}
+			pings <- ping
+			if answer != nil {
+				answer(conn, n, ping)
+			}
+		}
+	}
+}
+
+func TestClientPingsAnsweredWithPongsKeepAQuietSocketAlive(t *testing.T) {
+	const quietPings = 10 // 300ms of quiet, three times readTimeout
+	pings := make(chan pingFrom, 2*quietPings)
+	pong := func(conn *websocket.Conn, n int, ping pingFrom) {
+		_ = conn.WriteJSON(map[string]any{"type": "pong", "reply_to": ping.ID})
+		if n == quietPings {
+			_ = conn.WriteMessage(websocket.TextMessage, fixture(t, "frames/user_typing.json"))
+		}
+	}
+	frames := []string{string(fixture(t, "frames/hello.json"))}
+	f := newFakeSlack(t, map[string]http.HandlerFunc{
+		"/api/auth.test": jsonBody(http.StatusOK, authOK),
+		"/ws/":           socketServer(t, frames, readPings(pings, pong)),
+	})
+	p, _ := f.provider(t)
+	p.readTimeout = 100 * time.Millisecond
+	p.pingInterval = 30 * time.Millisecond
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	events := connect(t, p, ctx)
+	next(t, events) // connecting
+	next(t, events) // connected
+
+	if ev := next(t, events); reflect.TypeOf(ev) != reflect.TypeFor[domain.UserTyping]() {
+		t.Fatalf("event = %#v, want the typing frame sent after %d pongs", ev, quietPings)
+	}
+	for want := 1; want <= quietPings; want++ {
+		if got := <-pings; got != (pingFrom{Type: "ping", ID: want}) {
+			t.Fatalf("ping %d = %+v, want type ping with id %d", want, got, want)
+		}
+	}
+}
+
+func TestPingsWithoutPongsStillEndASilentSocket(t *testing.T) {
+	pings := make(chan pingFrom, 100)
+	frames := []string{string(fixture(t, "frames/hello.json"))}
+	f := newFakeSlack(t, map[string]http.HandlerFunc{
+		"/api/auth.test": jsonBody(http.StatusOK, authOK),
+		"/ws/":           socketServer(t, frames, readPings(pings, nil)),
+	})
+	p, _ := f.provider(t)
+	p.readTimeout = 100 * time.Millisecond
+	p.pingInterval = 30 * time.Millisecond
+
+	got := rest(t, connect(t, p, context.Background()))
+
+	want := []domain.Event{state(t, domain.Connecting), state(t, domain.Connected), state(t, domain.Disconnected)}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("events = %v, want %v", got, want)
+	}
+	if len(pings) == 0 {
+		t.Error("no ping reached the socket, so the test proves nothing")
+	}
+}

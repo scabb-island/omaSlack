@@ -7,6 +7,12 @@
 // on the workspace's own domain with those credentials and opens the web
 // client's WebSocket for real-time events. That protocol is unofficial, which is why the
 // workspace is only registered after the user's explicit consent.
+//
+// Like the web client, the socket sends Slack a {"type":"ping"} frame
+// every 30 seconds and counts the pong as a sign of life. Slack's own
+// WebSocket pings do not keep a quiet workspace's socket busy, so before
+// the client pings it hit its read deadline every couple of minutes and
+// reconnected.
 package desktopsession
 
 import (
@@ -35,8 +41,11 @@ type Provider struct {
 	socketURL string
 	// readTimeout is how long the socket may stay silent; tests shorten it.
 	readTimeout time.Duration
-	http        *http.Client
-	log         *slog.Logger
+	// pingInterval is how often the socket sends Slack a ping frame;
+	// tests shorten it.
+	pingInterval time.Duration
+	http         *http.Client
+	log          *slog.Logger
 	// live is the socket of the current Connect stream, written to by
 	// SubscribePresence and SendTyping.
 	live liveSocket
@@ -82,7 +91,8 @@ func New(team domain.TeamID, creds keyring.DesktopSession, opts ...Option) *Prov
 	p := &Provider{
 		team: team, creds: creds,
 		apiURL: defaultAPIURL, socketURL: defaultSocketURL, readTimeout: defaultReadTimeout,
-		http: http.DefaultClient, log: slog.Default(),
+		pingInterval: defaultPingInterval,
+		http:         http.DefaultClient, log: slog.Default(),
 	}
 	for _, opt := range opts {
 		opt(p)
