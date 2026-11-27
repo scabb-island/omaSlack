@@ -11,6 +11,7 @@ Item {
   property var service: null
 
   Plugin.Window { id: win; service: root.service }
+  KeyDriver { id: kd }
 
   function callsOf(method) { return root.service.calls.filter(function(c) { return c.method === method }) }
   function last(method) { var c = callsOf(method); return c.length ? c[c.length - 1].params : null }
@@ -58,10 +59,12 @@ Item {
                   messageLists: s.messageLists, answers: s.answers, moreHistory: s.moreHistory }
     load()
     win.open("")
+    if (!kd.activate(win.sidebarView)) return ["the window did not become active"]
+    kd.wait(1)
 
     // Finder (Ctrl+K): a conversation of the second workspace.
     s.reset()
-    win.textKey("\u000b", Qt.ControlModifier)
+    kd.press(Qt.Key_K, Qt.ControlModifier)
     var finder = win.finderView
     check(finder.visible && win.navOpen, "Ctrl+K did not open the finder")
     check(finder.rows.length === 4, "the finder lists " + finder.rows.length + " conversations")
@@ -76,7 +79,7 @@ Item {
 
     // Search (/): search.messages in the open conversation's workspace.
     s.reset()
-    win.textKey("/", 0)
+    kd.type("/")
     var search = win.searchView
     check(search.visible && search.team === "T2", "/ did not open the search on T2")
     search.field.text = "hit"
@@ -94,7 +97,7 @@ Item {
 
     // A reply: its thread opens on it.
     s.reset()
-    win.textKey("/", 0)
+    kd.type("/")
     check(search.field.text === "hit" && search.rows.length === 2, "the search forgot its last query")
     search.move(1)
     search.entered()
@@ -113,17 +116,17 @@ Item {
     s.moreHistory = {}
 
     // 1–9: the first conversation of that workspace in the sidebar.
-    win.textKey("1", 0)
+    kd.type("1")
     var row = win.sidebarRows[win.sidebarIndex]
     check(win.pane === "sidebar" && row && row.team === "T1" && row.type === "conv", "1 went to " + JSON.stringify(row))
-    win.textKey("2", 0)
+    kd.type("2")
     row = win.sidebarRows[win.sidebarIndex]
     check(row && row.team === "T2", "2 went to " + JSON.stringify(row))
-    win.textKey("3", 0)
+    kd.type("3")
     check(win.status === "There is no workspace 3.", "3 said " + win.status)
 
     // ?: the help lists the keys; any key closes it.
-    win.textKey("?", 0)
+    kd.type("?")
     check(win.helpView.visible && win.navOpen, "? did not show the help")
     win.helpView.hide()
     check(!win.helpView.visible, "the help did not close")

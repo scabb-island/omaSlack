@@ -109,6 +109,7 @@ ListView {
     // A conversation.
     CursorSurface {
       id: convRow
+      objectName: "convRow"
       visible: item.row.type === "conv"
       width: parent.width
       implicitHeight: convName.implicitHeight + Style.spacing.xs * 2

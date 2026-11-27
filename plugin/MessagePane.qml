@@ -85,9 +85,14 @@ FocusScope {
       }
     }
 
-    PanelSeparator {
+    // The rule under the header turns accent while the pane has the
+    // keyboard, so it shows before any message is selected.
+    Rectangle {
+      objectName: "paneRule"
+      readonly property bool focusShown: root.focused
       Layout.fillWidth: true
-      foreground: root.foreground
+      Layout.preferredHeight: Style.space(2)
+      color: focusShown ? Commons.Color.accent : Style.normalBorderColor
     }
 
     Item {

@@ -26,14 +26,17 @@ Item {
   }
 
   // press clicks key (a Qt.Key_*) with modifiers; type clicks each
-  // character of text. Both then let queued work run.
+  // character of text. Both let queued work (a focus handed back with
+  // Qt.callLater) run before and after, as a person's typing would.
   function press(key, modifiers) {
+    wait(1)
     var ok = events.keyClick(key, modifiers || Qt.NoModifier, -1)
     wait(1)
     return ok
   }
 
   function type(text) {
+    wait(1)
     for (var i = 0; i < text.length; i++) events.keyClickChar(text[i], Qt.NoModifier, -1)
     wait(1)
   }

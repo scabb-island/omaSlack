@@ -371,11 +371,13 @@ function specialName(id) {
 
 // ---- window keys ------------------------------------------------------------------
 
-// navKey: the window key t (with ctrl: Control held) as one of this
-// file's actions, or null: Ctrl+K or Ctrl+T the finder (as the TUI),
-// / search, ? help, 1–9 a workspace (index 0–8).
-function navKey(t, ctrl) {
-  if (ctrl) return t === "\u000b" || t === "\u0014" || t === "k" || t === "K" || t === "t" || t === "T" ? { action: "finder" } : null
+// navKey: the window key (key a Qt.Key_*, t its text, ctrl whether
+// Control is held) as one of this file's actions, or null: Ctrl+K or
+// Ctrl+T the finder (as the TUI), / search, ? help, 1–9 a workspace
+// (index 0–8). The chord is told by key, since its text is a control
+// character on some keyboards and the plain letter on others.
+function navKey(key, t, ctrl) {
+  if (ctrl) return key === Qt.Key_K || key === Qt.Key_T ? { action: "finder" } : null
   if (t === "/") return { action: "search" }
   if (t === "?") return { action: "help" }
   if (t >= "1" && t <= "9" && t.length === 1) return { action: "workspace", index: t.charCodeAt(0) - 49 }

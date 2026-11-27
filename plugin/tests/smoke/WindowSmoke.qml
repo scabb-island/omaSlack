@@ -68,11 +68,10 @@ Item {
           "sidebar rows: " + JSON.stringify(keys))
     check(win.sidebarView.count === keys.length, "the sidebar lists " + win.sidebarView.count + " rows")
 
-    // Keyboard: j onto the first conversation, Enter opens it.
+    // Keyboard: the cursor starts on the first conversation, Enter opens it.
     s.reset()
     win.pane = "sidebar"
-    win.moveVertical(1)
-    check(win.sidebarIndex === 2, "j did not reach the first conversation: " + win.sidebarIndex)
+    check(win.sidebarIndex === 2, "the cursor did not start on the first conversation: " + win.sidebarIndex)
     win.activate()
     var opened = last("conversations.open")
     check(opened && opened.team === "T1" && opened.conv === "C1", "Enter did not call conversations.open on C1")

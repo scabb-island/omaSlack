@@ -20,7 +20,8 @@ import "lib/nav.js" as N
 // pane has the keyboard) and every Service call; the parts draw and
 // report. Pure logic lives in lib/window.js (tests/tst_window.qml).
 //
-// Keys (PanelKeyCatcher, while no composer has the keyboard):
+// Keys (keyFront for Ctrl+K, /, ? and 1–9, then the PanelKeyCatcher;
+// while no composer or overlay has the keyboard):
 //   Tab / Shift+Tab   next / previous pane (sidebar, messages, thread)
 //   h l, ← →          pane to the left / right
 //   j k, ↓ ↑          move in the pane's list (up past the oldest message
@@ -226,6 +227,11 @@ Item {
     openInDaemon()
   }
 
+  // The sidebar shows a cursor whenever it can: on the first conversation
+  // until the user moves it, so the pane with the keyboard always shows
+  // where it is.
+  onSidebarRowsChanged: if (sidebarIndex < 0) sidebarIndex = W.step(sidebarRows, -1, 1)
+
   function indexOfRow(key) {
     for (var i = 0; i < sidebarRows.length; i++) if (sidebarRows[i].key === key) return i
     return -1
@@ -289,7 +295,9 @@ Item {
 
   // ---- keyboard --------------------------------------------------------------------
 
-  function focusKeys() { keys.forceActiveFocus() }
+  // The window's keys: keyFront (Ctrl+K, /, ?, 1–9) then, for what it
+  // leaves, the PanelKeyCatcher around it.
+  function focusKeys() { keyFront.forceActiveFocus() }
 
   function compose(paneName) {
     var name = paneName === "thread" && threadOpen ? "thread" : "messages"
@@ -326,7 +334,6 @@ Item {
   }
 
   function textKey(t, modifiers) {
-    if (navKey(t, modifiers)) return
     if (t === "i") compose(pane)
     else if (t === "g" && pane !== "sidebar") paneList(pane).toTop()
     else if (t === "G" && pane !== "sidebar") paneList(pane).toBottom()
@@ -356,9 +363,11 @@ Item {
     mentionTokens = next
   }
 
-  // navKey runs Ctrl+K, /, ? and 1–9; false for any other key.
-  function navKey(t, modifiers) {
-    var k = N.navKey(t, (modifiers & Qt.ControlModifier) !== 0)
+  // navKey runs Ctrl+K, Ctrl+T, /, ? and 1–9; false for any other key.
+  // keyFront calls it before the PanelKeyCatcher, whose j/k would
+  // otherwise take Ctrl+K when it arrives as the letter k.
+  function navKey(key, t, modifiers) {
+    var k = N.navKey(key, t, (modifiers & Qt.ControlModifier) !== 0)
     if (!k) return false
     if (k.action === "finder") finder.show("")
     else if (k.action === "search") searchOverlay.open(searchTeam())
@@ -462,6 +471,13 @@ Item {
       onCloseRequested: root.stepBack()
       onDeleteRequested: actions.askDelete()
       onTextKey: function(t, modifiers) { root.textKey(t, modifiers) }
+
+      Item {
+        id: keyFront
+        objectName: "windowKeys"
+        focus: true
+        Keys.onPressed: function(event) { if (root.navKey(event.key, event.text, event.modifiers)) event.accepted = true }
+      }
 
       RowLayout {
         anchors.fill: parent
