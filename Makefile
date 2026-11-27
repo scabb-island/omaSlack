@@ -17,8 +17,9 @@ LDFLAGS     := -s -w \
 OMARCHY_SHELL ?= $(or $(OMARCHY_PATH),/usr/share/omarchy)/shell
 QMLLINT       ?= /usr/lib/qt6/bin/qmllint
 QML_IMPORTS   := .cache/qml-imports
+QMLTESTRUNNER ?= /usr/lib/qt6/bin/qmltestrunner
 
-.PHONY: all build test test-race vet lint check qmllint plugin-validate specs local snapshot clean
+.PHONY: all build test test-race vet lint check qmllint qmltest plugin-validate specs local snapshot clean
 
 all: check
 
@@ -46,7 +47,14 @@ check: vet lint test
 qmllint:
 	@mkdir -p $(QML_IMPORTS)
 	@ln -sfn $(OMARCHY_SHELL) $(QML_IMPORTS)/qs
-	$(QMLLINT) --missing-property disable -I $(QML_IMPORTS) plugin/*.qml
+	$(QMLLINT) --missing-property disable -I $(QML_IMPORTS) plugin/*.qml plugin/tests/*.qml
+
+# Plugin tests: the pure JS (lib/*.js) and FakeService with qmltestrunner,
+# then the views in an offscreen quickshell against the installed shell
+# (they import Quickshell and qs.Ui, which qmltestrunner cannot load).
+qmltest:
+	QT_QPA_PLATFORM=offscreen $(QMLTESTRUNNER) -input plugin/tests
+	OMARCHY_SHELL=$(OMARCHY_SHELL) plugin/tests/smoke/run.sh
 
 plugin-validate:
 	omarchy plugin validate plugin
@@ -55,7 +63,7 @@ specs:
 	npx -y @fission-ai/openspec@latest validate --all --strict
 
 # Everything, including the checks that only run on an Omarchy machine.
-local: check test-race qmllint plugin-validate specs
+local: check test-race qmllint qmltest plugin-validate specs
 
 snapshot:
 	goreleaser release --snapshot --clean
