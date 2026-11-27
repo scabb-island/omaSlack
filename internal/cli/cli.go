@@ -50,6 +50,9 @@ type Env struct {
 	// Browsers lists the Chromium browsers whose Slack web session can be
 	// read as a desktop-session source. Nil means none are offered.
 	Browsers func() []BrowserSession
+	// Sources lists the desktop-session sources auth refresh re-reads (the
+	// Slack desktop app and browser profiles). Nil means auth.LocalSources.
+	Sources func() []auth.Source
 	// SlackAPIURL is Slack's Web API base URL, ending in "/".
 	SlackAPIURL string
 	// DialDaemon connects to the daemon as omaslack ctl. Nil means
