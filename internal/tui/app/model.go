@@ -77,9 +77,9 @@ type Model struct {
 	statusIsError bool
 	gone          bool // the daemon connection ended
 
-	marked     map[convKey]string // newest TS already sent to conversations.markRead
-	asked      map[userKey]bool   // users.info already asked
-	without    map[string]bool    // optional methods the daemon cannot do
+	marked     map[convKey]string    // newest TS already sent to conversations.markRead
+	asked      map[userKey]time.Time // when users.info was last asked about a user
+	without    map[string]bool       // optional methods the daemon cannot do
 	lastTyping time.Time
 	actions    []action
 }
@@ -98,7 +98,7 @@ func newModel(o Options) *Model {
 		client: o.Client, st: st, keys: DefaultKeys(), theme: o.Theme, images: o.Images,
 		now: o.Now, loc: o.Loc, sidebarWidth: defaultSidebarWidth,
 		sel: map[string]string{}, open: map[string]string{},
-		marked: map[convKey]string{}, asked: map[userKey]bool{}, without: map[string]bool{},
+		marked: map[convKey]string{}, asked: map[userKey]time.Time{}, without: map[string]bool{},
 	}
 	if m.now == nil {
 		m.now = time.Now

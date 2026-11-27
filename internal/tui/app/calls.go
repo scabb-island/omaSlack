@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -83,6 +84,19 @@ func then(first, next tea.Cmd) tea.Cmd {
 // the TUI does without, silently.
 var optional = map[string]bool{"users.info": true, "emoji.list": true, "typing.send": true}
 
+// quiet are the methods whose failures the user need not see: typing.send
+// fails while the daemon's socket to Slack reconnects, and a name that
+// does not arrive is asked again later.
+var quiet = map[string]bool{"typing.send": true, "users.info": true}
+
+// Asking users.info: at most usersPerCall IDs per call (the daemon's
+// limit), and an ID it did not answer is asked again after usersRetry
+// (the daemon looks up only a few unknown people per call).
+const (
+	usersPerCall = 100
+	usersRetry   = 30 * time.Second
+)
+
 // unsupported reports whether err says the daemon cannot do the method.
 func unsupported(err error) bool {
 	var e *rpc.Error
@@ -97,6 +111,9 @@ func (m *Model) failed(r resultMsg) {
 	}
 	if optional[r.method] && unsupported(r.err) {
 		m.without[r.method] = true
+		return
+	}
+	if quiet[r.method] {
 		return
 	}
 	m.setError(fmt.Sprintf("%s: %v", r.method, r.err))
@@ -158,21 +175,22 @@ func (m *Model) askNames() tea.Cmd {
 	if m.without["users.info"] || m.team == "" {
 		return nil
 	}
-	team := m.team
+	team, now := m.team, m.now()
 	var ids []string
 	for _, id := range m.shownUserIDs() {
-		if m.unnamed(team, id) {
-			m.asked[userKey{team, id}] = true
+		if m.unnamed(team, id, now) {
+			m.asked[userKey{team, id}] = now
 			ids = append(ids, id)
 		}
 	}
-	if len(ids) == 0 {
-		return nil
+	var cmds []tea.Cmd
+	for chunk := range slices.Chunk(ids, usersPerCall) {
+		cmds = append(cmds, call(m.client, "users.info", map[string]any{"team": team, "ids": chunk}, func(m *Model, users []wire.User) tea.Cmd {
+			m.st.PutUsers(team, users)
+			return nil
+		}))
 	}
-	return call(m.client, "users.info", map[string]any{"team": team, "ids": ids}, func(m *Model, users []wire.User) tea.Cmd {
-		m.st.PutUsers(team, users)
-		return nil
-	})
+	return tea.Batch(cmds...)
 }
 
 // shownUserIDs are the users the view may show: the other person of each
@@ -188,8 +206,10 @@ func (m *Model) shownUserIDs() []string {
 	return ids
 }
 
-// unnamed says id is a user (not a bot) with no name yet and not asked.
-func (m *Model) unnamed(team, id string) bool {
+// unnamed says id is a user (not a bot) with no name yet, not asked
+// lately.
+func (m *Model) unnamed(team, id string, now time.Time) bool {
 	isUser := id != "" && (id[0] == 'U' || id[0] == 'W')
-	return isUser && !m.asked[userKey{team, id}] && m.st.UserName(team, id) == ""
+	at, asked := m.asked[userKey{team, id}]
+	return isUser && (!asked || now.Sub(at) >= usersRetry) && m.st.UserName(team, id) == ""
 }
