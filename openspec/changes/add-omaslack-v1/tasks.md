@@ -75,11 +75,11 @@
 ## M4 — QML UI MVP
 - [x] 4.1 Spike: Quickshell `Socket` versus the `ctl --stream` bridge. A direct `Socket` won (see `docs/spikes/m4.1-quickshell-socket.md`)
 - [x] 4.2 `Service.qml` as the single RPC client, with its models
-- [ ] 4.3 `BarWidget.qml`: icon, DM and mention badges, connection state and tooltip
-- [ ] 4.4 `Panel.qml`: unread list with quick reply
+- [x] 4.3 `BarWidget.qml`: icon, DM and mention badges, connection state and tooltip
+- [x] 4.4 `Panel.qml`: unread list with quick reply
 - [ ] 4.5 `Window.qml` (`FloatingWindow`): sidebar, messages, threads, compose, reactions and attachments
 - [ ] 4.6 Full keyboard navigation and styles only from `Style`
-- [ ] 4.7 Manifest `schema[]` for settings
+- [x] 4.7 Manifest `schema[]` for settings
 - [x] 4.8 `qmltestrunner` tests for the models
 - [ ] 4.9 Daemon-side rich text: mrkdwn parsed once in a shared `internal/mrkdwn` package (also used by the TUI renderer) and rendered to the HTML subset Qt's `Text.RichText` draws, in `wire.Message.html` for history, replies and message events
 - [x] 4.10 Contracts: the Service API (`plugin/Service.qml`, mirrored by `plugin/tests/FakeService.qml`), pure JS state in `plugin/lib/`, the bar/popup/window split (`BarWidget.qml`, `BarIcon.qml`, `QuickPanel.qml`, `Window.qml` as the `panel` entry point), the manifest settings, `wire.Message.html`, and `make qmltest` (qmltestrunner for JS and FakeService; view smokes in an offscreen quickshell)
