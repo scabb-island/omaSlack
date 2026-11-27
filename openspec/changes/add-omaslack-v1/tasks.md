@@ -77,7 +77,7 @@
 - [x] 4.2 `Service.qml` as the single RPC client, with its models
 - [x] 4.3 `BarWidget.qml`: icon, DM and mention badges, connection state and tooltip
 - [x] 4.4 `Panel.qml`: unread list with quick reply
-- [ ] 4.5 `Window.qml` (`FloatingWindow`): sidebar, messages, threads, compose, reactions and attachments
+- [x] 4.5 `Window.qml` (`FloatingWindow`): sidebar, messages, threads, compose, reactions and attachments
 - [ ] 4.6 Full keyboard navigation and styles only from `Style`
 - [x] 4.7 Manifest `schema[]` for settings
 - [x] 4.8 `qmltestrunner` tests for the models
