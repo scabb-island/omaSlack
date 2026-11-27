@@ -63,10 +63,11 @@ func DefaultPaths() (Paths, error) {
 	if err != nil {
 		return Paths{}, fmt.Errorf("theme: %w", err)
 	}
-	return pathsFrom(home)
+	return PathsFrom(home)
 }
 
-func pathsFrom(home string) (Paths, error) {
+// PathsFrom resolves Paths under home; an empty home is an error.
+func PathsFrom(home string) (Paths, error) {
 	if home == "" {
 		return Paths{}, errors.New("theme: no home directory")
 	}

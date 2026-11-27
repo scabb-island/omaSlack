@@ -16,7 +16,7 @@ const authUsage = `Usage: omaslack auth add --provider internal-app
        omaslack auth remove <team-id>
 `
 
-// fileBackendWarning is what `omaslack auth` and `omaslack doctor` say
+// fileBackendWarning is what `omaslack auth` says (doctor has a shorter one)
 // when the credentials are in the file backend (spec slack-connection,
 // "Credentials in the keyring").
 const fileBackendWarning = "Warning: no Secret Service is running, so the credentials are in a plain file " +

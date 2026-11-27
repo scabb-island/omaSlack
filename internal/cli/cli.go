@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strings"
 
+	"gitlab.com/scabb-island/omaslack/internal/doctor"
 	"gitlab.com/scabb-island/omaslack/internal/keyring"
 	"gitlab.com/scabb-island/omaslack/internal/provider/desktopsession/auth"
 	"gitlab.com/scabb-island/omaslack/internal/rpc"
@@ -24,16 +25,12 @@ import (
 
 // Exit codes.
 const (
-	ExitOK             = 0
-	ExitError          = 1
-	ExitUsage          = 2
-	ExitNotImplemented = 3
-	ExitRPCError       = 4 // the daemon answered with a JSON-RPC error
-	ExitUnavailable    = 5 // the daemon could not be reached or went away
+	ExitOK          = 0
+	ExitError       = 1
+	ExitUsage       = 2
+	ExitRPCError    = 4 // the daemon answered with a JSON-RPC error
+	ExitUnavailable = 5 // the daemon could not be reached or went away
 )
-
-// ErrNotImplemented marks a subcommand whose milestone has not landed yet.
-var ErrNotImplemented = errors.New("not implemented yet")
 
 // Env is what a subcommand gets to work with. Injected so tests never touch
 // the real process streams, keyring, Slack desktop app or network.
@@ -58,6 +55,9 @@ type Env struct {
 	// RunTUI runs the terminal client. Nil means app.Run, on the real
 	// terminal.
 	RunTUI func(context.Context, app.Options) error
+	// DoctorProbes reads the system for omaslack doctor. Nil means
+	// doctor.SystemProbes with Keyring.
+	DoctorProbes func() doctor.Probes
 }
 
 // usageError reports a command line that does not parse. Run prints it
@@ -70,9 +70,8 @@ type usageError struct {
 func (e *usageError) Error() string { return e.err.Error() }
 
 type command struct {
-	summary   string
-	milestone string // non-empty while the subcommand is a placeholder
-	run       func(env Env, args []string) error
+	summary string
+	run     func(env Env, args []string) error
 }
 
 func commands() map[string]command {
@@ -81,7 +80,7 @@ func commands() map[string]command {
 		"tui":     {summary: "open the terminal client", run: runTUI},
 		"ctl":     {summary: "call a daemon RPC method or stream its events", run: runCtl},
 		"auth":    {summary: "add, list or remove Slack workspaces", run: runAuth},
-		"doctor":  {summary: "check the installation and report problems", milestone: "M5"},
+		"doctor":  {summary: "check the installation and report problems", run: runDoctor},
 		"version": {summary: "print version information", run: runVersion},
 	}
 }
@@ -106,10 +105,6 @@ func Run(env Env, args []string) int {
 		fmt.Fprintf(env.Stderr, "omaslack: unknown command %q\n\n", name)
 		usage(env.Stderr)
 		return ExitUsage
-	}
-	if cmd.run == nil {
-		fmt.Fprintf(env.Stderr, "omaslack %s: %v (planned for %s)\n", name, ErrNotImplemented, cmd.milestone)
-		return ExitNotImplemented
 	}
 	return exitCode(env, name, cmd.run(env, args[1:]))
 }
@@ -156,12 +151,7 @@ func usage(w io.Writer) {
 	var b strings.Builder
 	b.WriteString("Usage: omaslack <command> [arguments]\n\nCommands:\n")
 	for _, n := range names {
-		c := cmds[n]
-		line := fmt.Sprintf("  %-8s %s", n, c.summary)
-		if c.milestone != "" {
-			line += " (not implemented yet, " + c.milestone + ")"
-		}
-		b.WriteString(line + "\n")
+		fmt.Fprintf(&b, "  %-8s %s\n", n, cmds[n].summary)
 	}
 	_, _ = io.WriteString(w, b.String())
 }
