@@ -1,6 +1,7 @@
 import QtQuick
 import QtTest
 import "../lib/badges.js" as Badges
+import "../lib/install.js" as Install
 
 // lib/badges.js: what the bar icon shows (unread dot, state, tooltip, hidden)
 // for a given Service state and widget settings.
@@ -200,6 +201,49 @@ TestCase {
     verify(v.alert)
     verify(v.tooltip.indexOf("Update omaslack") >= 0, v.tooltip)
     verify(v.tooltip.indexOf("protocol 2 not supported") >= 0, v.tooltip)
+  }
+
+  // ---- what to do when the daemon does not answer (lib/install.js) ----------
+
+  function test_a_missing_package_says_how_to_install_it() {
+    var v = view({ connectionState: "unavailable", everConnected: false, setup: Install.action("install") })
+    compare(v.status, "down")
+    verify(v.tooltip.indexOf("omaslack-bin not installed") >= 0, v.tooltip)
+    verify(v.tooltip.indexOf("omarchy-pkg-aur-add omaslack-bin") >= 0, v.tooltip)
+    verify(v.tooltip.indexOf("Open the panel to install omaslack-bin.") >= 0, v.tooltip)
+    verify(v.tooltip.indexOf("systemctl") < 0, "no start hint without the package: " + v.tooltip)
+  }
+
+  function test_a_lost_daemon_shows_the_start_hint_of_the_probe() {
+    var v = view({ connectionState: "unavailable", everConnected: true, setup: Install.action("setup") })
+    compare(v.status, "reconnecting")
+    verify(v.tooltip.indexOf("omaslack setup") >= 0, v.tooltip)
+    verify(v.tooltip.indexOf("Middle-click to retry now.") >= 0, v.tooltip)
+  }
+
+  function test_incompatible_shows_the_update_action() {
+    var v = view({ connectionState: "incompatible", setup: Install.action("update") })
+    compare(v.status, "error")
+    verify(v.tooltip.indexOf("yay -S --needed omaslack-bin") >= 0, v.tooltip)
+    verify(v.tooltip.indexOf("Open the panel to update omaslack-bin.") >= 0, v.tooltip)
+  }
+
+  function test_a_need_without_a_button_only_explains() {
+    var v = view({ connectionState: "incompatible", setup: Install.action("update-plugin") })
+    verify(v.tooltip.indexOf("omarchy plugin update ar.scabb.omaslack") >= 0, v.tooltip)
+    verify(v.tooltip.indexOf("Open the panel") < 0, v.tooltip)
+  }
+
+  function test_a_retry_keeps_the_setup_hint() {
+    var v = view({ connectionState: "connecting", everConnected: false, setup: Install.action("start") })
+    verify(v.tooltip.indexOf("systemctl --user start omaslack") >= 0, v.tooltip)
+    verify(v.tooltip.indexOf("connecting to the daemon") < 0, v.tooltip)
+  }
+
+  function test_a_setup_need_is_ignored_while_connected() {
+    var v = view({ setup: Install.action("install") })
+    compare(v.status, "connected")
+    verify(v.tooltip.indexOf("omarchy-pkg-aur-add") < 0, v.tooltip)
   }
 
   function test_workspace_reconnecting_keeps_the_counts() {
