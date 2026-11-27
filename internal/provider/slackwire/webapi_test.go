@@ -48,7 +48,7 @@ func (s *slack) serve(pages map[string]map[string]string, status int, header map
 	s.t.Cleanup(srv.Close)
 	var logs bytes.Buffer
 	sign := func(form url.Values, h http.Header) { form.Set("token", "secret"); h.Set("X-Signed", "yes") }
-	return NewWebAPI(srv.URL+"/api/", srv.Client(), sign, domain.NewCapabilities(domain.Search, domain.PresenceWrite), slog.New(slog.NewTextHandler(&logs, nil))), &logs
+	return NewWebAPI(srv.URL+"/api/", srv.Client(), sign, domain.NewCapabilities(domain.Search, domain.PresenceWrite, domain.CustomEmoji), slog.New(slog.NewTextHandler(&logs, nil))), &logs
 }
 
 func fakeSlack(t *testing.T, pages map[string]map[string]string) (*WebAPI, *slack, *bytes.Buffer) {

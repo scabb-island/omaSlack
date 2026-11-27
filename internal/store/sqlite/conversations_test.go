@@ -45,7 +45,7 @@ func TestTheListIsStoredOrderedByID(t *testing.T) {
 	s := openStore(t)
 	general := domain.Conversation{ID: conv(t, "C02"), Kind: domain.Channel, Name: "general", Latest: ts(t, "1700000002.000000"), LastRead: ts(t, "1700000001.000000"), Mentions: 2}
 	secret := domain.Conversation{ID: conv(t, "G01"), Kind: domain.PrivateChannel, Name: "secret"}
-	direct := domain.Conversation{ID: conv(t, "D01"), Kind: domain.DirectMessage, Latest: ts(t, "1700000003.000000")}
+	direct := domain.Conversation{ID: conv(t, "D01"), Kind: domain.DirectMessage, Latest: ts(t, "1700000003.000000"), User: user(t, "U01")}
 	group := domain.Conversation{ID: conv(t, "C01"), Kind: domain.GroupMessage, Name: "mpdm-a--b"}
 	mustPutConversations(t, s, general, secret, direct, group)
 	expectConversations(t, s, group, general, direct, secret)
@@ -144,7 +144,7 @@ func TestMentionsStandWhileTheLatestIsUnknown(t *testing.T) {
 func TestTheListSurvivesAReopen(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "T123.db")
-	c := domain.Conversation{ID: conv(t, "D01"), Kind: domain.DirectMessage, Latest: ts(t, "1700000002.000000"), Mentions: 1}
+	c := domain.Conversation{ID: conv(t, "D01"), Kind: domain.DirectMessage, Latest: ts(t, "1700000002.000000"), Mentions: 1, User: user(t, "U01")}
 	s := openAt(t, path)
 	mustPutConversations(t, s, c)
 	if err := s.Close(); err != nil {
@@ -161,6 +161,7 @@ func TestACorruptListRowIsAnError(t *testing.T) {
 		"kind":   `INSERT INTO conversations (conv_id, kind) VALUES ('C01', 'forum')`,
 		"id":     `INSERT INTO conversations (conv_id, kind) VALUES ('x', 'channel')`,
 		"latest": `INSERT INTO conversations (conv_id, kind, latest) VALUES ('C01', 'channel', 'soon')`,
+		"user":   `INSERT INTO conversations (conv_id, kind, user_id) VALUES ('D01', 'im', 'nobody')`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "T123.db")

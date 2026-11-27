@@ -47,6 +47,18 @@ func TestAnUnreadableListFailsTheSummaryAndTheList(t *testing.T) {
 	}
 }
 
+func TestUsersInfoTakesUpToItsMaximumOfIDs(t *testing.T) {
+	f := newFixture()
+	ids := make([]string, UsersInfoMaxIDs)
+	for i := range ids {
+		ids[i] = fmt.Sprintf("U%03d", i)
+	}
+	params, _ := json.Marshal(map[string]any{"team": "T0ACME", "ids": ids})
+	if _, err := Methods(f.dir, f.focus).Handle(context.Background(), "users.info", params); err != nil {
+		t.Fatalf("users.info with %d IDs: %v", len(ids), err)
+	}
+}
+
 // ── End to end, over a real socket ──
 
 // session is a client connected to a daemon serving Methods.

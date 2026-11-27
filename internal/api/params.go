@@ -148,6 +148,24 @@ func (p *params) paths() []string {
 	return paths
 }
 
+// userIDs is a required array of 1 to most user IDs.
+func (p *params) userIDs(name string, most int) []domain.UserID {
+	var raw []string
+	switch {
+	case !p.decode(name, "an array of strings", &raw):
+		p.fail(name, "missing")
+	case len(raw) == 0:
+		p.fail(name, "must not be empty")
+	case len(raw) > most:
+		p.fail(name, "at most %d IDs per call", most)
+	}
+	ids := make([]domain.UserID, 0, len(raw))
+	for _, s := range raw {
+		ids = append(ids, parseWith(p, name, s, domain.ParseUserID))
+	}
+	return ids
+}
+
 // limit is member "limit": def when absent, at least 1, and capped at
 // most (a larger value is lowered, not refused).
 func (p *params) limit(def, most int) int {

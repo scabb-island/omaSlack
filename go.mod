@@ -11,7 +11,8 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/slack-go/slack v0.23.0
 	github.com/syndtr/goleveldb v1.0.0
-	golang.org/x/sys v0.47.0
+	golang.org/x/image v0.48.0
+	golang.org/x/sys v0.50.0
 	golang.org/x/term v0.45.0
 	modernc.org/sqlite v1.58.0
 )

@@ -30,6 +30,7 @@ type Conversation struct {
 	IsIM      bool   `json:"is_im"`
 	IsMPIM    bool   `json:"is_mpim"`
 	IsPrivate bool   `json:"is_private"`
+	User      string `json:"user"` // the other person of an IM
 	LastRead  string `json:"last_read"`
 	// Latest is the latest message object, or only its ts in some
 	// legacy shapes; parsed by latestTS.
@@ -44,7 +45,8 @@ type Conversation struct {
 var errOddLatest = errors.New("latest is neither a message nor a ts")
 
 // Parse checks w and builds its domain.Conversation, with its ID, kind,
-// name and, when w carries them, read marker and latest message. Slack's
+// name, the other person of a DM, and, when w carries them, read marker
+// and latest message. Slack's
 // never-read marker ("0000000000.000000") is the zero timestamp. In a DM
 // or group DM every unread message is for the user, as Slack's own badge
 // counts them, so unread_count_display there is the mention count; in a
@@ -56,14 +58,23 @@ func (w Conversation) Parse() (domain.Conversation, error) {
 	}
 	lastRead, errRead := ParseOptionalTS(w.LastRead)
 	latest, errLatest := w.latestTS()
-	if err := errors.Join(errRead, errLatest); err != nil {
-		return domain.Conversation{}, fmt.Errorf("conversation %s read state: %w", w.ID, err)
+	user, errUser := w.dmUser()
+	if err := errors.Join(errRead, errLatest, errUser); err != nil {
+		return domain.Conversation{}, fmt.Errorf("conversation %s: %w", w.ID, err)
 	}
-	c := domain.Conversation{ID: id, Kind: w.kind(), Name: w.Name, Latest: latest, LastRead: lastRead}
+	c := domain.Conversation{ID: id, Kind: w.kind(), Name: w.Name, Latest: latest, LastRead: lastRead, User: user}
 	if c.Kind == domain.DirectMessage || c.Kind == domain.GroupMessage {
 		c.Mentions = w.UnreadDisplay
 	}
 	return c, nil
+}
+
+// dmUser reads the other person of an IM; any other kind has none.
+func (w Conversation) dmUser() (domain.UserID, error) {
+	if !w.IsIM || w.User == "" {
+		return domain.UserID{}, nil
+	}
+	return domain.ParseUserID(w.User)
 }
 
 // latestTS reads the latest field: absent or null is zero (unknown or

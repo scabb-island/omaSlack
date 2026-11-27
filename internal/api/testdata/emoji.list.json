@@ -1,0 +1,48 @@
+[
+  {
+    "name": "custom emoji and aliases",
+    "params": {
+      "team": "T0ACME"
+    },
+    "calls": [
+      "T0ACME Emoji"
+    ],
+    "result": {
+      "emoji": {
+        "partyparrot": "https://emoji.slack-edge.com/T0ACME/partyparrot/abc.gif",
+        "shipit": "alias:squirrel"
+      }
+    }
+  },
+  {
+    "name": "provider without customEmoji",
+    "params": {
+      "team": "T0BETA"
+    },
+    "error": {
+      "code": -32002,
+      "message": "capability not supported by this provider: customEmoji"
+    }
+  },
+  {
+    "name": "credentials expired",
+    "params": {
+      "team": "T0EXPIRED"
+    },
+    "calls": [
+      "T0EXPIRED Emoji"
+    ],
+    "error": {
+      "code": -32003,
+      "message": "auth_expired"
+    }
+  },
+  {
+    "name": "missing team",
+    "params": {},
+    "error": {
+      "code": -32602,
+      "message": "team: missing"
+    }
+  }
+]

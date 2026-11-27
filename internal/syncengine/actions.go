@@ -2,7 +2,6 @@ package syncengine
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
@@ -39,6 +38,9 @@ const (
 	methodSetPresence    = "users.setPresence"
 	methodSnoozeDND      = "dnd.setSnooze"
 	methodEndDND         = "dnd.endSnooze"
+	methodUsersInfo      = "users.info"
+	methodEmojiList      = "emoji.list"
+	methodTyping         = "typing" // a socket frame, not a Web API method
 )
 
 // State is the workspace's connection state as last published.
@@ -269,11 +271,25 @@ func (w *writer) clearDraft(ctx context.Context, conv domain.ConversationID, thr
 // Missing interface or capability: an error wrapping domain.ErrUnsupported.
 
 func (e *Engine) Users(ctx context.Context, ids []domain.UserID) ([]domain.User, error) {
-	return nil, errTODO38
+	d, err := optional[provider.UserDirectory](e, "name users")
+	if err != nil {
+		return nil, err
+	}
+	return ask(ctx, e, methodUsersInfo, func(ctx context.Context) ([]domain.User, error) { return d.Users(ctx, ids) })
 }
 
-func (e *Engine) Emoji(ctx context.Context) (map[string]string, error) { return nil, errTODO38 }
+func (e *Engine) Emoji(ctx context.Context) (map[string]string, error) {
+	l, err := optional[provider.EmojiLister](e, "list emoji", domain.CustomEmoji)
+	if err != nil {
+		return nil, err
+	}
+	return ask(ctx, e, methodEmojiList, l.Emoji)
+}
 
-func (e *Engine) SendTyping(ctx context.Context, conv domain.ConversationID) error { return errTODO38 }
-
-var errTODO38 = errors.New("syncengine: not implemented yet (task 3.8)")
+func (e *Engine) SendTyping(ctx context.Context, conv domain.ConversationID) error {
+	s, err := optional[provider.TypingSender](e, "send typing", domain.Typing)
+	if err != nil {
+		return err
+	}
+	return e.interactive(ctx, methodTyping, func(ctx context.Context) error { return s.SendTyping(ctx, conv) })
+}

@@ -324,6 +324,32 @@ func TestPassThroughsReachTheProviderAndPublishNothing(t *testing.T) {
 	r.pub.expectNothing(t)
 }
 
+func TestNamesEmojiAndTypingReachTheProviderAndPublishNothing(t *testing.T) {
+	r, w := newWritesRig(t, domain.CustomEmoji, domain.Typing)
+	w.users = []domain.User{{ID: me, Name: "me"}}
+	r.connected(t)
+
+	users, err := r.engine.Users(bg, []domain.UserID{me})
+	if err != nil || !reflect.DeepEqual(users, w.users) {
+		t.Fatalf("Users = %+v, %v", users, err)
+	}
+	r.expectGrant(t, "users.info")
+	emoji, err := r.engine.Emoji(bg)
+	if err != nil || emoji["shipit"] != "alias:squirrel" {
+		t.Fatalf("Emoji = %v, %v", emoji, err)
+	}
+	r.expectGrant(t, "emoji.list")
+	if err := r.engine.SendTyping(bg, convA); err != nil {
+		t.Fatalf("SendTyping = %v", err)
+	}
+	r.expectGrant(t, "typing")
+	want := []string{"users.info [U0ME]\n", "emoji.list\n", "typing CAAA\n"}
+	if got := w.recorded(); !slices.Equal(got, want) {
+		t.Fatalf("calls = %q, want %q", got, want)
+	}
+	r.pub.expectNothing(t)
+}
+
 func TestProviderErrorsOfActionsReachTheCaller(t *testing.T) {
 	r, w := newWritesRig(t, domain.Search)
 	r.connected(t)
@@ -367,6 +393,9 @@ func actions(e *syncengine.Engine) map[string]error {
 		"SetPresence":    e.SetPresence(ctx, true),
 		"SnoozeDND":      e.SnoozeDND(ctx, 1),
 		"EndDND":         e.EndDND(ctx),
+		"Users":          second(e.Users(ctx, []domain.UserID{me})),
+		"Emoji":          second(e.Emoji(ctx)),
+		"SendTyping":     e.SendTyping(ctx, convA),
 	}
 }
 
@@ -392,6 +421,12 @@ func TestActionsNeedingAnUndeclaredCapabilityAreUnsupported(t *testing.T) {
 	}
 	if err := r.engine.SetPresence(bg, true); !errors.Is(err, domain.ErrUnsupported) {
 		t.Errorf("SetPresence = %v", err)
+	}
+	if _, err := r.engine.Emoji(bg); !errors.Is(err, domain.ErrUnsupported) {
+		t.Errorf("Emoji = %v", err)
+	}
+	if err := r.engine.SendTyping(bg, convA); !errors.Is(err, domain.ErrUnsupported) {
+		t.Errorf("SendTyping = %v", err)
 	}
 	if c := w.recorded(); len(c) != 0 {
 		t.Errorf("calls = %q", c)
