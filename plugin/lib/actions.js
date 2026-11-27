@@ -253,9 +253,12 @@ function fileChoice(files) {
 
 function isImage(file) { return /^image\//.test((file && file.mimetype) || "") }
 
-// canFiles: whether the workspace may fetch and upload files (its
-// "files" capability).
-function canFiles(workspace) { return !!workspace && (workspace.capabilities || []).indexOf("files") >= 0 }
+// can: whether workspace (a wire.Workspace) has capability ("files" for
+// files.fetch and files.upload, "customEmoji" for emoji.list).
+function can(workspace, capability) { return !!workspace && (workspace.capabilities || []).indexOf(capability) >= 0 }
+
+// fileUrl: the file:// URL of a local path (files.fetch's localPath).
+function fileUrl(path) { return "file://" + String(path).split("/").map(encodeURIComponent).join("/") }
 
 function fileName(f) { return f.name || f.title || f.id || "the file" }
 

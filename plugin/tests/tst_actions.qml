@@ -112,10 +112,18 @@ TestCase {
     verify(!A.isImage({}))
   }
 
-  function test_files_need_the_workspace_capability() {
-    verify(A.canFiles({ capabilities: ["files", "search"] }))
-    verify(!A.canFiles({ capabilities: ["search"] }))
-    verify(!A.canFiles(null))
+  function test_capabilities_come_from_the_workspace() {
+    verify(A.can({ capabilities: ["files", "search"] }, "files"))
+    verify(!A.can({ capabilities: ["search"] }, "customEmoji"))
+    verify(!A.can({}, "files"))
+    verify(!A.can(null, "files"))
+  }
+
+  function test_a_local_path_becomes_a_file_url() {
+    compare(A.fileUrl("/home/ana/a.png"), "file:///home/ana/a.png")
+    // Characters a URL would read as syntax are escaped (intentional
+    // non-ASCII: an accented name).
+    compare(A.fileUrl("/tmp/my #1 café?.png"), "file:///tmp/my%20%231%20caf%C3%A9%3F.png")
   }
 
   function test_file_name_falls_back_to_the_title_then_the_id() {
