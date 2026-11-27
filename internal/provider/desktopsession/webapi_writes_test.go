@@ -114,3 +114,20 @@ func TestWriteFailuresKeepTheirKind(t *testing.T) {
 		t.Errorf("SetPresence() err = %v, want a 3s RateLimitedError", err)
 	}
 }
+
+func TestNamesAndEmojiComeFromTheWebAPI(t *testing.T) {
+	f := newFakeSlack(t, map[string]http.HandlerFunc{
+		"/api/users.list": fixtureBody(t, "users.list.json"),
+		"/api/emoji.list": jsonBody(http.StatusOK, `{"ok":true,"emoji":{"shipit":"alias:squirrel"}}`),
+	})
+	p, _ := f.provider(t)
+
+	users, err := p.Users(context.Background(), []domain.UserID{parse(t, domain.ParseUserID, "U0003")})
+	if err != nil || len(users) != 1 || users[0].Name != "juana" {
+		t.Errorf("Users() = %+v, %v; want juana", users, err)
+	}
+	emoji, err := p.Emoji(context.Background())
+	if err != nil || emoji["shipit"] != "alias:squirrel" {
+		t.Errorf("Emoji() = %v, %v; want shipit", emoji, err)
+	}
+}
