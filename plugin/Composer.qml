@@ -3,6 +3,7 @@ import QtQuick.Controls
 import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
+import "lib/contrast.js" as C
 
 // The window's message field, for a conversation or a thread: multi-line,
 // Enter sends, Shift+Enter starts a new line, Esc hands the keyboard back.
@@ -174,7 +175,7 @@ Item {
       wrapMode: TextEdit.Wrap
       textFormat: TextEdit.PlainText
       placeholderText: root.placeholder
-      placeholderTextColor: Qt.darker(root.foreground, 1.6)
+      placeholderTextColor: C.muted(root.foreground, Commons.Color.background)
       color: root.foreground
       selectionColor: Style.selectionFillFor(root.foreground, Commons.Color.accent)
       selectedTextColor: root.foreground

@@ -6,6 +6,7 @@ import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
 import "lib/nav.js" as N
+import "lib/contrast.js" as C
 
 // The compose autocomplete of one Composer, as the TUI's: typing @ offers
 // people (users.search, debounced), # the workspace's channels and : the
@@ -204,7 +205,7 @@ Item {
         Layout.bottomMargin: Style.spacing.xs
         textFormat: Text.PlainText
         text: (root.completion.trig ? N.POPUP_TITLES[root.completion.trig.sign] : "") + " · Tab picks"
-        color: Qt.darker(root.foreground, 1.4)
+        color: C.muted(root.foreground, Commons.Color.popups.background)
         font.family: root.fontFamily
         font.pixelSize: Style.font.caption
       }

@@ -49,7 +49,7 @@ ListOverlay {
       Layout.fillWidth: true
       textFormat: Text.PlainText
       text: line.row.title || ""
-      color: line.row.unread ? root.foreground : Qt.darker(root.foreground, 1.4)
+      color: line.row.unread ? root.foreground : root.dim
       font.family: root.fontFamily
       font.pixelSize: Style.font.body
       font.bold: !!line.row.unread
@@ -59,7 +59,7 @@ ListOverlay {
       visible: line.row.mentions > 0
       textFormat: Text.PlainText
       text: "(" + line.row.mentions + ")"
-      color: Commons.Color.accent
+      color: root.accentText
       font.family: root.fontFamily
       font.pixelSize: Style.font.bodySmall
       font.bold: true
@@ -68,7 +68,7 @@ ListOverlay {
       visible: root.manyWorkspaces
       textFormat: Text.PlainText
       text: line.row.workspace || ""
-      color: Qt.darker(root.foreground, 1.4)
+      color: root.dim
       font.family: root.fontFamily
       font.pixelSize: Style.font.caption
     }

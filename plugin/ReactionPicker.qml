@@ -92,7 +92,7 @@ ActionCard {
         anchors.verticalCenter: parent.verticalCenter
         textFormat: Text.PlainText
         text: "Emoji name"
-        color: Qt.darker(root.foreground, 1.6)
+        color: root.dim
         font: input.font
       }
     }
@@ -144,7 +144,7 @@ ActionCard {
     width: parent.width
     textFormat: Text.PlainText
     text: A.pickEmoji([], 0, root.query) !== "" ? "Enter reacts with :" + A.pickEmoji([], 0, root.query) + ":" : "No emoji match."
-    color: Qt.darker(root.foreground, 1.4)
+    color: root.dim
     font.family: root.fontFamily
     font.pixelSize: Style.font.bodySmall
   }

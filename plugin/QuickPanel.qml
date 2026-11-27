@@ -6,6 +6,7 @@ import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
 import "lib/quickpanel.js" as Lib
+import "lib/contrast.js" as C
 
 // The quick-view popup under the bar icon (task 4.4): conversations with
 // unread messages, DMs and mentions first, each with a preview; a quick
@@ -71,7 +72,7 @@ FocusScope {
   readonly property var dndButtons: Lib.dndButtons(scopes, Math.min(scopeIndex, scopes.length - 1), choices, dndState.snoozed)
 
   readonly property color foreground: Commons.Color.foreground
-  readonly property color dim: Qt.darker(foreground, 1.4)
+  readonly property color dim: C.muted(root.foreground, Commons.Color.popups.background)
   readonly property string fontFamily: Style.font.family
   readonly property bool shown: !Window.window || Window.window.visible
 
@@ -258,7 +259,7 @@ FocusScope {
         width: parent.width
         textFormat: Text.PlainText
         text: root.status
-        color: Commons.Color.urgent
+        color: C.readable(Commons.Color.urgent, Commons.Color.popups.background, root.foreground)
         font.family: root.fontFamily
         font.pixelSize: Style.font.bodySmall
         wrapMode: Text.WordWrap

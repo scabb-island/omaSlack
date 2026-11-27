@@ -6,6 +6,7 @@ import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
 import "lib/quickpanel.js" as Lib
+import "lib/contrast.js" as C
 
 // One unread conversation in the quick-view panel: name, workspace,
 // mention badge, a preview of the latest messages, the row actions and,
@@ -31,7 +32,9 @@ CursorSurface {
   // The reply field took or lost the keyboard.
   signal replyFocusChanged(bool focused)
 
-  readonly property color dim: Qt.darker(foreground, 1.4)
+  // Secondary text and the badge's text readable in the popup
+  // (lib/contrast.js).
+  readonly property color dim: C.muted(root.foreground, Commons.Color.popups.background)
   readonly property string badgeText: Lib.badge(row)
 
   function focusReply() { replyField.forceActiveFocus() }
@@ -94,7 +97,7 @@ CursorSurface {
           anchors.centerIn: parent
           textFormat: Text.PlainText
           text: root.badgeText
-          color: Commons.Color.background
+          color: C.textOn(Commons.Color.accent, Commons.Color.popups.background, root.foreground)
           font.family: root.fontFamily
           font.pixelSize: Style.font.caption
           font.bold: true
@@ -146,6 +149,8 @@ CursorSurface {
       visible: root.replying
       Layout.fillWidth: true
       placeholderText: "Reply to " + (root.row.name || "") + " (Enter sends, Esc leaves)"
+      // The shell's darker placeholder reads as typed text on a light theme.
+      placeholderTextColor: root.dim
       foreground: root.foreground
       font.family: root.fontFamily
       onAccepted: root.replyAccepted(text)

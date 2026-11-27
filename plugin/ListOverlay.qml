@@ -5,6 +5,7 @@ import QtQuick.Layouts
 import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
+import "lib/contrast.js" as C
 
 // A card over the window with a title, a text field and a list under it:
 // the base of the finder (Finder.qml) and the search (SearchOverlay.qml).
@@ -24,6 +25,11 @@ FocusScope {
   property int currentIndex: 0
   property color foreground: Commons.Color.popups.text
   property string fontFamily: Style.font.family
+
+  // Secondary text and accent text readable on the card
+  // (lib/contrast.js).
+  readonly property color dim: C.muted(root.foreground, Commons.Color.popups.background)
+  readonly property color accentText: C.readable(Commons.Color.accent, Commons.Color.popups.background, root.foreground)
 
   readonly property alias field: input
   readonly property alias list: view
@@ -102,6 +108,8 @@ FocusScope {
         objectName: "overlayField"
         Layout.fillWidth: true
         placeholderText: root.placeholder
+        // The shell's darker placeholder reads as typed text on a light theme.
+        placeholderTextColor: root.dim
         foreground: root.foreground
         font.family: root.fontFamily
         font.pixelSize: Style.font.body
@@ -122,7 +130,7 @@ FocusScope {
         Layout.fillWidth: true
         textFormat: Text.PlainText
         text: root.hint
-        color: Qt.darker(root.foreground, 1.4)
+        color: root.dim
         font.family: root.fontFamily
         font.pixelSize: Style.font.bodySmall
         wrapMode: Text.WordWrap

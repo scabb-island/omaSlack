@@ -2,6 +2,7 @@ import QtQuick
 import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
+import "lib/contrast.js" as C
 
 // A card over the window for the message actions' choices (the reaction
 // picker, the file chooser): a title, the caller's content and a hint
@@ -19,6 +20,8 @@ FocusScope {
   // function(event) -> bool: true when the key was taken.
   property var keyHandler: null
   default property alias content: body.data
+  // Secondary text readable on the card (lib/contrast.js).
+  readonly property color dim: C.muted(root.foreground, Commons.Color.popups.background)
 
   signal dismissed()
 
@@ -70,7 +73,7 @@ FocusScope {
         width: parent.width
         textFormat: Text.PlainText
         text: root.hint
-        color: Qt.darker(root.foreground, 1.4)
+        color: root.dim
         font.family: root.fontFamily
         font.pixelSize: Style.font.caption
         wrapMode: Text.WordWrap

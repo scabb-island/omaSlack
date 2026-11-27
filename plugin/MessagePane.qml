@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
+import "lib/contrast.js" as C
 
 // A column with a header, a MessageList and a Composer: the window shows
 // one for the open conversation and one for the open thread (threadTS
@@ -26,6 +27,11 @@ FocusScope {
   property string emptyText: ""
   property color foreground: Commons.Color.foreground
   property string fontFamily: Style.font.family
+
+  // Secondary text and accent text that read on the window's background
+  // (lib/contrast.js).
+  readonly property color dim: C.muted(root.foreground, Commons.Color.background)
+  readonly property color accentText: C.readable(Commons.Color.accent, Commons.Color.background, root.foreground)
 
   readonly property alias list: list
   readonly property alias composer: composer
@@ -69,7 +75,7 @@ FocusScope {
         Layout.fillWidth: true
         textFormat: Text.PlainText
         text: root.subtitle
-        color: Qt.darker(root.foreground, 1.4)
+        color: root.dim
         font.family: root.fontFamily
         font.pixelSize: Style.font.caption
         elide: Text.ElideRight
@@ -125,7 +131,7 @@ FocusScope {
         wrapMode: Text.WordWrap
         textFormat: Text.PlainText
         text: root.emptyText
-        color: Qt.darker(root.foreground, 1.4)
+        color: root.dim
         font.family: root.fontFamily
         font.pixelSize: Style.font.body
       }
@@ -136,7 +142,7 @@ FocusScope {
       Layout.fillWidth: true
       textFormat: Text.PlainText
       text: "Editing a message: Enter saves, Esc cancels"
-      color: Commons.Color.accent
+      color: root.accentText
       font.family: root.fontFamily
       font.pixelSize: Style.font.caption
       elide: Text.ElideRight

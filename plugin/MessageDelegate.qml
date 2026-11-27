@@ -7,6 +7,7 @@ import qs.Commons as Commons
 import qs.Ui
 import "lib/window.js" as W
 import "lib/actions.js" as A
+import "lib/contrast.js" as C
 
 // One message in a MessageList: the day separator above it when the day
 // changes, the author and time (unless it continues the previous
@@ -41,8 +42,11 @@ Column {
   signal fileClicked(var file)
 
   readonly property var message: row && row.message ? row.message : ({})
-  readonly property var content: W.body(message, String(Commons.Color.accent))
-  readonly property color dim: Qt.darker(foreground, 1.4)
+  // Secondary text and accent text (links, "↳ N replies") readable on the
+  // window's background on light and dark themes (lib/contrast.js).
+  readonly property color dim: C.muted(root.foreground, Commons.Color.background)
+  readonly property color accentText: C.readable(Commons.Color.accent, Commons.Color.background, root.foreground)
+  readonly property var content: W.body(message, String(accentText))
   readonly property string threadText: showThread ? W.threadLabel(message) : ""
   readonly property var chips: W.reactionChips(message.reactions, selfUser)
 
@@ -237,7 +241,7 @@ Column {
         visible: root.threadText !== ""
         textFormat: Text.PlainText
         text: root.threadText
-        color: Commons.Color.accent
+        color: root.accentText
         font.family: root.fontFamily
         font.pixelSize: Style.font.bodySmall
         font.bold: true

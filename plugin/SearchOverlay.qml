@@ -100,7 +100,7 @@ ListOverlay {
       Text {
         textFormat: Text.PlainText
         text: line.row.where || ""
-        color: Commons.Color.accent
+        color: root.accentText
         font.family: root.fontFamily
         font.pixelSize: Style.font.bodySmall
         font.bold: true
@@ -109,7 +109,7 @@ ListOverlay {
         Layout.fillWidth: true
         textFormat: Text.PlainText
         text: (line.row.who || "") + " · " + Qt.formatDateTime(new Date((line.row.seconds || 0) * 1000), "yyyy-MM-dd hh:mm")
-        color: Qt.darker(root.foreground, 1.4)
+        color: root.dim
         font.family: root.fontFamily
         font.pixelSize: Style.font.caption
         elide: Text.ElideRight
@@ -119,7 +119,7 @@ ListOverlay {
       Layout.fillWidth: true
       textFormat: Text.RichText
       // Rich text ignores linkColor: W.body styles the links.
-      text: W.body({ html: line.row.html || "" }, String(Commons.Color.accent)).text
+      text: W.body({ html: line.row.html || "" }, String(root.accentText)).text
       color: root.foreground
       font.family: root.fontFamily
       font.pixelSize: Style.font.body

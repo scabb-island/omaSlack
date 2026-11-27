@@ -6,6 +6,7 @@ import qs.Commons as Commons
 import qs.Ui
 import "lib/window.js" as W
 import "lib/nav.js" as N
+import "lib/contrast.js" as C
 
 // The full window (task 4.5): a FloatingWindow with the fixed title
 // "omaslack" (for Hyprland rules), with the workspace and conversation
@@ -612,7 +613,7 @@ Item {
         padding: Style.spacing.md
         textFormat: Text.PlainText
         text: (error ? "󰀦  " + root.status : "󰋽  " + root.info)
-        color: error ? Commons.Color.urgent : root.foreground
+        color: error ? C.readable(Commons.Color.urgent, Commons.Color.background, root.foreground) : root.foreground
         font.family: root.fontFamily
         font.pixelSize: Style.font.bodySmall
         wrapMode: Text.WordWrap
