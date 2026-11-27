@@ -388,7 +388,10 @@ Item {
     var q = root._userQueue[team] || []
     q.push(user)
     root._userQueue[team] = q
-    if (!usersTimer.running) usersTimer.start()
+    // Not "if (!running)": userName() runs inside bindings, and reading
+    // running there makes start() re-trigger the binding being evaluated
+    // (a binding loop). start() does nothing while the timer runs.
+    usersTimer.start()
   }
 
   function _flushUsers() {
