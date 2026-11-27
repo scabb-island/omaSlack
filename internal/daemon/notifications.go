@@ -97,15 +97,25 @@ func (d *daemon) lookup(ctx context.Context, ev domain.MessageCreated) (notify.D
 		Candidate: notify.Candidate{
 			Team: ev.Team, Self: w.Self, Conversation: conv, Message: ev.Message, Following: following,
 		},
-		Names: names,
-	}
-	if u, ok := ev.Message.Author.User(); ok {
-		d0.Author = names.UserName(u.String())
+		Names:  names,
+		Author: authorName(ev.Message, names),
 	}
 	if len(d.dir.running()) > 1 {
 		d0.Workspace = w.Name
 	}
 	return d0, nil
+}
+
+// authorName is who wrote m: the name Slack put on it (bots), else the
+// person's name; "" when unknown.
+func authorName(m domain.Message, n names) string {
+	if m.AuthorName != "" {
+		return m.AuthorName
+	}
+	if u, ok := m.Author.User(); ok {
+		return n.UserName(u.String())
+	}
+	return ""
 }
 
 // conversation is id's entry in the store's list or, for a conversation

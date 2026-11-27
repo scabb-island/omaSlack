@@ -202,6 +202,11 @@ func TestNotifiesOncePerMessage(t *testing.T) {
 	n.send("C0GENERAL", "chatter")
 	n.send("C0GENERAL", "hey <@U0ME>")
 	n.expect("hey @U0ME")
+	bot, _ := domain.ParseBotID("B0CI")
+	n.stream("D0BOB", domain.Message{Author: domain.BotAuthor(bot), AuthorName: "CI", Text: "build green"})
+	if got := <-n.desk.shown; got.Summary != "CI" {
+		t.Errorf("a bot's notification is %+v, want it named CI", got)
+	}
 	n.settle()
 }
 
