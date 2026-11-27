@@ -53,7 +53,7 @@ import "lib/nav.js" as N
 // reactions picker (r) opens in `overlays` and calls service.react; search
 // (/) and the finder (Ctrl+K) open in `overlays` and end in
 // selectConversation(team, conv, ts); compose autocomplete and attachments
-// hook into Composer (keyFilter, insertText, input).
+// hook into Composer (addKeyFilter, insertText, input).
 Item {
   id: root
 

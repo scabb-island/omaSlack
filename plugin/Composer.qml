@@ -12,9 +12,11 @@ import qs.Ui
 //
 // Seams for the autocomplete (@ # :) and attachments: `input` is the
 // TextArea (text, cursorPosition, cursorRectangle for placing a popup),
-// insertText() edits at the cursor, and keyFilter, when set, sees every
-// key first and returns true to take it (a suggestion popup's Up/Down,
-// Tab and Enter).
+// insertText() edits at the cursor, addKeyFilter(f) lets f see every key
+// first and return true to take it (a suggestion popup's Up/Down, Tab and
+// Enter; filters run in the order added, the first that takes a key wins),
+// and `loading` is true while the field sets its own text (a draft, a
+// cleared field), which is not the user typing.
 //
 // Editing a message (e): startEdit(ts, text) puts the field in edit mode
 // (editTS set) with the message's text, saving the draft first and
@@ -30,8 +32,6 @@ Item {
   property string placeholder: ""
   property color foreground: Commons.Color.foreground
   property string fontFamily: Style.font.family
-  // function(event) -> bool: return true to take the key (see above).
-  property var keyFilter: null
   // The field grows with its text up to this many lines, then scrolls.
   property int maxLines: 8
   // The ts of the message being edited; "" while composing a new one.
@@ -40,6 +40,7 @@ Item {
   readonly property alias input: area
   readonly property alias text: area.text
   readonly property bool editing: area.activeFocus
+  readonly property bool loading: _loading
 
   signal submitted(string text)
   signal escaped()
@@ -48,6 +49,8 @@ Item {
   readonly property int draftDelay: 800
 
   property bool _loading: false
+  // function(event) -> bool each, in the order added (addKeyFilter).
+  property var _keyFilters: []
   property bool _dirty: false
   // A non-empty draft is stored in the daemon for target.
   property bool _stored: false
@@ -62,6 +65,14 @@ Item {
   }
 
   function insertText(t) { area.insert(area.cursorPosition, t) }
+
+  function addKeyFilter(f) { root._keyFilters = root._keyFilters.concat([f]) }
+
+  // filterKey: whether a key filter took event.
+  function filterKey(event) {
+    for (var i = 0; i < root._keyFilters.length; i++) if (root._keyFilters[i](event)) return true
+    return false
+  }
 
   // startEdit edits the message ts, starting from text.
   function startEdit(ts, text) {
@@ -187,7 +198,7 @@ Item {
       }
 
       Keys.onPressed: function(event) {
-        if (root.keyFilter && root.keyFilter(event)) event.accepted = true
+        if (root.filterKey(event)) event.accepted = true
         else event.accepted = root.handleKey(event.key, event.modifiers)
       }
     }

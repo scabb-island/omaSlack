@@ -109,6 +109,10 @@ Item {
     var composer = win.threadView.composer
     focusOn(composer.input, "Enter in the thread: its composer")
 
+    // A second key filter after the autocomplete's sees the keys the
+    // popup leaves, never the ones it takes.
+    var seen = []
+    composer.addKeyFilter(function(event) { seen.push(event.key); return false })
     s.reset()
     kd.type("thanks @an")
     kd.wait(250)
@@ -122,9 +126,11 @@ Item {
     kd.type("@an")
     kd.wait(250)
     check(complete.open, "the suggestions did not come back on a new word")
+    seen = []
     kd.press(Qt.Key_Tab)
     kd.type("ok")
     check(composer.text === "thanks @Ana ok", "the composer has " + JSON.stringify(composer.text))
+    check(seen.indexOf(Qt.Key_Tab) < 0 && seen.indexOf(Qt.Key_O) >= 0, "the second filter saw " + JSON.stringify(seen))
     kd.press(Qt.Key_Return)
     var sent = last("messages.send")
     check(sent && sent.conv === "C1" && sent.threadTS === theirsTS && sent.text === "thanks <@U7> ok",
