@@ -1,0 +1,8 @@
+── Today ───────────────────────────────
+alice  09:15
+  first
+  second, long enough to wrap onto a    
+  second line (edited)                  
+  👀 1                                  
+bob  09:18
+  third

@@ -1,0 +1,10 @@
+{
+  "_comment": "The second message is selected; its lines are filled with Theme.Selection. The emoji is intentional.",
+  "width": 40,
+  "selected": 1,
+  "messages": [
+    {"ts": "1795695300.000100", "author": "U0ALICE", "text": "first"},
+    {"ts": "1795695360.000200", "author": "U0ALICE", "text": "*second*, long enough to wrap onto a second line", "edited": "1", "reactions": [{"emoji": "eyes", "users": ["U0SELF"]}]},
+    {"ts": "1795695480.000300", "author": "U0BOB", "text": "third"}
+  ]
+}

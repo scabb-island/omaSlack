@@ -1,0 +1,11 @@
+{
+  "_comment": "Text golden cases: name -> mrkdwn and width. The non-ASCII text is intentional.",
+  "cases": {
+    "emphasis": {"width": 40, "text": "*bold* _italic_ ~strike~ *_both_* `code *not bold*` snake_case_name 2*3*4"},
+    "references": {"width": 50, "text": "<@U0SELF> <@U0ALICE> <@U0ZED|zed> <#C0GEN> <#C0X|random> <!here> <!channel> <!everyone> <!subteam^S1|@devs> <!date^1795695300^{date_short}|Nov 26> <https://example.com/a?b=1&amp;c=2|a link> <https://example.com> <mailto:me@example.com>"},
+    "blocks": {"width": 30, "text": "intro\n&gt; quoted line that wraps around\n&gt; second quote\n```\nfunc main() {\n\tfmt.Println(\"hi\")\n}\n```\noutro\n&gt;&gt;&gt; quote the rest\nof the message"},
+    "emoji": {"width": 40, "text": ":wave: :+1::skin-tone-5: :tada: :partyparrot: :not_an_emoji: 12:30:45 :fire::fire:"},
+    "non-ascii": {"width": 16, "text": "¡Hola, José! ñandú 日本語のテキストを折り返す 👋🏽👋🏽 café"},
+    "malformed": {"width": 40, "text": "*unclosed _also ~nope `tick <@U0ALICE <|x> <> &amp &bogus; ``` fence"}
+  }
+}
