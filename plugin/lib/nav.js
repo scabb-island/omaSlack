@@ -364,3 +364,115 @@ function specialName(id) {
   for (var i = 0; i < SPECIAL_MENTIONS.length; i++) if (SPECIAL_MENTIONS[i][0] === id) return id
   return ""
 }
+
+// ---- window keys ------------------------------------------------------------------
+
+// navKey: the window key t (with ctrl: Control held) as one of this
+// file's actions, or null: Ctrl+K or Ctrl+T the finder (as the TUI),
+// / search, ? help, 1–9 a workspace (index 0–8).
+function navKey(t, ctrl) {
+  if (ctrl) return t === "\u000b" || t === "\u0014" || t === "k" || t === "K" || t === "t" || t === "T" ? { action: "finder" } : null
+  if (t === "/") return { action: "search" }
+  if (t === "?") return { action: "help" }
+  if (t >= "1" && t <= "9" && t.length === 1) return { action: "workspace", index: t.charCodeAt(0) - 49 }
+  return null
+}
+
+// workspaceJump: where 1–9 puts the sidebar cursor: the first conversation
+// of the index-th workspace in the sidebar's rows (lib/window.js
+// sidebarRows), or index -1 and why not.
+function workspaceJump(rows, index) {
+  var seen = -1
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].type === "workspace") seen++
+    else if (seen === index && rows[i].type === "conv") return { index: i, error: "" }
+    if (seen > index) break
+  }
+  var error = seen >= index ? "Workspace " + (index + 1) + " has no conversations yet." : "There is no workspace " + (index + 1) + "."
+  return { index: -1, error: error }
+}
+
+// ---- search -------------------------------------------------------------------------
+
+function escapeHtml(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") }
+
+// searchRows: search.messages's hits ([wire.SearchHit]) of one workspace as
+// the result list shows them: { key, conv, ts, root (the top-level
+// message: the thread's root for a reply), where (the conversation, as
+// the finder names it), who, seconds (epoch, for the date), html }.
+// convs are the workspace's conversations; nameOf(conv) and userName(user)
+// are the Service's, bound to the workspace.
+function searchRows(hits, convs, nameOf, userName) {
+  var kinds = {}
+  ;(convs || []).forEach(function(c) { kinds[c.id] = c.kind })
+  return (hits || []).map(function(h, i) {
+    var m = h.message || {}
+    return {
+      key: h.conv + "/" + m.ts + "/" + i,
+      conv: h.conv,
+      ts: m.ts,
+      root: m.threadTS || m.ts,
+      where: finderTitle(kinds[h.conv] || "channel", nameOf(h.conv)),
+      who: userName(m.author) || m.author || "",
+      seconds: parseInt(m.ts, 10) || 0,
+      html: m.html || escapeHtml(m.text || "")
+    }
+  })
+}
+
+// containsTS: whether messages ([wire.Message]) hold the message ts.
+function containsTS(messages, ts) {
+  for (var i = 0; i < messages.length; i++) if (messages[i].ts === ts) return true
+  return false
+}
+
+// ---- help ---------------------------------------------------------------------------
+
+// HELP: every window key, in sections, for the help overlay (?). Keep it
+// in step with Window.qml's keys.
+var HELP = [
+  { title: "Move", keys: [
+    ["j/↓", "move down (newer)"],
+    ["k/↑", "move up (older; loads history at the top)"],
+    ["g", "go to the oldest message"],
+    ["G", "go to the newest"],
+    ["h/←", "pane to the left"],
+    ["l/→", "pane to the right"],
+    ["Tab", "next pane"],
+    ["Shift+Tab", "previous pane"]
+  ] },
+  { title: "Conversations", keys: [
+    ["Enter", "open the conversation / the message's thread"],
+    ["1–9", "switch workspace"],
+    ["Ctrl+K", "find a conversation in any workspace (Ctrl+T too)"],
+    ["/", "search messages in this workspace"]
+  ] },
+  { title: "Messages", keys: [
+    ["i", "write a message"],
+    ["R", "reply in the message's thread"],
+    ["e", "edit your message"],
+    ["D", "delete your message"],
+    ["r", "react to the message"],
+    ["o", "open the message's file"]
+  ] },
+  { title: "Compose", keys: [
+    ["Enter", "send"],
+    ["Shift+Enter", "new line"],
+    ["Esc", "leave the composer"]
+  ] },
+  { title: "Autocomplete", keys: [
+    ["@ # :", "suggest people, channels, emoji"],
+    ["Tab/Enter", "pick the suggestion"],
+    ["↑/↓", "previous / next suggestion"],
+    ["Esc", "close the suggestions"]
+  ] },
+  { title: "Lists (finder, search)", keys: [
+    ["↑/↓", "previous / next (Ctrl+P / Ctrl+N too)"],
+    ["Enter", "open"],
+    ["Esc", "close"]
+  ] },
+  { title: "Window", keys: [
+    ["?", "this help"],
+    ["Esc", "leave the composer, close the thread, then the window"]
+  ] }
+]

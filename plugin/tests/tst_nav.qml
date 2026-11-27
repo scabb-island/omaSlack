@@ -3,8 +3,8 @@ import QtTest
 import "../lib/nav.js" as N
 import "../lib/emoji.js" as E
 
-// The window's navigation logic (lib/nav.js): the conversation finder
-// and the compose autocomplete.
+// The window's navigation logic (lib/nav.js): the conversation finder,
+// the compose autocomplete, search results, workspace keys and help.
 TestCase {
   name: "Nav"
 
@@ -260,5 +260,85 @@ TestCase {
     compare(r.tokens["#general"], "<#C1>")
     compare(r.tokens["@here"], "<!here>")
     compare(N.toWire(r.text, r.tokens), "hi <@U1> in <#C1>, <!here> <b> <@U9> <!subteam^S1>")
+  }
+
+  // ---- window keys ---------------------------------------------------------------
+
+  function test_nav_keys() {
+    compare(N.navKey("\u000b", true), { action: "finder" }) // Ctrl+K
+    compare(N.navKey("\u0014", true), { action: "finder" }) // Ctrl+T
+    compare(N.navKey("k", true), { action: "finder" })
+    compare(N.navKey("/", false), { action: "search" })
+    compare(N.navKey("?", false), { action: "help" })
+    compare(N.navKey("1", false), { action: "workspace", index: 0 })
+    compare(N.navKey("9", false), { action: "workspace", index: 8 })
+    compare(N.navKey("0", false), null)
+    compare(N.navKey("1", true), null)
+    compare(N.navKey("x", false), null)
+  }
+
+  readonly property var rows: [
+    { type: "workspace", team: "T1" }, { type: "section" }, { type: "conv", team: "T1", conv: "C1" },
+    { type: "workspace", team: "T2" }, { type: "section" }, { type: "conv", team: "T2", conv: "C9" },
+    { type: "workspace", team: "T3" }
+  ]
+
+  function test_workspace_jump_lands_on_its_first_conversation() {
+    compare(N.workspaceJump(rows, 0), { index: 2, error: "" })
+    compare(N.workspaceJump(rows, 1), { index: 5, error: "" })
+    compare(N.workspaceJump(rows, 2), { index: -1, error: "Workspace 3 has no conversations yet." })
+    compare(N.workspaceJump(rows, 3), { index: -1, error: "There is no workspace 4." })
+  }
+
+  // ---- search -------------------------------------------------------------------
+
+  function test_search_rows_say_where_who_and_when() {
+    var hits = [
+      { conv: "C1", message: { ts: "1700000000.000100", author: "U1", text: "a *b*", html: "a <b>b</b>" } },
+      { conv: "D1", message: { ts: "1700000500.000200", threadTS: "1700000400.000100", author: "U2", text: "x" } },
+      { conv: "C7", message: { ts: "1700000600.000100", author: "U3", text: "y" } }
+    ]
+    var convs = [{ id: "C1", kind: "channel" }, { id: "D1", kind: "im" }]
+    var r = N.searchRows(hits, convs,
+      function(conv) { return { C1: "#general", D1: "Ana" }[conv] || conv },
+      function(user) { return { U1: "Ana", U2: "Bo" }[user] || user })
+    compare(r.length, 3)
+    compare(r[0].where, "#general")
+    compare(r[0].who, "Ana")
+    compare(r[0].seconds, 1700000000)
+    compare(r[0].html, "a <b>b</b>")
+    compare(r[0].root, "1700000000.000100")
+    compare(r[1].where, "@Ana")
+    compare(r[1].root, "1700000400.000100")
+    compare(r[1].ts, "1700000500.000200")
+    compare(r[1].html, "x") // plain text when the daemon sent no html
+    compare(r[2].where, "#C7")
+    compare(r[2].who, "U3")
+    verify(r[0].key !== r[1].key)
+  }
+
+  function test_html_from_plain_text_is_escaped() {
+    compare(N.searchRows([{ conv: "C1", message: { ts: "1.0", author: "U1", text: "a<b>&" } }], [],
+      function(c) { return c }, function(u) { return u })[0].html, "a&lt;b&gt;&amp;")
+  }
+
+  function test_contains_ts() {
+    var msgs = [{ ts: "1.0" }, { ts: "2.0" }]
+    verify(N.containsTS(msgs, "2.0"))
+    verify(!N.containsTS(msgs, "3.0"))
+  }
+
+  // ---- help -----------------------------------------------------------------------
+
+  function test_help_lists_every_window_key() {
+    var keys = []
+    N.HELP.forEach(function(section) {
+      verify(section.title !== "")
+      section.keys.forEach(function(k) { verify(k[1] !== "", k[0]); keys.push(k[0]) })
+    })
+    ;["j/↓", "k/↑", "g", "G", "h/←", "l/→", "Tab", "Shift+Tab", "Enter", "1–9", "Ctrl+K", "i", "R",
+      "e", "D", "r", "o", "/", "?", "Esc", "Shift+Enter", "@ # :", "Tab/Enter"].forEach(function(k) {
+      verify(keys.indexOf(k) >= 0, k)
+    })
   }
 }
