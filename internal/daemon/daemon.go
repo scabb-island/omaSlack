@@ -275,7 +275,7 @@ func (d *daemon) open(ctx context.Context, team domain.TeamID, creds keyring.Cre
 	ectx, cancel := context.WithCancel(d.engines)
 	w := &workspace{
 		Workspace: api.Workspace{
-			Team: team, Name: id.Name, Provider: creds.Provider(), Capabilities: p.Capabilities(),
+			Team: team, Name: id.Name, Self: id.Self, Provider: creds.Provider(), Capabilities: p.Capabilities(),
 			Store: st, Engine: eng,
 		},
 		creds: creds, store: st, cancel: cancel, done: make(chan struct{}),

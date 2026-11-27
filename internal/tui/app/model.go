@@ -83,7 +83,8 @@ type Model struct {
 	lastTyping time.Time
 	actions    []action
 
-	pick pickState // finder, search results and reaction picker
+	pick pickState    // finder, search results and reaction picker
+	cx   composeState // autocomplete, mention tokens, edit and delete (complete.go, edit.go)
 }
 
 // action is what a NORMAL mode key does.

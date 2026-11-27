@@ -26,7 +26,7 @@ var update = flag.Bool("update", false, "rewrite the golden files in testdata/")
 // with its own store and engine.
 //
 //   - T0ACME (desktop-session) can do everything and has history,
-//     a thread, reactions and drafts in C0GENERAL.
+//     a thread, reactions and drafts in C0GENERAL; U0ANA is signed in.
 //   - T0BETA (internal-app) lacks search, presenceWrite and files.
 //   - T0EXPIRED's credentials were rejected: every engine action fails
 //     with provider.ErrAuthExpired.
@@ -40,6 +40,7 @@ func newFixture() *fixture {
 	f := &fixture{engines: map[string]*fakeEngine{}, focus: &fakeFocus{}}
 	all := domain.NewCapabilities(domain.AllCapabilities()...)
 	f.add("T0ACME", "Acme", "desktop-session", all, acmeStore(), acmeOlder(), nil)
+	f.dir[0].Self = user("U0ANA") // the other workspaces do not know who is signed in
 	f.add("T0BETA", "Beta", "internal-app", domain.NewCapabilities(domain.Realtime), betaStore(), nil, nil)
 	f.add("T0EXPIRED", "Expired", "desktop-session", all, newFakeStore(), nil, errExpired)
 	return f
@@ -63,7 +64,7 @@ func acmeStore() *fakeStore {
 	root := ts("1700000200.000000")
 	s.add(general,
 		domain.Message{TS: ts("1700000100.000000"), Author: author("U0ANA"), Text: "hello"},
-		domain.Message{TS: root, ThreadTS: root, Author: author("U0BOB"), Text: "thread root"},
+		domain.Message{TS: root, ThreadTS: root, Author: author("U0BOB"), Text: "thread root", ReplyCount: 2, LatestReply: ts("1700000220.000000")},
 		domain.Message{TS: ts("1700000210.000000"), ThreadTS: root, Author: author("U0ANA"), Text: "first reply"},
 		domain.Message{TS: ts("1700000220.000000"), ThreadTS: root, Author: author("U0BOB"), Text: "second reply"},
 		domain.Message{TS: ts("1700000300.000000"), Author: author("U0ANA"), Text: "latest", Edited: ts("1700000310.000000"),

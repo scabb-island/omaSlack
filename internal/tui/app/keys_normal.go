@@ -17,6 +17,9 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 	if m.pick.open != nil {
 		return m.pickerKey(k)
 	}
+	if m.cx.deleting != nil {
+		return m.confirmDelete(k)
+	}
 	switch m.mode {
 	case insertMode:
 		return m.insertKey(k)
@@ -56,6 +59,10 @@ func (m *Model) normalActions() []action {
 		{k.Quit, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.quit() }},
 		{k.Search, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.startSearch() }},
 		{k.React, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.openReactions() }},
+
+		{k.Edit, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.startEdit() }},
+		{k.Delete, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.askDelete() }},
+		{k.Reply, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.reply() }},
 	}
 }
 

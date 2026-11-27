@@ -56,6 +56,14 @@ type Store interface {
 	// first, without the root.
 	Replies(ctx context.Context, conv domain.ConversationID, thread domain.TS) ([]domain.Message, error)
 
+	// CountReply counts reply, which arrived in real time, on its thread
+	// root: one reply more, and reply as the newest. It returns the root
+	// as now stored and true, or false when nothing changed: reply is not
+	// a reply, its root is not cached (or deleted), or reply is not newer
+	// than the root's newest known reply (a replay, or Slack's echo of the
+	// user's own reply).
+	CountReply(ctx context.Context, conv domain.ConversationID, reply domain.Message) (domain.Message, bool, error)
+
 	// File returns a file some stored message carries, with its download
 	// URL; ErrUnknownFile when none does.
 	File(ctx context.Context, id domain.FileID) (domain.File, error)

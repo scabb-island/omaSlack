@@ -171,9 +171,22 @@ func (p painter) body(m wire.Message, width int) []string {
 	}
 	lines = append(lines, p.reactions(m.Reactions, width)...)
 	if m.ThreadTS != "" && m.ThreadTS == m.TS {
-		lines = append(lines, p.accent().Render("↳ thread"))
+		lines = append(lines, p.accent().Render(threadMark(m.ReplyCount)))
 	}
 	return lines
+}
+
+// threadMark is what a thread root shows under it: how many replies it
+// has, or just that it is a thread while the count is unknown.
+func threadMark(replies int) string {
+	switch replies {
+	case 0:
+		return "↳ thread"
+	case 1:
+		return "↳ 1 reply"
+	default:
+		return fmt.Sprintf("↳ %d replies", replies)
+	}
 }
 
 // edited puts "(edited)" after the last line, or under it when it would

@@ -14,13 +14,17 @@ import (
 
 // Message is one message.
 type Message struct {
-	TS        string     `json:"ts"`
-	ThreadTS  string     `json:"threadTS,omitempty"`
-	Author    string     `json:"author,omitempty"`
-	Text      string     `json:"text"`
-	Edited    string     `json:"edited,omitempty"`
-	Reactions []Reaction `json:"reactions,omitempty"`
-	Files     []File     `json:"files,omitempty"`
+	TS       string `json:"ts"`
+	ThreadTS string `json:"threadTS,omitempty"`
+	Author   string `json:"author,omitempty"`
+	Text     string `json:"text"`
+	Edited   string `json:"edited,omitempty"`
+	// A thread root's replies: how many (omitted when none or unknown)
+	// and the newest one's ts (omitted when unknown).
+	ReplyCount  int        `json:"replyCount,omitempty"`
+	LatestReply string     `json:"latestReply,omitempty"`
+	Reactions   []Reaction `json:"reactions,omitempty"`
+	Files       []File     `json:"files,omitempty"`
 }
 
 // File is one file attached to a message: what a client shows. Its bytes
@@ -61,6 +65,7 @@ type Conversation struct {
 type Workspace struct {
 	Team         string   `json:"team"`
 	Name         string   `json:"name"`
+	Self         string   `json:"self,omitempty"` // the signed-in user
 	Provider     string   `json:"provider"`
 	Capabilities []string `json:"capabilities"`
 	State        string   `json:"state"`
@@ -88,6 +93,9 @@ func FromMessage(m domain.Message, reactions []store.Reaction) Message {
 		Author:   m.Author.String(),
 		Text:     m.Text,
 		Edited:   optTS(m.Edited),
+
+		ReplyCount:  m.ReplyCount,
+		LatestReply: optTS(m.LatestReply),
 	}
 	for _, r := range reactions {
 		out.Reactions = append(out.Reactions, Reaction{Emoji: r.Emoji, Users: ids(r.Users)})
@@ -112,13 +120,14 @@ func FromConversation(c domain.Conversation) Conversation {
 	}
 }
 
-// FromWorkspace converts a workspace's identity and state.
-func FromWorkspace(team domain.TeamID, name, provider string, caps domain.Capabilities, state domain.ConnectionState) Workspace {
+// FromWorkspace converts a workspace's identity and state. A zero self
+// (who is signed in is unknown) is omitted.
+func FromWorkspace(team domain.TeamID, name string, self domain.UserID, provider string, caps domain.Capabilities, state domain.ConnectionState) Workspace {
 	names := make([]string, 0, len(caps.List()))
 	for _, c := range caps.List() {
 		names = append(names, c.String())
 	}
-	return Workspace{Team: team.String(), Name: name, Provider: provider, Capabilities: names, State: state.String()}
+	return Workspace{Team: team.String(), Name: name, Self: optUser(self), Provider: provider, Capabilities: names, State: state.String()}
 }
 
 // FromUser converts one user.

@@ -25,7 +25,8 @@
       "text": "hello",
       "ts": "1700000100.000100",
       "thread_ts": "1700000100.000100",
-      "reply_count": 1
+      "reply_count": 1,
+      "latest_reply": "1700000300.000300"
     },
     {
       "type": "message",

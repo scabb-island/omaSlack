@@ -1,39 +1,39 @@
 
 
-
-
-
 ╭─ Help ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│Move (NORMAL)                                           Compose (INSERT)                                              │
-│  j/↓         move down (newer)                           Enter       send                                            │
-│  k/↑         move up (older; loads history at the top)   A-Enter/C-j new line                                        │
-│  g           go to the top                               Esc         back to NORMAL / close the thread               │
-│  G           go to the newest                                                                                        │
-│  h/←         pane to the left                          Find, search, react                                           │
-│  l/→         pane to the right                           /           search messages in this workspace               │
-│  Tab         next pane                                   r           react to the selected message                   │
-│  S-Tab       previous pane                               ↓/C-n       next (j too in search results)                  │
-│                                                          ↑/C-p       previous (k too in search results)              │
-│Conversations                                             Enter       pick                                            │
+│Move (NORMAL)                                           Find, search, react                                           │
+│  j/↓         move down (newer)                           /           search messages in this workspace               │
+│  k/↑         move up (older; loads history at the top)   r           react to the selected message                   │
+│  g           go to the top                               ↓/C-n       next (j too in search results)                  │
+│  G           go to the newest                            ↑/C-p       previous (k too in search results)              │
+│  h/←         pane to the left                            Enter       pick                                            │
+│  l/→         pane to the right                                                                                       │
+│  Tab         next pane                                 Messages (NORMAL)                                             │
+│  S-Tab       previous pane                               e           edit your message                               │
+│                                                          D           delete your message (asks y/n)                  │
+│Conversations                                             R           reply in the message's thread                   │
 │  Enter       open conversation / thread of message                                                                   │
-│  1–9         switch workspace                          Commands (COMMAND)                                            │
-│  C-k/C-t     find a conversation in any workspace        :q              quit                                        │
-│  C-b         show or hide the sidebar                    :open <name>    open a conversation by name (#general, @ana)│
-│  <           narrower sidebar                            :help           this help                                   │
-│  >           wider sidebar                               :search <query> search messages in this workspace           │
-│                                                          :react <emoji>  react to the selected message (:react +1)   │
-│Modes                                                                                                                 │
-│  i           write a message (INSERT)                                                                                │
-│  :           command line (COMMAND)                                                                                  │
+│  1–9         switch workspace                          Autocomplete (INSERT)                                         │
+│  C-k/C-t     find a conversation in any workspace        @ # :       suggest people, channels, emoji                 │
+│  C-b         show or hide the sidebar                    Tab/Enter   pick the suggestion (Esc closes)                │
+│  <           narrower sidebar                            ↓/C-n       next suggestion                                 │
+│  >           wider sidebar                               ↑/C-p       previous suggestion                             │
+│                                                                                                                      │
+│Modes                                                   Commands (COMMAND)                                            │
+│  i           write a message (INSERT)                    :q              quit                                        │
+│  :           command line (COMMAND)                      :open <name>    open a conversation by name (#general, @ana)│
+│  Esc         back to NORMAL / close the thread           :help           this help                                   │
+│  ?           this help                                   :search <query> search messages in this workspace           │
+│  q           quit                                        :react <emoji>  react to the selected message (:react +1)   │
+│                                                                                                                      │
+│Compose (INSERT)                                                                                                      │
+│  Enter       send                                                                                                    │
+│  A-Enter/C-j new line                                                                                                │
 │  Esc         back to NORMAL / close the thread                                                                       │
-│  ?           this help                                                                                               │
-│  q           quit                                                                                                    │
 │                                                                                                                      │
 │                                                                                                                      │
 │Press any key to close.                                                                                               │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-
-
 
 
 

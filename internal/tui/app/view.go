@@ -94,7 +94,7 @@ func (m *Model) mainView(w, h int) string {
 	default:
 		panes = m.threadView(w, top)
 	}
-	return panes + "\n" + m.composeView(w, composeH)
+	return m.withPopup(panes, w) + "\n" + m.composeView(w, composeH)
 }
 
 // rail lists the workspaces: their number (the 1–9 key), their initials
@@ -327,6 +327,9 @@ func (m *Model) composeView(w, h int) string {
 	}
 	if m.target.thread != "" {
 		title = "Reply in thread · " + title
+	}
+	if m.cx.edit != nil {
+		title = "Editing a message · Enter saves · Esc cancels"
 	}
 	lines := strings.Split(m.compose.View(), "\n")
 	return m.box(title, lines, w, h, m.mode == insertMode)

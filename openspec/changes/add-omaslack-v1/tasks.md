@@ -62,13 +62,14 @@
 - [x] 3.3 Conversation finder, search and reaction picker
   - Ctrl+k/Ctrl+t: fuzzy finder over the conversations of every workspace (`rankConversations`: match kind first, then unread/mentions, then the newest). It opens existing conversations only; opening new DMs and joining channels needs daemon methods v1 does not have. `/` or `:search <query>` runs `search.messages`; a hit opens its conversation with the message selected, asking `messages.history{before: ts + 1µs}` until the hit arrives (the daemon loads one older page per call, so up to 10 calls); a `messages.around`-style method would make that one call. `r` or `:react <name>` toggles a reaction; it removes only once `Directory.Self` is known, until then it always adds. Recent emoji are remembered per session, not across runs.
 - [x] 3.4 mrkdwn rendering, mentions, emoji and day separators
-  - Notes for 3.1 and 3.5: the app's `render.Directory` must resolve bot (`B…`) IDs in `UserName` too, and `Emoji` only for custom emoji (standard ones come from `render.StandardEmoji`). Image file rows carry an `omaslack-image:<id>` OSC 8 link on their `[image]` tag; `render.ImageFileID(line)` finds them so 3.5 can draw the image below. `wire.Message` has no reply count, so thread roots show "↳ thread", not "N replies". `Messages` takes about 20 ms for 1000 messages, so render on changes, not on every frame.
+  - Notes for 3.1 and 3.5: the app's `render.Directory` must resolve bot (`B…`) IDs in `UserName` too, and `Emoji` only for custom emoji (standard ones come from `render.StandardEmoji`). Image file rows carry an `omaslack-image:<id>` OSC 8 link on their `[image]` tag; `render.ImageFileID(line)` finds them so 3.5 can draw the image below. Thread roots show "↳ N replies" from `replyCount` (3.9), and "↳ thread" while the count is unknown. `Messages` takes about 20 ms for 1000 messages, so render on changes, not on every frame.
 - [x] 3.5 Images with kitty, sixel or half-block
   - `internal/tui/image`: `Detect` (env rules, `OMASLACK_IMAGES` override), `Size` and `Render` (max 50 MP, PNG/JPEG/GIF/WebP). Rendering is CPU-bound: the app runs it in a `tea.Cmd` and prints kitty/sixel output outside the cell renderer.
 - [x] 3.6 Theme from Omarchy's `omaslack.toml` + reload on SIGUSR1
   - `internal/tui/theme`: `Load` (omaslack.toml, else colors.toml through `roles.go`) and `Watch`. The app wires `signal.Notify(SIGUSR1)` into `Watch`.
 - [x] 3.7 Golden view tests
 - [x] 3.8 Daemon methods the clients need to show names: `users.info{team, ids[]}`, the other person of each DM in `conversations.list` (`user`), `emoji.list{team}` and `typing.send{team, conv}`
+- [x] 3.9 Who is signed in and thread reply counts: `self` in each workspace of `hello` and `workspaces.list` (the TUI's `Directory.Self`), and `replyCount`/`latestReply` on thread roots, kept current as replies arrive in real time, so the TUI shows "N replies"
 
 ## M4 — QML UI MVP
 - [x] 4.1 Spike: Quickshell `Socket` versus the `ctl --stream` bridge. A direct `Socket` won (see `docs/spikes/m4.1-quickshell-socket.md`)

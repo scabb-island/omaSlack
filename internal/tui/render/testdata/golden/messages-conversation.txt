@@ -21,7 +21,7 @@ bob  09:30
   Screenshot of the new layout, thoughts?
   [image] layout.png · 470.8 KB · image/png
   [file] layout-spec.pdf · 2.2 MB · application/pdf
-  ↳ thread
+  ↳ 2 replies
 me  10:02
   Looks great except the sidebar width & the <tab> order. 💯
 U0ZED  11:45
