@@ -82,6 +82,8 @@ type Model struct {
 	without    map[string]bool       // optional methods the daemon cannot do
 	lastTyping time.Time
 	actions    []action
+
+	pick pickState // finder, search results and reaction picker
 }
 
 // action is what a NORMAL mode key does.
