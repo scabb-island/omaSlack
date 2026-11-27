@@ -16,17 +16,18 @@
 │  C-b         show or hide the sidebar                    Tab/Enter   pick the suggestion (Esc closes)                │
 │  <           narrower sidebar                            ↓/C-n       next suggestion                                 │
 │  >           wider sidebar                               ↑/C-p       previous suggestion                             │
-│                                                                                                                      │
-│Modes                                                   Commands (COMMAND)                                            │
-│  i           write a message (INSERT)                    :q              quit                                        │
-│  :           command line (COMMAND)                      :open <name>    open a conversation by name (#general, @ana)│
-│  Esc         back to NORMAL / close the thread           :help           this help                                   │
-│  ?           this help                                   :attach <path>  send a file here; any text after it is the …│
-│  q           quit                                        :search <query> search messages in this workspace           │
-│                                                          :react <emoji>  react to the selected message (:react +1)   │
-│Compose (INSERT)                                          :away / :back   set your presence to away / automatic       │
-│  Enter       send                                        :dnd <length>   do not disturb: 30m, 1h, 2h, tomorrow       │
-│  A-Enter/C-j new line                                    :dnd off        end do not disturb                          │
+│  C-r         renew an expired desktop session                                                                        │
+│                                                        Commands (COMMAND)                                            │
+│Modes                                                     :q              quit                                        │
+│  i           write a message (INSERT)                    :open <name>    open a conversation by name (#general, @ana)│
+│  :           command line (COMMAND)                      :help           this help                                   │
+│  Esc         back to NORMAL / close the thread           :attach <path>  send a file here; any text after it is the …│
+│  ?           this help                                   :search <query> search messages in this workspace           │
+│  q           quit                                        :react <emoji>  react to the selected message (:react +1)   │
+│                                                          :away / :back   set your presence to away / automatic       │
+│Compose (INSERT)                                          :dnd <length>   do not disturb: 30m, 1h, 2h, tomorrow       │
+│  Enter       send                                        :dnd off        end do not disturb                          │
+│  A-Enter/C-j new line                                                                                                │
 │  Esc         back to NORMAL / close the thread                                                                       │
 │                                                                                                                      │
 │Files                                                                                                                 │
@@ -35,6 +36,5 @@
 │  C-o         attach a file (:attach)                                                                                 │
 │                                                                                                                      │
 │                                                                                                                      │
-│Press any key to close.                                                                                               │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
  NORMAL  │ Acme │ ● connected                                                                                    ? help
