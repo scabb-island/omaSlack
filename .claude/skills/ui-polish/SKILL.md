@@ -16,8 +16,10 @@ before it.
 
 ## Tools
 
-It uses the `interfaces` plugin from `jakubkrehel/skills`. The user installs
-it once in Claude Code (slash commands only the user can type):
+It uses the `interfaces` plugin from `jakubkrehel/skills`. The project's
+`.claude/settings.json` declares its marketplace and enables it, so Claude
+Code offers to install it when the repo is opened. By hand (slash commands
+only the user can type):
 
     /plugin marketplace add jakubkrehel/skills
     /plugin install interfaces@interfaces
