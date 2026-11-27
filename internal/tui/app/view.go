@@ -325,6 +325,9 @@ func (m *Model) composeView(w, h int) string {
 	if m.target.thread != "" {
 		title = "Reply in thread · " + title
 	}
+	if m.cx.edit != nil {
+		title = "Editing a message · Enter saves · Esc cancels"
+	}
 	lines := strings.Split(m.compose.View(), "\n")
 	return m.box(title, lines, w, h, m.mode == insertMode)
 }

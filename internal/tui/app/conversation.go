@@ -141,6 +141,7 @@ func (m *Model) retarget(t target) tea.Cmd {
 	if t == m.target {
 		return nil
 	}
+	m.cancelEdit() // compose must hold the draft before it is saved
 	save := m.saveDraft()
 	m.target = t
 	m.compose.SetValue(m.st.Draft(t))

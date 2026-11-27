@@ -3,34 +3,34 @@
 
 
 
-
 ╭─ Help ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│Move (NORMAL)                                             Modes                                                       │
-│  j/↓         move down (newer)                             i           write a message (INSERT)                      │
-│  k/↑         move up (older; loads history at the top)     :           command line (COMMAND)                        │
+│Move (NORMAL)                                             Compose (INSERT)                                            │
+│  j/↓         move down (newer)                             Enter       send                                          │
+│  k/↑         move up (older; loads history at the top)     A-Enter/C-j new line                                      │
 │  g           go to the top                                 Esc         back to NORMAL / close the thread             │
-│  G           go to the newest                              ?           this help                                     │
-│  h/←         pane to the left                              q           quit                                          │
-│  l/→         pane to the right                                                                                       │
-│  Tab         next pane                                   Compose (INSERT)                                            │
-│  S-Tab       previous pane                                 Enter       send                                          │
-│                                                            A-Enter/C-j new line                                      │
-│Conversations                                               Esc         back to NORMAL / close the thread             │
-│  Enter       open conversation / thread of message                                                                   │
-│  1–9         switch workspace                            Autocomplete (INSERT)                                       │
-│  C-k/C-t     find a conversation (coming soon)             @ # :       suggest people, channels, emoji               │
-│  C-b         show or hide the sidebar                      Tab/Enter   pick the suggestion (Esc closes)              │
-│  <           narrower sidebar                              ↓/C-n       next suggestion                               │
-│  >           wider sidebar                                 ↑/C-p       previous suggestion                           │
+│  G           go to the newest                                                                                        │
+│  h/←         pane to the left                            Messages (NORMAL)                                           │
+│  l/→         pane to the right                             e           edit your message                             │
+│  Tab         next pane                                     D           delete your message (asks y/n)                │
+│  S-Tab       previous pane                                 R           reply in the message's thread                 │
 │                                                                                                                      │
-│                                                          Commands (COMMAND)                                          │
+│Conversations                                             Autocomplete (INSERT)                                       │
+│  Enter       open conversation / thread of message         @ # :       suggest people, channels, emoji               │
+│  1–9         switch workspace                              Tab/Enter   pick the suggestion (Esc closes)              │
+│  C-k/C-t     find a conversation (coming soon)             ↓/C-n       next suggestion                               │
+│  C-b         show or hide the sidebar                      ↑/C-p       previous suggestion                           │
+│  <           narrower sidebar                                                                                        │
+│  >           wider sidebar                               Commands (COMMAND)                                          │
 │                                                            :q            quit                                        │
-│                                                            :open <name>  open a conversation by name (#general, @ana)│
-│                                                            :help         this help                                   │
+│Modes                                                       :open <name>  open a conversation by name (#general, @ana)│
+│  i           write a message (INSERT)                      :help         this help                                   │
+│  :           command line (COMMAND)                                                                                  │
+│  Esc         back to NORMAL / close the thread                                                                       │
+│  ?           this help                                                                                               │
+│  q           quit                                                                                                    │
 │                                                                                                                      │
 │Press any key to close.                                                                                               │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-
 
 
 

@@ -22,7 +22,8 @@ import (
 const SearchDebounce = 150 * time.Millisecond
 
 // composeState is what compose adds on top of the textarea: the
-// autocomplete popup and the mention tokens (see suggest.go).
+// autocomplete popup, the mention tokens (see suggest.go), the message
+// being edited and a delete waiting for its confirmation.
 type composeState struct {
 	trig      trigger      // what the popup completes
 	items     []suggestion // the popup; empty when closed
@@ -30,12 +31,21 @@ type composeState struct {
 	dismissed *anchor // Esc closed the popup on the trigger here
 	seq       int     // bumped on every new trigger: older users.search answers are stale
 
-	tokens map[string]string // display token → wire token
+	tokens   map[string]string // display token → wire token
+	edit     *msgRef           // the message compose edits; nil when writing a new one
+	deleting *msgRef           // the message waiting for y/n
 }
 
 // anchor is where a trigger sits in compose: its row and its sign's
 // column.
 type anchor struct{ row, col int }
+
+// msgRef names one message.
+type msgRef struct{ team, conv, ts string }
+
+func (r msgRef) params(extra ...any) map[string]any {
+	return target{r.team, r.conv, ""}.params(append([]any{"ts", r.ts}, extra...)...)
+}
 
 // mentionTokens is the session's display → wire token map.
 func (m *Model) mentionTokens() map[string]string {
@@ -49,12 +59,14 @@ func (m *Model) mentionTokens() map[string]string {
 func (m *Model) popupOpen() bool { return m.mode == insertMode && len(m.cx.items) > 0 }
 
 // composeKey handles the INSERT keys that compose's extras take before
-// the textarea: the popup's while it shows.
+// the textarea: the popup's while it shows, then the edit's.
 func (m *Model) composeKey(k tea.KeyPressMsg) (tea.Cmd, bool) {
 	if m.popupOpen() {
-		return m.popupKey(k)
+		if cmd, ok := m.popupKey(k); ok {
+			return cmd, true
+		}
 	}
-	return nil, false
+	return m.editKey(k)
 }
 
 // popupKey: Tab or Enter accepts, ↑/↓ (Ctrl+p/Ctrl+n) move, Esc closes.

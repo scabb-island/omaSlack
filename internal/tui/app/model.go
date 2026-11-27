@@ -83,7 +83,7 @@ type Model struct {
 	lastTyping time.Time
 	actions    []action
 
-	cx composeState // autocomplete and mention tokens (complete.go)
+	cx composeState // autocomplete, mention tokens, edit and delete (complete.go, edit.go)
 }
 
 // action is what a NORMAL mode key does.
