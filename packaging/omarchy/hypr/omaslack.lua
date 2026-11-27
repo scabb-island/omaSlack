@@ -3,7 +3,8 @@
 -- FloatingWindow (class org.quickshell) titled exactly "omaslack": float
 -- it, centered, at the size the window asks for (plugin/Window.qml).
 --
+-- `omaslack setup --window-rule` copies it to ~/.config/hypr/omaslack.lua.
 -- Load it from ~/.config/hypr/hyprland.lua, after
 -- require("default.hypr.omarchy"), which defines `o`:
---   require("hypr.omaslack")   -- with this file at ~/.config/hypr/omaslack.lua
+--   if package.searchpath("hypr.omaslack", package.path) then require("hypr.omaslack") end
 o.window({ class = "^org\\.quickshell$", title = "^omaslack$" }, { float = true, center = true, size = { 1100, 720 } })
