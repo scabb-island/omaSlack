@@ -65,8 +65,10 @@ specs:
 # Everything, including the checks that only run on an Omarchy machine.
 local: check test-race qmllint qmltest plugin-validate specs
 
+# Local snapshot in dist/. Signing needs the release job's GitLab OIDC
+# identity, so it is skipped here.
 snapshot:
-	goreleaser release --snapshot --clean
+	goreleaser release --snapshot --clean --skip=sign
 
 # ── ub-mode quality gates (local only, never in CI) ──────────────────────────
 # crapper, dryer and mutator (github.com/unclebob) are installed by mise from

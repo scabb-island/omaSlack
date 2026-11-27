@@ -39,6 +39,22 @@ archives:
 checksum:
   name_template: checksums.txt
 
+# Keyless cosign signature of checksums.txt (spec aur-packaging, "Signed
+# releases"). In the release job cosign reads the GitLab OIDC token from
+# SIGSTORE_ID_TOKEN (id_tokens in .gitlab-ci.yml), gets a short-lived
+# certificate for the job's identity from Fulcio and logs it in Rekor: no
+# signing key exists anywhere. Local snapshots skip it (`--skip=sign`).
+signs:
+  - id: cosign
+    cmd: cosign
+    artifacts: checksum
+    signature: "${artifact}.sigstore.json"
+    args:
+      - sign-blob
+      - "--bundle=${signature}"
+      - --yes
+      - "${artifact}"
+
 snapshot:
   version_template: "{{ incpatch .Version }}-snapshot+{{ .ShortCommit }}"
 
@@ -104,3 +120,19 @@ release:
   gitlab:
     owner: scabb-island
     name: omaslack
+  footer: |
+    ## Verify the download
+
+    `checksums.txt` is signed with [cosign](https://docs.sigstore.dev/) by
+    this project's release job, keyless: the signature binds it to the
+    GitLab CI identity of tag `{{ .Tag }}`. Download `checksums.txt`,
+    `checksums.txt.sigstore.json` and your tarball, then run:
+
+    ```sh
+    cosign verify-blob \
+      --bundle checksums.txt.sigstore.json \
+      --certificate-identity "https://gitlab.com/scabb-island/omaslack//.gitlab-ci.yml@refs/tags/{{ .Tag }}" \
+      --certificate-oidc-issuer https://gitlab.com \
+      checksums.txt
+    sha256sum --ignore-missing -c checksums.txt
+    ```
