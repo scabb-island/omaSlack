@@ -18,7 +18,7 @@ import (
 )
 
 // A client sees the workspace, subscribes, and receives what the provider
-// streams, which the cache then serves.
+// streams, which the cache then serves; both carry the message's HTML.
 func TestEndToEndAMessageReachesTheClientAndTheCache(t *testing.T) {
 	h := newHarness(t)
 	team := h.addTeam("T0ACME")
@@ -49,20 +49,20 @@ func TestEndToEndAMessageReachesTheClientAndTheCache(t *testing.T) {
 	conv, _ := domain.ParseConversationID("C0GENERAL")
 	ts, _ := domain.ParseTS("1700000000.000100")
 	live <- domain.MessageCreated{Team: team, Conversation: conv, Message: domain.Message{
-		TS: ts, Author: domain.UserAuthor(mustUser(t, "U0YOU")), Text: "hello daemon",
+		TS: ts, Author: domain.UserAuthor(mustUser(t, "U0YOU")), Text: "hello *daemon*",
 	}}
 
 	select {
 	case n := <-c.Notifications():
 		var ev wire.MessageEvent
-		if err := json.Unmarshal(n.Params, &ev); err != nil || n.Method != "message.created" || ev.Message.Text != "hello daemon" {
+		if err := json.Unmarshal(n.Params, &ev); err != nil || n.Method != "message.created" || ev.Message.HTML != "hello <b>daemon</b>" {
 			t.Fatalf("notification %s %s (%v)", n.Method, n.Params, err)
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("no message.created notification")
 	}
 	history := call[[]wire.Message](t, c, "messages.history", map[string]string{"team": "T0ACME", "conv": "C0GENERAL"})
-	if len(history) != 1 || history[0].Text != "hello daemon" || history[0].TS != "1700000000.000100" {
+	if len(history) != 1 || history[0].HTML != "hello <b>daemon</b>" || history[0].TS != "1700000000.000100" {
 		t.Fatalf("messages.history = %+v", history)
 	}
 }
@@ -190,5 +190,14 @@ func TestAKeyringThatCannotBeOpenedStopsTheStart(t *testing.T) {
 func TestRunNeedsPaths(t *testing.T) {
 	if err := Run(context.Background(), Config{}); err == nil {
 		t.Fatal("Run without paths did not fail")
+	}
+}
+
+// A message event of a workspace that is gone still gets HTML, with no
+// names to give.
+func TestMessageEventsOfAnUnknownTeamRenderWithoutNames(t *testing.T) {
+	team, _ := domain.ParseTeamID("T0GONE")
+	if got := newDirectory().html(team)("<@U0ME> *hi*"); got != `<a href="omaslack://user/T0GONE/U0ME">@U0ME</a> <b>hi</b>` {
+		t.Errorf("html = %q", got)
 	}
 }

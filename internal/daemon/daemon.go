@@ -120,6 +120,7 @@ func newDaemon(ctx context.Context, cfg Config) *daemon {
 	}
 	d.hub = events.New(events.Options{
 		Summary: func(ctx context.Context) (wire.Summary, error) { return api.Summary(ctx, d.dir) },
+		HTML:    d.dir.html,
 		Log:     cfg.Log,
 	})
 	return d
@@ -276,7 +277,7 @@ func (d *daemon) open(ctx context.Context, team domain.TeamID, creds keyring.Cre
 	w := &workspace{
 		Workspace: api.Workspace{
 			Team: team, Name: id.Name, Self: id.Self, Provider: creds.Provider(), Capabilities: p.Capabilities(),
-			Store: st, Engine: eng,
+			Store: st, Engine: eng, Names: api.NewNames(),
 		},
 		creds: creds, store: st, cancel: cancel, done: make(chan struct{}),
 	}

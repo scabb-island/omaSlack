@@ -14,7 +14,8 @@
         "message": {
           "ts": "1700000100.000000",
           "author": "U0ANA",
-          "text": "deploy is done"
+          "text": "deploy is done",
+          "html": "deploy is done"
         }
       }
     ]
@@ -35,7 +36,8 @@
         "message": {
           "ts": "1700000100.000000",
           "author": "U0ANA",
-          "text": "deploy is done"
+          "text": "deploy is done",
+          "html": "deploy is done"
         }
       }
     ]

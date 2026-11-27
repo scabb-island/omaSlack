@@ -21,8 +21,8 @@ type Message struct {
 	// HTML is Text rendered for Qt's Text.RichText (mrkdwn parsed in the
 	// daemon, mentions and channels resolved to names, emoji shortcodes
 	// to characters), so QML never parses mrkdwn (spec gui-client, "Long
-	// histories without degrading the shell"). Empty until task 4.9 fills
-	// it; clients fall back to Text.
+	// histories without degrading the shell"; task 4.9). Omitted when the
+	// daemon rendered none (an empty Text); clients fall back to Text.
 	HTML   string `json:"html,omitempty"`
 	Edited string `json:"edited,omitempty"`
 	// A thread root's replies: how many (omitted when none or unknown)
@@ -91,8 +91,14 @@ type SearchHit struct {
 	Message Message `json:"message"`
 }
 
-// FromMessage converts a message with its reactions (nil for none).
-func FromMessage(m domain.Message, reactions []store.Reaction) Message {
+// HTMLFunc renders a message's mrkdwn Text as its HTML, for one
+// workspace (the daemon's api.Workspace.HTML).
+type HTMLFunc func(mrkdwn string) string
+
+// FromMessage converts a message with its reactions (nil for none). Every
+// message the daemon sends is built here, so this is where HTML is
+// filled: html(Text), or nothing when html is nil.
+func FromMessage(m domain.Message, reactions []store.Reaction, html HTMLFunc) Message {
 	out := Message{
 		TS:       m.TS.String(),
 		ThreadTS: optTS(m.ThreadTS),
@@ -102,6 +108,9 @@ func FromMessage(m domain.Message, reactions []store.Reaction) Message {
 
 		ReplyCount:  m.ReplyCount,
 		LatestReply: optTS(m.LatestReply),
+	}
+	if html != nil {
+		out.HTML = html(m.Text)
 	}
 	for _, r := range reactions {
 		out.Reactions = append(out.Reactions, Reaction{Emoji: r.Emoji, Users: ids(r.Users)})
@@ -141,9 +150,9 @@ func FromUser(u domain.User) User {
 	return User{ID: u.ID.String(), Name: u.Name, RealName: u.RealName, DisplayName: u.DisplayName}
 }
 
-// FromSearchHit converts one message search hit.
-func FromSearchHit(h domain.SearchHit) SearchHit {
-	return SearchHit{Conv: h.Conversation.String(), Message: FromMessage(h.Message, nil)}
+// FromSearchHit converts one message search hit; html as in FromMessage.
+func FromSearchHit(h domain.SearchHit, html HTMLFunc) SearchHit {
+	return SearchHit{Conv: h.Conversation.String(), Message: FromMessage(h.Message, nil, html)}
 }
 
 func optTS(t domain.TS) string { return t.OrEmpty() }

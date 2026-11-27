@@ -28,7 +28,7 @@ type Directory interface {
 	ConversationName(id string) string
 	// Emoji resolves a custom shortcode (no colons) to the plain text to
 	// print, such as ":name:" (render styles it); standard shortcodes are
-	// resolved by StandardEmoji first and never reach it. ok is false for
+	// resolved by mrkdwn.StandardEmoji first and never reach it. ok is false for
 	// an unknown name, which is printed as ":name:" verbatim.
 	Emoji(name string) (text string, ok bool)
 	// Self is the signed-in user's ID, so mentions of them stand out.

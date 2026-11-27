@@ -24,7 +24,7 @@ func publishAll(h *Hub, evs ...domain.Event) {
 func notes(evs ...domain.Event) []delivered {
 	out := make([]delivered, 0, len(evs))
 	for _, ev := range evs {
-		out = append(out, delivered{ev.Topic(), wire.FromEvent(ev)})
+		out = append(out, delivered{ev.Topic(), wire.FromEvent(ev, nil)})
 	}
 	return out
 }

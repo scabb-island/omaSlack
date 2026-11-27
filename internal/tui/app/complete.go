@@ -12,7 +12,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
-	"gitlab.com/scabb-island/omaslack/internal/tui/render"
+	"gitlab.com/scabb-island/omaslack/internal/mrkdwn"
 	"gitlab.com/scabb-island/omaslack/internal/wire"
 )
 
@@ -153,7 +153,7 @@ func (m *Model) suggest(trig trigger) tea.Cmd {
 	case '#':
 		m.showItems(channelSuggestions(m.st.Conversations(team), trig.query))
 	case ':':
-		m.showItems(emojiSuggestions(render.StandardEmojiNames(), m.st.customEmojiNames(team), trig.query))
+		m.showItems(emojiSuggestions(mrkdwn.StandardEmojiNames(), m.st.customEmojiNames(team), trig.query))
 	case '@':
 		return m.searchPeople(team, trig)
 	}

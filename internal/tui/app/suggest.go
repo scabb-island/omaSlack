@@ -8,7 +8,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"gitlab.com/scabb-island/omaslack/internal/tui/render"
+	"gitlab.com/scabb-island/omaslack/internal/mrkdwn"
 	"gitlab.com/scabb-island/omaslack/internal/wire"
 )
 
@@ -214,7 +214,7 @@ func emojiSuggestions(standard, custom []string, q string) []suggestion {
 	for _, i := range capped(rank(names, q)) {
 		code := ":" + names[i] + ":"
 		label := code
-		if glyph, ok := render.StandardEmoji(names[i]); ok && i < len(standard) {
+		if glyph, ok := mrkdwn.StandardEmoji(names[i]); ok && i < len(standard) {
 			label = glyph + " " + code
 		}
 		out = append(out, suggestion{label: label, text: code})

@@ -13,6 +13,7 @@
         "ts": "1700000300.000000",
         "author": "U0ANA",
         "text": "latest",
+        "html": "latest",
         "edited": "1700000310.000000",
         "reactions": [
           {
@@ -38,23 +39,27 @@
         "threadTS": "1700000200.000000",
         "author": "U0BOB",
         "text": "thread root",
+        "html": "thread root",
         "replyCount": 2,
         "latestReply": "1700000220.000000"
       },
       {
         "ts": "1700000100.000000",
         "author": "U0ANA",
-        "text": "hello"
+        "text": "hello",
+        "html": "hello"
       },
       {
         "ts": "1700000020.000000",
         "author": "U0ANA",
-        "text": "older two"
+        "text": "older two",
+        "html": "older two"
       },
       {
         "ts": "1700000010.000000",
         "author": "U0BOB",
-        "text": "older one"
+        "text": "older one",
+        "html": "older one"
       }
     ]
   },
@@ -72,6 +77,7 @@
         "threadTS": "1700000200.000000",
         "author": "U0BOB",
         "text": "thread root",
+        "html": "thread root",
         "replyCount": 2,
         "latestReply": "1700000220.000000"
       }
@@ -89,6 +95,7 @@
         "ts": "1700000300.000000",
         "author": "U0ANA",
         "text": "latest",
+        "html": "latest",
         "edited": "1700000310.000000",
         "reactions": [
           {
@@ -114,6 +121,7 @@
         "threadTS": "1700000200.000000",
         "author": "U0BOB",
         "text": "thread root",
+        "html": "thread root",
         "replyCount": 2,
         "latestReply": "1700000220.000000"
       }
@@ -145,6 +153,7 @@
         "ts": "1700000300.000000",
         "author": "U0ANA",
         "text": "latest",
+        "html": "latest",
         "edited": "1700000310.000000",
         "reactions": [
           {
@@ -170,23 +179,27 @@
         "threadTS": "1700000200.000000",
         "author": "U0BOB",
         "text": "thread root",
+        "html": "thread root",
         "replyCount": 2,
         "latestReply": "1700000220.000000"
       },
       {
         "ts": "1700000100.000000",
         "author": "U0ANA",
-        "text": "hello"
+        "text": "hello",
+        "html": "hello"
       },
       {
         "ts": "1700000020.000000",
         "author": "U0ANA",
-        "text": "older two"
+        "text": "older two",
+        "html": "older two"
       },
       {
         "ts": "1700000010.000000",
         "author": "U0BOB",
-        "text": "older one"
+        "text": "older one",
+        "html": "older one"
       }
     ]
   },

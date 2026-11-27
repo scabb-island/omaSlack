@@ -74,6 +74,9 @@ type Workspace struct {
 	Capabilities domain.Capabilities
 	Store        Reader
 	Engine       Actions
+	// Names is who the workspace's messages refer to, for their HTML; the
+	// daemon keeps one per workspace (NewNames). nil names nobody.
+	Names *Names
 }
 
 // Info is the workspace as workspaces.list and hello report it.
@@ -143,6 +146,12 @@ type Focuser interface {
 //     UsersInfoMaxIDs (100); more is -32602, not lowered.
 //
 // Behavior:
+//   - Every message in a result carries html: its text rendered for Qt's
+//     Text.RichText (mrkdwn.HTML). The people it mentions are named
+//     through the engine (users.info's directory, one call per result)
+//     and its channels from the cache; a name that cannot be learned
+//     stays the ID, and never fails the call. Message events render with
+//     the names reads learned (Workspace.HTML), so they never wait.
 //   - messages.history reads the cache; when it holds fewer than limit
 //     messages before the cursor, it asks the engine for one older page
 //     (LoadOlder) and reads again. Every message carries its reactions.
