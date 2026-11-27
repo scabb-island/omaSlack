@@ -24,7 +24,7 @@ func emojiText(name string, d Directory) (string, bool) {
 		if !ok {
 			return "", false
 		}
-		b.WriteString(clean(s))
+		b.WriteString(oneLine(s))
 	}
 	return b.String(), true
 }

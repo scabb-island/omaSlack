@@ -3,7 +3,7 @@
 // Everything here is a pure function of its inputs, so it is tested with
 // golden files and never talks to the daemon.
 //
-// Output is lipgloss-styled text with true-color SGR sequences and OSC 8
+// Output is styled text with true-color SGR sequences and OSC 8
 // hyperlinks; the terminal program downsamples colors. Control characters
 // in messages and names (an ESC above all) are dropped, so a message can
 // never write its own escape sequences.

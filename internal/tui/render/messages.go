@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 	"gitlab.com/scabb-island/omaslack/internal/wire"
 )
 
@@ -103,8 +103,8 @@ func dayLabel(t, now time.Time) string {
 	return t.Format("Monday, January 2, 2006")
 }
 
-func (p painter) muted() lipgloss.Style  { return p.base.Foreground(p.t.Muted) }
-func (p painter) accent() lipgloss.Style { return p.base.Foreground(p.t.Accent) }
+func (p painter) muted() style  { return p.base.Foreground(p.t.Muted) }
+func (p painter) accent() style { return p.base.Foreground(p.t.Accent) }
 
 // space is n blank cells, in the selection background when there is one.
 func (p painter) space(n int) string {
@@ -119,11 +119,11 @@ func (p painter) separator(label string, width int) string {
 	head := "── " + label + " "
 	fill := 2
 	if width > 0 {
-		fill = width - lipgloss.Width(head)
+		fill = width - ansi.StringWidth(head)
 	}
 	line := head + strings.Repeat("─", max(fill, 0))
 	if width > 0 {
-		return p.muted().MaxWidth(width).Render(line)
+		line = ansi.Truncate(line, width, "")
 	}
 	return p.muted().Render(line)
 }
@@ -145,14 +145,14 @@ func (p painter) message(m wire.Message, l messageLayout, width int) []string {
 	}
 	if p.filled && width > 0 {
 		for i, s := range lines {
-			lines[i] = s + p.space(width-lipgloss.Width(s))
+			lines[i] = s + p.space(width-ansi.StringWidth(s))
 		}
 	}
 	return lines
 }
 
 func (p painter) header(m wire.Message, t time.Time) string {
-	name := firstOf(clean(p.d.UserName(m.Author)), clean(m.Author), "unknown")
+	name := firstOf(oneLine(p.d.UserName(m.Author)), oneLine(m.Author), "unknown")
 	h := p.base.Bold(true).Render(name)
 	if strings.HasPrefix(m.Author, "B") {
 		h += p.space(1) + p.muted().Render("[bot]")
@@ -167,7 +167,7 @@ func (p painter) body(m wire.Message, width int) []string {
 	}
 	lines = p.edited(lines, m.Edited != "", width)
 	for _, f := range m.Files {
-		lines = append(lines, wrap(p.file(f), width)...)
+		lines = append(lines, cut(p.file(f), width))
 	}
 	lines = append(lines, p.reactions(m.Reactions, width)...)
 	if m.ThreadTS != "" && m.ThreadTS == m.TS {
@@ -184,24 +184,32 @@ func (p painter) edited(lines []string, edited bool, width int) []string {
 	}
 	mark := p.muted().Render("(edited)")
 	last := len(lines) - 1
-	if last >= 0 && (width <= 0 || lipgloss.Width(lines[last])+1+lipgloss.Width(mark) <= width) {
+	if last >= 0 && (width <= 0 || ansi.StringWidth(lines[last])+1+ansi.StringWidth(mark) <= width) {
 		lines[last] += p.space(1) + mark
 		return lines
 	}
 	return append(lines, mark)
 }
 
-// file is one row: "[file] name · size · type". An image's tag carries
-// ImageScheme so the app can draw it inline.
+// cut keeps s on one line, ending in "…" when it does not fit.
+func cut(s string, width int) string {
+	if width <= 0 {
+		return s
+	}
+	return ansi.Truncate(s, width, "…")
+}
+
+// file is one row, cut to one line: "[file] name · size · type". An
+// image's tag carries ImageScheme so the app can draw it inline.
 func (p painter) file(f wire.File) string {
 	tag := p.muted().Render("[file]")
 	if strings.HasPrefix(f.MIMEType, "image/") && isFileID(f.ID) {
 		tag = p.muted().Hyperlink(ImageScheme + f.ID).Render("[image]")
 	}
-	row := tag + p.space(1) + p.accent().Render(firstOf(clean(f.Name), clean(f.Title), clean(f.ID)))
+	row := tag + p.space(1) + p.accent().Render(firstOf(oneLine(f.Name), oneLine(f.Title), oneLine(f.ID)))
 	row += p.muted().Render(" · " + size(f.Size))
 	if f.MIMEType != "" {
-		row += p.muted().Render(" · " + clean(f.MIMEType))
+		row += p.muted().Render(" · " + oneLine(f.MIMEType))
 	}
 	return row
 }
@@ -237,7 +245,7 @@ func (p painter) reactions(rs []wire.Reaction, width int) []string {
 	for i, r := range rs {
 		e, ok := emojiText(r.Emoji, p.d)
 		if !ok {
-			e = ":" + clean(r.Emoji) + ":"
+			e = ":" + oneLine(r.Emoji) + ":"
 		}
 		style := p.muted()
 		if containsString(r.Users, p.d.Self()) {

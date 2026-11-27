@@ -1,0 +1,22 @@
+{
+  "_comment": "The non-ASCII names are intentional: they exercise accents and wide runes.",
+  "self": "U0SELF",
+  "users": {
+    "U0SELF": "me",
+    "U0ALICE": "alice",
+    "U0BOB": "bob",
+    "U0JOSE": "José Muñoz",
+    "U0YUKI": "雪子",
+    "B0CI": "ci-bot",
+    "U0EVIL": "evil\n\u001b[31mname"
+  },
+  "conversations": {
+    "C0GEN": "general",
+    "C0DEV": "desarrollo",
+    "C0EVIL": "two\nlines"
+  },
+  "emoji": {
+    "partyparrot": ":partyparrot:",
+    "shipit": ":shipit:"
+  }
+}

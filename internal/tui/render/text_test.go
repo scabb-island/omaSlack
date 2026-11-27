@@ -80,6 +80,24 @@ func TestTextWraps(t *testing.T) {
 	}
 }
 
+// Every wrapped line must carry its own styles and close them, because the
+// app places lines independently (viewport, borders, selection).
+func TestWrappedLinesAreSelfContained(t *testing.T) {
+	out := Text("*bold words* and <https://x.y/z|link label text>", testDir(), testOptions(6))
+	lines := strings.Split(out, "\n")
+	if len(lines) < 4 {
+		t.Fatalf("expected wrapping, got %q", lines)
+	}
+	for _, l := range lines {
+		if !strings.HasPrefix(l, "\x1b") || !strings.HasSuffix(l, "\x1b[m") && !strings.HasSuffix(l, "\x07") {
+			t.Errorf("line %q does not open and close its own style", l)
+		}
+		if strings.Contains(strip(l), "label") && !strings.Contains(l, "\x1b]8;;https://x.y/z") {
+			t.Errorf("link line %q lost its hyperlink", l)
+		}
+	}
+}
+
 func TestTextStyles(t *testing.T) {
 	o := testOptions(80)
 	self := Text("<@U0SELF>", testDir(), o)
@@ -118,6 +136,15 @@ func FuzzText(f *testing.F) {
 			}
 			if strings.ContainsFunc(line, unicode.IsControl) {
 				t.Fatalf("line %q leaks a control character", line)
+			}
+		}
+		for line := range strings.SplitSeq(out, "\n") {
+			var pen penState
+			for seq := range escapes(line) {
+				pen.apply(seq)
+			}
+			if pen.close() != "" {
+				t.Fatalf("line %q leaves a style or link open", line)
 			}
 		}
 	})

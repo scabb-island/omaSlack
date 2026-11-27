@@ -94,6 +94,20 @@ func TestMessagesAttachments(t *testing.T) {
 	}
 }
 
+func TestFileRowIsOneLine(t *testing.T) {
+	msgs := []wire.Message{{TS: at(26, 10, 0), Author: "U0BOB", Files: []wire.File{
+		{ID: "F2", Name: "a-very-long-file-name.png", MIMEType: "image/png", Size: 2048},
+	}}}
+	lines := Messages(msgs, -1, testDir(), testOptions(20))
+	last := lines[len(lines)-1]
+	if got := strip(last); got != "  [image] a-very-lo…" {
+		t.Errorf("file row %q, want it cut to one line", got)
+	}
+	if _, ok := ImageFileID(last); !ok {
+		t.Error("the cut row lost its image link")
+	}
+}
+
 func TestReactionsHighlightSelf(t *testing.T) {
 	msgs := []wire.Message{{TS: at(26, 10, 0), Author: "U0BOB", Text: "x", Reactions: []wire.Reaction{
 		{Emoji: "+1", Users: []string{"U0SELF"}}, {Emoji: "tada", Users: []string{"U0BOB"}},
@@ -140,6 +154,16 @@ func TestMessagesSelected(t *testing.T) {
 	}
 	if len(marked) != 3 || !strings.Contains(marked[0], "second") || !strings.Contains(marked[2], "👍") {
 		t.Errorf("selected lines %q, want the second message's body and reactions", marked)
+	}
+}
+
+// Names come from Slack, so they get the same cleaning as text, and a
+// newline in one must not break the one-line header.
+func TestDirectoryNamesStayOnOneLine(t *testing.T) {
+	msgs := []wire.Message{{TS: at(26, 10, 0), Author: "U0EVIL", Text: "<@U0EVIL> in <#C0EVIL>"}}
+	want := "── Today ─────────────────\nevil [31mname  10:00\n  @evil [31mname in #two\n  lines"
+	if got := readable(msgs, -1, 26); got != want {
+		t.Errorf("got\n%q\nwant\n%q", got, want)
 	}
 }
 

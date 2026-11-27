@@ -1,7 +1,10 @@
 package render
 
 import (
+	"encoding/json"
+	"os"
 	"regexp"
+	"sync"
 	"time"
 
 	"gitlab.com/scabb-island/omaslack/internal/tui/theme"
@@ -23,14 +26,17 @@ func (f fakeDir) Emoji(name string) (string, bool) {
 	return s, ok
 }
 
-func testDir() fakeDir {
-	return fakeDir{
-		SelfID:        "U0SELF",
-		Users:         map[string]string{"U0SELF": "me", "U0ALICE": "alice", "U0BOB": "bob", "B0CI": "ci-bot"},
-		Conversations: map[string]string{"C0GEN": "general"},
-		Custom:        map[string]string{"partyparrot": ":partyparrot:"},
+var testDir = sync.OnceValue(func() fakeDir {
+	b, err := os.ReadFile("testdata/directory.json")
+	if err != nil {
+		panic(err)
 	}
-}
+	var d fakeDir
+	if err := json.Unmarshal(b, &d); err != nil {
+		panic(err)
+	}
+	return d
+})
 
 // testLoc is fixed so goldens do not depend on the machine's zone or tzdata.
 var testLoc = time.FixedZone("ART", -3*60*60)

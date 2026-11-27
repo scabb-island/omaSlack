@@ -5,7 +5,6 @@ import (
 	"strings"
 	"unicode"
 
-	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 	"gitlab.com/scabb-island/omaslack/internal/tui/theme"
 )
@@ -16,12 +15,12 @@ import (
 type painter struct {
 	t      theme.Theme
 	d      Directory
-	base   lipgloss.Style
+	base   style
 	filled bool // selected: blank cells get the background too
 }
 
 func newPainter(t theme.Theme, d Directory, selected bool) painter {
-	base := lipgloss.NewStyle().Foreground(t.Foreground)
+	base := style{}.Foreground(t.Foreground)
 	if selected {
 		base = base.Background(t.Selection)
 	}
@@ -37,7 +36,7 @@ const (
 	strike
 )
 
-func (p painter) plain(e emphasis) lipgloss.Style {
+func (p painter) plain(e emphasis) style {
 	return p.base.Bold(e&bold != 0).Italic(e&italic != 0).Strikethrough(e&strike != 0)
 }
 
@@ -53,8 +52,13 @@ func clean(s string) string {
 	}, s)
 }
 
-// unescape decodes HTML entities; &#27; must not smuggle an ESC in.
-func unescape(s string) string { return clean(html.UnescapeString(s)) }
+// oneLine is clean for what must stay on one line: names from the
+// Directory and from wire values, and text inside a line.
+func oneLine(s string) string { return strings.ReplaceAll(clean(s), "\n", " ") }
+
+// unescape decodes HTML entities; &#27; must not smuggle an ESC in, nor
+// &#10; a line break past a quote bar.
+func unescape(s string) string { return oneLine(html.UnescapeString(s)) }
 
 // blocks renders cleaned mrkdwn as lines no wider than width (0: no limit).
 func (p painter) blocks(s string, width int) []string {
@@ -107,14 +111,14 @@ func appendText(segs []segment, s string) []segment {
 
 // codeBlock keeps whitespace and never wraps: a line too long is cut.
 func (p painter) codeBlock(s string, width int) []string {
-	bar := p.base.Foreground(p.t.Code).Render("│ ")
-	style := p.base.Foreground(p.t.Code)
-	if width > 2 {
-		style = style.MaxWidth(width - 2)
-	}
+	code := p.base.Foreground(p.t.Code)
+	bar := code.Render("│ ")
 	lines := strings.Split(s, "\n")
 	for i, l := range lines {
-		lines[i] = bar + style.Render(l)
+		if width > 2 {
+			l = ansi.Truncate(l, width-2, "")
+		}
+		lines[i] = bar + code.Render(l)
 	}
 	return lines
 }
@@ -155,15 +159,6 @@ func (p painter) line(s string, quoted bool, width int) []string {
 		lines[i] = bar + l
 	}
 	return lines
-}
-
-// wrap breaks at spaces and, for a word longer than the line, inside the
-// word. Widths count terminal cells, so CJK and emoji take two.
-func wrap(s string, width int) []string {
-	if width > 0 {
-		s = ansi.Hardwrap(ansi.Wordwrap(s, width, ""), width, true)
-	}
-	return strings.Split(s, "\n")
 }
 
 // inline renders one line: emphasis, `code`, <…> references and :emoji:.
@@ -292,7 +287,7 @@ func (p painter) reference(s string, i int) (string, int, bool) {
 }
 
 func (p painter) user(id, label string) string {
-	name := firstOf(clean(p.d.UserName(id)), label, id)
+	name := firstOf(oneLine(p.d.UserName(id)), label, id)
 	style := p.base.Foreground(p.t.Accent).Bold(true)
 	if id == p.d.Self() {
 		style = p.base.Foreground(p.t.Mention).Bold(true)
@@ -301,7 +296,7 @@ func (p painter) user(id, label string) string {
 }
 
 func (p painter) channel(id, label string) string {
-	name := firstOf(label, clean(p.d.ConversationName(id)), id)
+	name := firstOf(label, oneLine(p.d.ConversationName(id)), id)
 	return p.base.Foreground(p.t.Accent).Render("#" + name)
 }
 
