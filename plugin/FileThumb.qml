@@ -10,6 +10,11 @@ import "lib/filecache.js" as Files
 // near the screen, and decodes it asynchronously at the drawn size
 // (SizedImage). It stays out of the layout until the picture is there,
 // and when the workspace has no files capability.
+//
+// The image keeps its own size, never this item's laid-out one: whether
+// the thumb shows depends on the decode, so a decode that depended on the
+// thumb showing was a cycle (visible -> height -> decode -> broken ->
+// visible) that Qt reported as a binding loop.
 Item {
   id: root
 
@@ -17,21 +22,22 @@ Item {
   property string team: ""
   // A wire.File with an image/* mimetype.
   property var file: null
+  // The widest the thumbnail may be (the message body's width).
+  property real maxWidth: implicitWidth
 
   signal clicked()
 
   readonly property string want: file && file.id ? team + "/" + file.id : ""
   readonly property bool allowed: !!service && A.can(workspaceOf(service.workspaces, team), "files")
   property string path: ""
-  // The picture could not be decoded. Set by the image, not bound to its
-  // status: the status depends on this item's size, which depends on this.
+  // The picture could not be decoded (set by the image).
   property bool broken: false
   readonly property url url: path !== "" ? A.fileUrl(path) : ""
 
   objectName: "thumb:" + (file && file.id ? file.id : "")
   visible: path !== "" && !broken
   implicitWidth: Style.space(320)
-  implicitHeight: visible ? Style.space(200) : 0
+  implicitHeight: visible ? image.height : 0
 
   function workspaceOf(list, t) {
     for (var i = 0; i < (list || []).length; i++) if (list[i].team === t) return list[i]
@@ -53,7 +59,8 @@ Item {
 
   SizedImage {
     id: image
-    anchors.fill: parent
+    width: Math.min(root.implicitWidth, root.maxWidth)
+    height: Style.space(200)
     url: root.url
     horizontalAlignment: Image.AlignLeft
     onStatusChanged: if (status === Image.Error) root.broken = true
