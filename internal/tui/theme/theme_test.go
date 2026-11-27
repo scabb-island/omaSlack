@@ -27,7 +27,7 @@ func hex(c color.Color) string {
 }
 
 func TestPathsFromHome(t *testing.T) {
-	p, err := pathsFrom("/home/ana")
+	p, err := PathsFrom("/home/ana")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +38,7 @@ func TestPathsFromHome(t *testing.T) {
 	if p != want {
 		t.Fatalf("paths = %+v", p)
 	}
-	if _, err := pathsFrom(""); err == nil {
+	if _, err := PathsFrom(""); err == nil {
 		t.Fatal("empty home: want an error")
 	}
 }

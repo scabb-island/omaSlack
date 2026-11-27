@@ -1,0 +1,17 @@
+# omaslack terminal client, for the Omarchy launcher. Installed as
+# /usr/share/applications/omaslack.desktop. omarchy-launch-or-focus-tui
+# focuses the running TUI (window class org.omarchy.omaslack) or opens it
+# in Omarchy's terminal.
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=omaslack
+GenericName=Slack Client
+Comment=Open or focus the omaslack terminal client for Slack
+Exec=omarchy-launch-or-focus-tui omaslack tui
+TryExec=omaslack
+Icon=internet-group-chat
+Terminal=false
+Categories=Network;InstantMessaging;Chat;
+Keywords=slack;chat;messages;tui;
+StartupNotify=false
