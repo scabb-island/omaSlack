@@ -5,6 +5,7 @@
       {
         "team": "T0ACME",
         "name": "Acme",
+        "self": "U0ANA",
         "provider": "desktop-session",
         "capabilities": [
           "realtime",
@@ -52,6 +53,7 @@
       {
         "team": "T0ACME",
         "name": "Acme",
+        "self": "U0ANA",
         "provider": "desktop-session",
         "capabilities": [
           "realtime",

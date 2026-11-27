@@ -68,8 +68,9 @@ var (
 // Workspace is one signed-in workspace as the methods see it.
 type Workspace struct {
 	Team         domain.TeamID
-	Name         string // the workspace's display name
-	Provider     string // "desktop-session" or "internal-app"
+	Name         string        // the workspace's display name
+	Self         domain.UserID // the signed-in user; zero when unknown
+	Provider     string        // "desktop-session" or "internal-app"
 	Capabilities domain.Capabilities
 	Store        Reader
 	Engine       Actions
@@ -77,7 +78,7 @@ type Workspace struct {
 
 // Info is the workspace as workspaces.list and hello report it.
 func (w Workspace) Info() wire.Workspace {
-	return wire.FromWorkspace(w.Team, w.Name, w.Provider, w.Capabilities, w.Engine.State())
+	return wire.FromWorkspace(w.Team, w.Name, w.Self, w.Provider, w.Capabilities, w.Engine.State())
 }
 
 // Directory lists the signed-in workspaces. The daemon owns it; the list

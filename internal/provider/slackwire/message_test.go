@@ -45,6 +45,9 @@ func TestMessagesParseIntoDomainMessages(t *testing.T) {
 			domain.Message{TS: ts("1700000100.000100"), Author: author("U0002")}},
 		"edited reply": {`{"user":"U0002","ts":"1700000300.000300","thread_ts":"1700000100.000100","edited":{"ts":"1700000400.000000"}}`,
 			domain.Message{TS: ts("1700000300.000300"), ThreadTS: ts("1700000100.000100"), Author: author("U0002"), Edited: ts("1700000400.000000")}},
+		"thread root": {`{"user":"U0002","ts":"1700000100.000100","thread_ts":"1700000100.000100","reply_count":3,"latest_reply":"1700000500.000500"}`,
+			domain.Message{TS: ts("1700000100.000100"), ThreadTS: ts("1700000100.000100"), Author: author("U0002"),
+				ReplyCount: 3, LatestReply: ts("1700000500.000500")}},
 		"with files": {`{"user":"U0002","ts":"1700000100.000100","files":[` +
 			`{"id":"F0001","name":"report.pdf","title":"Q3 report","mimetype":"application/pdf","size":2048,` +
 			`"url_private":"https://files.slack.com/files-pri/T0001-F0001/report.pdf",` +
@@ -79,12 +82,13 @@ func TestMessagesWithABadFieldAreRejected(t *testing.T) {
 		json    string
 		wantErr error
 	}{
-		"missing ts":      {`{"user":"U0001"}`, domain.ErrInvalidTS},
-		"no user, no bot": {`{"ts":"1700000100.000100"}`, domain.ErrInvalidID},
-		"bad user":        {`{"user":"C0001","ts":"1700000100.000100"}`, domain.ErrInvalidID},
-		"bad bot_id":      {`{"bot_id":"U0001","ts":"1700000100.000100"}`, domain.ErrInvalidID},
-		"bad thread_ts":   {`{"user":"U0001","ts":"1700000100.000100","thread_ts":"1.2"}`, domain.ErrInvalidTS},
-		"bad edited.ts":   {`{"user":"U0001","ts":"1700000100.000100","edited":{"ts":"x"}}`, domain.ErrInvalidTS},
+		"missing ts":       {`{"user":"U0001"}`, domain.ErrInvalidTS},
+		"no user, no bot":  {`{"ts":"1700000100.000100"}`, domain.ErrInvalidID},
+		"bad user":         {`{"user":"C0001","ts":"1700000100.000100"}`, domain.ErrInvalidID},
+		"bad bot_id":       {`{"bot_id":"U0001","ts":"1700000100.000100"}`, domain.ErrInvalidID},
+		"bad thread_ts":    {`{"user":"U0001","ts":"1700000100.000100","thread_ts":"1.2"}`, domain.ErrInvalidTS},
+		"bad edited.ts":    {`{"user":"U0001","ts":"1700000100.000100","edited":{"ts":"x"}}`, domain.ErrInvalidTS},
+		"bad latest_reply": {`{"user":"U0001","ts":"1700000100.000100","latest_reply":"x"}`, domain.ErrInvalidTS},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := decode(t, tc.json).Parse(); !errors.Is(err, tc.wantErr) {
