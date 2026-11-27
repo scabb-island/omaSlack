@@ -41,7 +41,7 @@ ON CONFLICT (conv_id, ts) DO UPDATE SET
     latest_reply = COALESCE(NULLIF(excluded.latest_reply, ''), messages.latest_reply)
 WHERE excluded.edited_ts >= messages.edited_ts`
 
-// messageColumns are what every messages query reads, in messageRow's
+// messageColumns are what every messages query reads, in messageRow.targets'
 // order.
 const messageColumns = `ts, thread_ts, author, author_name, text, edited_ts, reply_count, latest_reply`
 
@@ -122,25 +122,7 @@ func (s *Store) queryMessages(ctx context.Context, conv domain.ConversationID, q
 
 // scanMessages runs a messages query and parses every row it returns.
 func (s *Store) scanMessages(ctx context.Context, query string, args ...any) ([]domain.Message, error) {
-	rows, err := s.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("store/sqlite: read messages: %w", err)
-	}
-	defer func() { _ = rows.Close() }()
-
-	var out []domain.Message
-	for rows.Next() {
-		var r messageRow
-		if err := rows.Scan(&r.ts, &r.threadTS, &r.author, &r.authorName, &r.text, &r.editedTS, &r.replyCount, &r.latestReply); err != nil {
-			return nil, fmt.Errorf("store/sqlite: read messages: %w", err)
-		}
-		m, err := r.parse()
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, m)
-	}
-	return out, rows.Err()
+	return queryRows[domain.Message, messageRow](ctx, s.db, "messages", query, args...)
 }
 
 // messageRow is a messages row as stored: outside data until parsed.
@@ -148,6 +130,10 @@ type messageRow struct {
 	ts, threadTS, author, authorName, text, editedTS string
 	replyCount                                       int
 	latestReply                                      string
+}
+
+func (r *messageRow) targets() []any {
+	return []any{&r.ts, &r.threadTS, &r.author, &r.authorName, &r.text, &r.editedTS, &r.replyCount, &r.latestReply}
 }
 
 func (r messageRow) parse() (domain.Message, error) {
