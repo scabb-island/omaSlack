@@ -3,12 +3,14 @@ import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
 import "lib/badges.js" as Badges
+import "lib/install.js" as Install
 
 // The bar icon (task 4.3): follows the bar's color, one unread dot at the
 // glyph's corner for anything unread in scope (no counts: those are in the
 // per-workspace tooltip and the quick panel), the connection state
-// (connected, reconnecting, error, auth_expired) and DND. Dims, with a
-// tooltip on how to start the daemon, while the daemon does not answer.
+// (connected, reconnecting, error, auth_expired) and DND. Dims while the
+// daemon does not answer, with a tooltip on what to do: install, update,
+// set up or start omaslack (the Service's setupNeed, lib/install.js).
 // Takes no space when hideWhenEmpty is on and nothing is unread (never
 // during DND).
 //
@@ -54,7 +56,8 @@ Item {
     dnd: service ? service.dnd : ({}),
     nowSeconds: nowSeconds,
     unreadScope: unreadScope,
-    hideWhenEmpty: hideWhenEmpty
+    hideWhenEmpty: hideWhenEmpty,
+    setup: service ? Install.action(service.setupNeed) : null
   })
   readonly property bool hidden: view.hidden
   // The glyph's button, where the bar centers its open-panel mark

@@ -36,9 +36,10 @@ var STATUSES = {
 //
 // input: { hasService, connectionState, connectionError, everConnected,
 //          workspaces, summary, dnd, nowSeconds,
-//          unreadScope, hideWhenEmpty }
+//          unreadScope, hideWhenEmpty, setup }
 // (everConnected: the Service reached "connected" at least once, so a lost
-// connection reads as reconnecting rather than as a daemon never started.)
+// connection reads as reconnecting rather than as a daemon never started;
+// setup: lib/install.js action() for the Service's setupNeed, or null.)
 //
 // returns: { status, glyph, dimmed, alert, dot, mainCount, channelCount,
 //            hidden, tooltip }
@@ -166,14 +167,23 @@ function layout(input) {
 
 // ---- tooltip --------------------------------------------------------------
 
+// daemonTooltip: with input.setup (lib/install.js action(), from the
+// Service's probe), what is wrong and what to do; without it, the generic
+// hints. The Service keeps its setupNeed through the "connecting" of each
+// retry, so the tooltip does not flicker back to "connecting".
 function daemonTooltip(status, input) {
   var lines
-  if (status === "starting") lines = ["omaslack: connecting to the daemon…"]
+  var setup = input.setup
+  if (setup && status === "reconnecting")
+    lines = ["omaslack: lost the daemon, retrying.", setup.hint, "Middle-click to retry now."]
+  else if (setup) lines = ["omaslack: " + setup.title + ".", setup.hint]
+  else if (status === "starting") lines = ["omaslack: connecting to the daemon…"]
   else if (status === "down") lines = ["omaslack: the daemon is not running.", START_HINT]
   else if (status === "reconnecting")
     lines = ["omaslack: lost the daemon, retrying.", "If it stopped: " + START_HINT, "Middle-click to retry now."]
   else lines = ["omaslack: the plugin and the daemon speak different protocol versions.",
                 "Update omaslack so both match."]
+  if (setup && setup.label) lines.push("Open the panel to " + setup.label.charAt(0).toLowerCase() + setup.label.slice(1) + ".")
   if (input.connectionError) lines.push("(" + input.connectionError + ")")
   return lines.join("\n")
 }

@@ -17,6 +17,15 @@ Item {
     onCloseRequested: root.closes++
   }
 
+  function child(item, name) {
+    if (item.objectName === name) return item
+    for (var i = 0; i < item.children.length; i++) {
+      var found = child(item.children[i], name)
+      if (found) return found
+    }
+    return null
+  }
+
   function methods() { return root.service.calls.map(function(c) { return c.method }) }
   function callsOf(method) { return root.service.calls.filter(function(c) { return c.method === method }) }
 
@@ -121,6 +130,37 @@ Item {
     root.service.unreadList = []
     check(panel.rows.length === 0 && panel.empty, "no unread conversations is not the empty state")
     check(panel.implicitHeight > 0, "the empty panel has no height")
+
+    // The daemon does not answer and the probe says what to do: the panel
+    // says it and offers the action (lib/install.js); Enter runs it.
+    var s = root.service
+    s.connectionState = "unavailable"
+    s.setupNeed = "install"
+    var setupButton = child(panel, "setupButton")
+    var setupHint = child(panel, "setupHint")
+    check(setupButton && setupButton.visible && setupButton.text === "Install omaslack-bin",
+          "no install button: " + (setupButton ? setupButton.visible + " " + setupButton.text : "missing"))
+    check(setupHint && setupHint.visible && setupHint.text.indexOf("omaslack-bin") >= 0, "no install hint")
+    check(!child(panel, "dndFlow").visible, "the DND buttons show without a daemon")
+    s.reset()
+    setupButton.clicked()
+    check(callsOf("runSetupAction").length === 1, "the install button did not run the action")
+    s.reset()
+    panel.activateCursor()
+    var ran = callsOf("runSetupAction")
+    check(ran.length === 1 && ran[0].params.need === "install", "Enter did not run the action: " + JSON.stringify(s.calls))
+
+    // A need without a command only explains.
+    s.setupNeed = "update-plugin"
+    check(!setupButton.visible, "update-plugin shows a button")
+    check(setupHint.text.indexOf("omarchy plugin update") >= 0, "update-plugin hint: " + setupHint.text)
+    s.reset()
+    panel.activateCursor()
+    check(s.calls.length === 0, "Enter ran something without an action")
+
+    s.setupNeed = ""
+    s.connectionState = "connected"
+    check(!setupHint.visible && child(panel, "dndFlow").visible, "the setup block outlives the connection")
     return failures
   }
 }

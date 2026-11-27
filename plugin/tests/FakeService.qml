@@ -14,6 +14,9 @@ Item {
   property string connectionState: "connected"
   readonly property bool daemonAvailable: connectionState === "connected"
   property string connectionError: ""
+  // Set by the test: "", "install", "update", "update-plugin", "restart",
+  // "setup" or "start" (lib/install.js need()).
+  property string setupNeed: ""
 
   property var workspaces: []
   property var summary: ({ workspaces: ({}), total: ({ dms: 0, mentions: 0, channels: 0, threads: 0 }) })
@@ -85,4 +88,5 @@ Item {
   function openPreferred(client, team, conv) { client === "tui" ? openTui(team, conv) : openWindow(team, conv) }
 
   function reconnect() { record("reconnect", {}) }
+  function runSetupAction() { record("runSetupAction", { need: setupNeed }) }
 }

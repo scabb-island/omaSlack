@@ -7,11 +7,15 @@ import qs.Commons as Commons
 import qs.Ui
 import "lib/quickpanel.js" as Lib
 import "lib/contrast.js" as C
+import "lib/install.js" as Install
 
 // The quick-view popup under the bar icon (task 4.4): conversations with
 // unread messages, DMs and mentions first, each with a preview; a quick
 // reply that sends and marks the conversation read; mark as read; DND and Away/Back; and
-// opening a conversation in the window or the TUI.
+// opening a conversation in the window or the TUI. While the daemon does
+// not answer, what to do instead (the Service's setupNeed, lib/install.js):
+// install, update, set up or start omaslack, with a button that runs it;
+// the DND buttons, which need the daemon, step aside meanwhile.
 //
 // Previews come from messages.history (limit 3), which only reads the
 // daemon's cache (and at most pages older history in): it never moves the
@@ -42,6 +46,9 @@ FocusScope {
   readonly property var rows: service ? buildRows(service.summary, service.conversations) : []
   readonly property bool empty: rows.length === 0
   readonly property bool multiWorkspace: service ? service.workspaces.length > 1 : false
+  // What to do while the daemon does not answer (lib/install.js action()),
+  // null while connected or not known yet.
+  readonly property var setupAction: service ? Install.action(service.setupNeed) : null
 
   // The cursor the user moved to, { section: "dnd" | "rows", index }, and
   // the key of its row, so it follows that row when the list reorders. The
@@ -78,7 +85,9 @@ FocusScope {
   readonly property bool shown: !Window.window || Window.window.visible
 
   implicitWidth: Style.space(420)
-  implicitHeight: header.implicitHeight + Style.spacing.panelGap + (empty ? emptyText.implicitHeight : rowColumn.implicitHeight)
+  implicitHeight: header.implicitHeight
+    + (emptyText.visible ? Style.spacing.panelGap + emptyText.implicitHeight
+       : empty ? 0 : Style.spacing.panelGap + rowColumn.implicitHeight)
 
   // summary and conversations are read so the binding re-runs when either
   // changes; unreadConversations() is derived from them.
@@ -107,6 +116,7 @@ FocusScope {
   function cursorRow() { return cursor.section === "rows" && rows.length > 0 ? rows[cursor.index] : null }
 
   function activateCursor() {
+    if (setupAction) { if (setupAction.argv) service.runSetupAction(); return }
     if (cursor.section === "dnd") pressDnd(dndButtons[cursor.index])
     else if (cursorRow()) openRow(cursorRow())
   }
@@ -240,7 +250,8 @@ FocusScope {
       PanelHero {
         width: parent.width
         title: "Slack"
-        meta: !root.service || !root.service.daemonAvailable
+        meta: root.setupAction ? root.setupAction.title
+          : !root.service || !root.service.daemonAvailable
           ? "Daemon not running"
           : (root.empty ? "Nothing unread" : root.rows.length + " unread")
         detail: [root.dndState.snoozed ? "DND until " + Lib.clockLabel(root.dndState.until) : "",
@@ -271,13 +282,39 @@ FocusScope {
 
       PanelSeparator { foreground: root.foreground }
 
+      Text {
+        objectName: "setupHint"
+        visible: !!root.setupAction
+        width: parent.width
+        textFormat: Text.PlainText
+        text: root.setupAction ? root.setupAction.hint : ""
+        color: root.foreground
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.body
+        wrapMode: Text.WordWrap
+      }
+
+      Button {
+        objectName: "setupButton"
+        visible: !!root.setupAction && root.setupAction.label !== ""
+        text: root.setupAction ? root.setupAction.label : ""
+        bordered: true
+        fontFamily: root.fontFamily
+        foreground: root.foreground
+        hasCursor: true
+        onClicked: root.service.runSetupAction()
+      }
+
       PanelSectionHeader {
+        visible: !root.setupAction
         text: "Do not disturb and presence"
         foreground: root.foreground
         fontFamily: root.fontFamily
       }
 
       Flow {
+        objectName: "dndFlow"
+        visible: !root.setupAction
         width: parent.width
         spacing: Style.spacing.md
 
@@ -297,12 +334,15 @@ FocusScope {
         }
       }
 
-      PanelSeparator { foreground: root.foreground }
+      PanelSeparator {
+        visible: !(root.setupAction && root.empty)
+        foreground: root.foreground
+      }
     }
 
     Text {
       id: emptyText
-      visible: root.empty
+      visible: root.empty && !root.setupAction
       anchors.top: header.bottom
       anchors.topMargin: Style.spacing.panelGap
       width: parent.width

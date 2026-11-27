@@ -54,7 +54,7 @@ Item {
     var failures = []
     function check(ok, message) { if (!ok) failures.push(message) }
     var s = root.service
-    var saved = { connectionState: s.connectionState, connectionError: s.connectionError,
+    var saved = { connectionState: s.connectionState, connectionError: s.connectionError, setupNeed: s.setupNeed,
                   workspaces: s.workspaces, summary: s.summary, dnd: s.dnd }
     function unread(c) { s.summary = { workspaces: { T1: c }, total: c } }
     var button = child(icon, "button")
@@ -149,6 +149,12 @@ Item {
     check(button.dimmed, "a missing daemon does not dim the icon")
     check(!dot.visible, "the dot shows without the daemon")
     check(button.tooltipText.indexOf("systemctl --user start omaslack") >= 0, "tooltip: " + button.tooltipText)
+
+    // The Service's probe says what to do (lib/install.js): the tooltip
+    // says it too.
+    s.setupNeed = "install"
+    check(button.tooltipText.indexOf("omarchy-pkg-aur-add omaslack-bin") >= 0, "install tooltip: " + button.tooltipText)
+    s.setupNeed = ""
 
     // Middle click asks the Service to reconnect; left and right report.
     s.reset()
