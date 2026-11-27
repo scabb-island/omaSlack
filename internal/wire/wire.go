@@ -18,7 +18,13 @@ type Message struct {
 	ThreadTS string `json:"threadTS,omitempty"`
 	Author   string `json:"author,omitempty"`
 	Text     string `json:"text"`
-	Edited   string `json:"edited,omitempty"`
+	// HTML is Text rendered for Qt's Text.RichText (mrkdwn parsed in the
+	// daemon, mentions and channels resolved to names, emoji shortcodes
+	// to characters), so QML never parses mrkdwn (spec gui-client, "Long
+	// histories without degrading the shell"). Empty until task 4.9 fills
+	// it; clients fall back to Text.
+	HTML   string `json:"html,omitempty"`
+	Edited string `json:"edited,omitempty"`
 	// A thread root's replies: how many (omitted when none or unknown)
 	// and the newest one's ts (omitted when unknown).
 	ReplyCount  int        `json:"replyCount,omitempty"`

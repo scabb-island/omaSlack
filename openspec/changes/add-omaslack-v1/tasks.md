@@ -81,6 +81,8 @@
 - [ ] 4.6 Full keyboard navigation and styles only from `Style`
 - [ ] 4.7 Manifest `schema[]` for settings
 - [ ] 4.8 `qmltestrunner` tests for the models
+- [ ] 4.9 Daemon-side rich text: mrkdwn parsed once in a shared `internal/mrkdwn` package (also used by the TUI renderer) and rendered to the HTML subset Qt's `Text.RichText` draws, in `wire.Message.html` for history, replies and message events
+- [x] 4.10 Contracts: the Service API (`plugin/Service.qml`, mirrored by `plugin/tests/FakeService.qml`), pure JS state in `plugin/lib/`, the bar/popup/window split (`BarWidget.qml`, `BarIcon.qml`, `QuickPanel.qml`, `Window.qml` as the `panel` entry point), the manifest settings, `wire.Message.html`, and `make qmltest` (qmltestrunner for JS and FakeService; view smokes in an offscreen quickshell)
 
 ## M5 — Notifications, presence and Omarchy integration
 - [ ] 5.1 Notifier: rules (DM, mention, keywords, channels), DND and suppression when the conversation is in view

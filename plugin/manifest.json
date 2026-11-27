@@ -5,15 +5,17 @@
   "version": "0.0.1",
   "author": "Scabb Island",
   "license": "MIT",
-  "description": "Slack for Omarchy, from the bar and from the terminal, on one local daemon. Early skeleton: shows whether the omaslack daemon is reachable.",
+  "description": "Slack for Omarchy, from the bar and from the terminal, on one local daemon: unread badges, a quick-view panel with quick replies, and a full window.",
   "kinds": [
     "service",
-    "bar-widget"
+    "bar-widget",
+    "panel"
   ],
   "keepLoaded": true,
   "entryPoints": {
     "service": "Service.qml",
-    "barWidget": "BarWidget.qml"
+    "barWidget": "BarWidget.qml",
+    "panel": "Window.qml"
   },
   "barWidget": {
     "displayName": "omaslack",
@@ -26,6 +28,50 @@
       "omaslack"
     ],
     "allowMultiple": false,
-    "defaultSection": "right"
+    "defaultSection": "right",
+    "defaults": {
+      "showChannelBadge": true,
+      "unreadScope": "dms-and-mentions",
+      "openWith": "window",
+      "hideWhenEmpty": false
+    },
+    "schema": [
+      {
+        "key": "showChannelBadge",
+        "type": "boolean",
+        "label": "Channel badge",
+        "defaultValue": true,
+        "description": "Show a second badge for unread channels and threads."
+      },
+      {
+        "key": "unreadScope",
+        "type": "enum",
+        "label": "Main badge counts",
+        "options": [
+          "dms-and-mentions",
+          "all"
+        ],
+        "defaultValue": "dms-and-mentions",
+        "description": "What the main badge counts: DMs and mentions aimed at you, or every unread conversation."
+      },
+      {
+        "key": "openWith",
+        "type": "enum",
+        "label": "Open conversations in",
+        "options": [
+          "window",
+          "tui"
+        ],
+        "defaultValue": "window",
+        "description": "Where right-clicking the icon or picking a conversation in the panel opens it."
+      },
+      {
+        "key": "hideWhenEmpty",
+        "type": "boolean",
+        "label": "Hide when nothing is unread",
+        "defaultValue": false,
+        "description": "The icon takes no space in the bar while nothing is unread."
+      }
+    ]
   }
 }

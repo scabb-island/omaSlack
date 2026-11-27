@@ -36,7 +36,7 @@ make snapshot         # goreleaser snapshot (linux amd64/arm64) in dist/
 go test ./internal/cli -run TestVersion   # a single test
 ```
 
-For QML, `make qmllint` maps `$OMARCHY_PATH/shell` as the `qs` import prefix (the way the shell does) and turns off `missing-property`, because the shell hands plugins a `bar` object with no static type.
+For QML, `make qmltest` runs the plugin tests: `qmltestrunner` on `plugin/tests/tst_*.qml` (the pure JS in `plugin/lib/` and `FakeService.qml`), then `plugin/tests/smoke/run.sh`, which loads each `plugin/tests/smoke/*Smoke.qml` in an offscreen `quickshell` against the installed shell, because the views import Quickshell and `qs.Ui`, which `qmltestrunner` cannot load. Popups built on `KeyboardPanel` need Wayland, so smoke their content, not the popup. `make qmllint` maps `$OMARCHY_PATH/shell` as the `qs` import prefix (the way the shell does) and turns off `missing-property`, because the shell hands plugins a `bar` object with no static type.
 
 ## ub-mode (change discipline)
 
