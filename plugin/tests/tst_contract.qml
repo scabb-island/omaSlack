@@ -11,14 +11,14 @@ TestCase {
   FakeService { id: fake }
 
   readonly property var properties: [
-    "pluginId", "socketPath", "shell", "connectionState", "daemonAvailable", "connectionError",
+    "pluginId", "socketPath", "shell", "connectionState", "daemonAvailable", "connectionError", "setupNeed",
     "workspaces", "summary", "conversations", "dnd", "presence", "messagesRevision"
   ]
   readonly property var functions: [
     "messages", "hasMoreHistory", "unreadConversations", "userName", "conversationName",
     "call", "openConversation", "loadOlder", "loadReplies", "send", "edit", "remove", "react",
     "markRead", "setDraft", "snoozeDND", "endDND", "setPresence", "fetchFile",
-    "openWindow", "openTui", "openPreferred", "reconnect"
+    "openWindow", "openTui", "openPreferred", "reconnect", "runSetupAction"
   ]
   readonly property var signalNames: ["daemonEvent", "messagesUpdated", "focusRequested"]
 
@@ -43,6 +43,17 @@ TestCase {
     compare(fake.calls.length, 1)
     compare(fake.calls[0].method, "messages.send")
     compare(fake.calls[0].params.text, "hi")
+  }
+
+  // runSetupAction runs the action of setupNeed (lib/install.js).
+  function test_run_setup_action_is_recorded() {
+    fake.reset()
+    fake.setupNeed = "install"
+    fake.runSetupAction()
+    compare(fake.calls.length, 1)
+    compare(fake.calls[0].method, "runSetupAction")
+    compare(fake.calls[0].params.need, "install")
+    fake.setupNeed = ""
   }
 
   // presence.set takes "away" or "auto" (internal/api/methods.go).

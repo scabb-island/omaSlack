@@ -5,6 +5,7 @@ import "lib/rpc.js" as Rpc
 import "lib/store.js" as Store
 import "lib/backoff.js" as Backoff
 import "lib/asks.js" as Asks
+import "lib/install.js" as Install
 
 // The one connection between omarchy-shell and the omaslack daemon
 // (spec gui-client, "Single Service as the daemon client"). The shell mounts
@@ -36,11 +37,18 @@ Item {
 
   // "unknown" before the first attempt, then "connecting", "connected",
   // "unavailable" (no daemon on the socket; retrying with backoff) or
-  // "incompatible" (hello refused our protocol version; not retrying).
+  // "incompatible" (hello refused our protocol version; asked again every
+  // 30 s, quietly: the state stays "incompatible" meanwhile).
   property string connectionState: "unknown"
   readonly property bool daemonAvailable: connectionState === "connected"
   // Why the last attempt failed, for tooltips. Empty when connected.
   property string connectionError: ""
+  // What the user has to do while the daemon does not answer, from a probe
+  // run after each failed attempt (lib/install.js need()): "" (connected,
+  // or not known yet), "install", "update", "update-plugin", "restart",
+  // "setup" or "start". Views show Install.action(setupNeed) and call
+  // runSetupAction().
+  readonly property string setupNeed: root.connectionState === "connected" ? "" : Install.need(root._probe, Rpc.PROTOCOL)
 
   // ---- state from the daemon ----------------------------------------------
 
@@ -196,6 +204,16 @@ Item {
   // ("window" or "tui").
   function openPreferred(client, team, conv) { client === "tui" ? openTui(team, conv) : openWindow(team, conv) }
 
+  // Run the action of setupNeed: package actions and omaslack setup in a
+  // visible floating terminal (never silently), systemctl directly, then a
+  // reconnection. Does nothing for a need without an action.
+  function runSetupAction() {
+    var a = Install.action(root.setupNeed)
+    if (!a || !a.argv) return
+    Quickshell.execDetached(a.argv)
+    if (a.reconnect) setupReconnect.restart()
+  }
+
   // Try to connect now, resetting the backoff (the bar's "retry").
   function reconnect() {
     root._delay = 0
@@ -219,6 +237,11 @@ Item {
   property var _st: Store.empty()
   property var _rpc: Rpc.newClient()
   property int _delay: 0
+  // The last install probe (lib/install.js parseProbe), null while
+  // connected or before the first failed attempt.
+  property var _probe: null
+  // hello refused our protocol: the close that follows keeps "incompatible".
+  property bool _refused: false
   // Not properties of interest to bindings; mutated in place.
   property var _askedUsers: Asks.empty() // users.info asks (lib/asks.js)
   property var _userQueue: ({}) // <team>: [user]
@@ -267,7 +290,7 @@ Item {
   function _connect() {
     sock.connected = false // may schedule a retry; this attempt replaces it
     retryTimer.stop()
-    root.connectionState = "connecting"
+    if (root.connectionState !== "incompatible") root.connectionState = "connecting"
     sock.connected = true
   }
 
@@ -277,6 +300,7 @@ Item {
 
   function _onHello(err) {
     if (err && err.code === Rpc.INCOMPATIBLE) {
+      root._refused = true
       root.connectionState = "incompatible"
       root.connectionError = err.message || "incompatible protocol"
       sock.connected = false
@@ -288,6 +312,7 @@ Item {
       return
     }
     root._delay = 0
+    root._probe = null
     root.connectionError = ""
     root.connectionState = "connected"
     root.messagesRevision++ // names asked while offline are asked again
@@ -357,15 +382,22 @@ Item {
     for (var i = 0; i < failed.callbacks.length; i++) {
       try { failed.callbacks[i]() } catch (e) { console.warn("omaslack: callback failed:", e) }
     }
-    if (root.connectionState === "incompatible") return
-    if (reason) root.connectionError = reason
-    root.connectionState = "unavailable"
+    if (root._refused) {
+      root._refused = false
+      root.connectionState = "incompatible"
+    } else {
+      if (reason) root.connectionError = reason
+      root.connectionState = "unavailable"
+    }
+    root._probeInstall(root.connectionState)
     root._scheduleRetry()
   }
 
+  // An incompatible daemon is asked again at the slowest pace: after an
+  // update (runSetupAction) the new one is found without a shell restart.
   function _scheduleRetry() {
-    if (retryTimer.running || root.connectionState === "incompatible") return
-    root._delay = Backoff.next(root._delay)
+    if (retryTimer.running) return
+    root._delay = root.connectionState === "incompatible" ? Backoff.MAX_MS : Backoff.next(root._delay)
     retryTimer.interval = root._delay
     retryTimer.start()
   }
@@ -394,6 +426,21 @@ Item {
       root._wantUser(params.team, params.conversation.user)
     if (method === "ui.focus") root._onFocus(params)
     root.daemonEvent(method, params)
+  }
+
+  // ---- install probe ------------------------------------------------------------
+
+  // _probeInstall checks, after a failed attempt, whether omaslack is
+  // installed, set up and compatible (lib/install.js PROBE). One at a time.
+  function _probeInstall(state) {
+    if (probeProc.running || !Install.shouldProbe(state)) return
+    probeProc.forState = state
+    probeProc.running = true
+  }
+
+  function _onProbe(text, state) {
+    if (root.connectionState === "connected") return
+    root._probe = Install.parseProbe(text, state)
   }
 
   // ---- users.info batching ----------------------------------------------------
@@ -486,6 +533,22 @@ Item {
       root.connectionError = root._socketError(code)
       if (!connected) root._onClosed(root.connectionError)
     }
+  }
+
+  Process {
+    id: probeProc
+    property string forState: ""
+    command: ["sh", "-c", Install.PROBE]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root._onProbe(text, probeProc.forState)
+    }
+  }
+
+  Timer {
+    id: setupReconnect
+    interval: 1500
+    onTriggered: root.reconnect()
   }
 
   Timer {
