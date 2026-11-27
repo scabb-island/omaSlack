@@ -8,7 +8,7 @@ set -u
 
 for pid in $(pgrep -x -u "$(id -u)" omaslack 2>/dev/null); do
   # argv[1] is the subcommand. Read it from /proc: the process may be gone.
-  mapfile -d '' -t argv <"/proc/$pid/cmdline" 2>/dev/null || continue
+  mapfile -d '' -t argv 2>/dev/null <"/proc/$pid/cmdline" || continue
   if [[ ${argv[1]:-} == tui ]]; then
     kill -USR1 "$pid" 2>/dev/null || true
   fi
