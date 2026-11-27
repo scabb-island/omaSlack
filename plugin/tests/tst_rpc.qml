@@ -8,6 +8,11 @@ TestCase {
 
   function noop() {}
 
+  function test_protocol_constants_match_the_daemon() {
+    compare(Rpc.PROTOCOL, 1) // internal/version.Protocol
+    compare(Rpc.INCOMPATIBLE, -32001) // rpc.CodeIncompatibleProtocol
+  }
+
   function test_request_builds_one_ndjson_line() {
     var r = Rpc.request(Rpc.newClient(), "hello", { client: "omaslack-plugin", protocol: 1 }, noop)
     compare(r.line.charAt(r.line.length - 1), "\n")

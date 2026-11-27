@@ -4,6 +4,13 @@
 // functions: Service.qml owns the socket and feeds lines in. A client
 // state is never mutated; each function returns the next one.
 
+// PROTOCOL is the major protocol version this client speaks in hello; keep
+// it equal to internal/version.Protocol.
+var PROTOCOL = 1
+// INCOMPATIBLE is the error code hello answers when the daemon does not
+// speak PROTOCOL (rpc.CodeIncompatibleProtocol).
+var INCOMPATIBLE = -32001
+
 // newClient returns an empty client state: the next request id and the
 // callbacks waiting for a response, keyed by id.
 function newClient() {
