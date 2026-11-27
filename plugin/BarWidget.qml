@@ -28,6 +28,9 @@ Panel {
   readonly property string openWith: setting("openWith", "window")
   readonly property bool hideWhenEmpty: setting("hideWhenEmpty", false)
 
+  // hideWhenEmpty: the slot leaves the bar too, as first-party widgets do
+  // (SystemUpdate), so the bar keeps no gap for it.
+  visible: !icon.hidden
   implicitWidth: icon.implicitWidth
   implicitHeight: icon.implicitHeight
 
