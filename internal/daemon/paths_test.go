@@ -16,7 +16,7 @@ func TestDefaultPathsFollowTheXDGVariables(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := Paths{Socket: "/run/user/1000/omaslack.sock", Data: "/data/omaslack"}
+	want := Paths{Socket: "/run/user/1000/omaslack.sock", Data: "/data/omaslack", Config: "/home/u/.config/omaslack/config.toml"}
 	if got != want {
 		t.Fatalf("got %+v, want %+v", got, want)
 	}

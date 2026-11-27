@@ -15,6 +15,7 @@ import (
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 	"gitlab.com/scabb-island/omaslack/internal/events"
 	"gitlab.com/scabb-island/omaslack/internal/keyring"
+	"gitlab.com/scabb-island/omaslack/internal/notify"
 	"gitlab.com/scabb-island/omaslack/internal/provider/desktopsession"
 	"gitlab.com/scabb-island/omaslack/internal/rpc"
 	"gitlab.com/scabb-island/omaslack/internal/store/sqlite"
@@ -47,6 +48,13 @@ type Config struct {
 	// Reload asks to read the keyring again: every signal received on it
 	// (SIGHUP, from signal.Notify) is one reload. Nil means never.
 	Reload <-chan os.Signal
+	// Notifications builds the desktop notification sender, which tells
+	// events about clicks and closes (notify.NewBus on the session bus).
+	// Nil means no notifications.
+	Notifications func(events notify.Events) notify.Sender
+	// LaunchTUI starts the TUI or focuses its window, for a click that
+	// opens it (LaunchTUI). Nil means never.
+	LaunchTUI func() error
 }
 
 func (c Config) withDefaults() Config {
@@ -69,6 +77,12 @@ type daemon struct {
 	dir   *directory
 	hub   *events.Hub
 	cache identityCache
+	// clients is every greeted connection and what it views.
+	clients *clients
+	// notifier is nil when notifications are off; pub is what the engines
+	// publish to.
+	notifier *notify.Notifier
+	pub      syncengine.Publisher
 	// engines is the context every engine derives from. It is not the
 	// signal's context: engines stop only once the server has.
 	engines context.Context
@@ -101,9 +115,12 @@ func Run(ctx context.Context, cfg Config) error {
 	hubCtx, stopHub := context.WithCancel(d.engines)
 	defer stopHub()
 	go func() { _ = d.hub.Run(hubCtx) }()
+	var closeSender func()
+	d.pub, closeSender = d.startNotifier(hubCtx)
+	defer closeSender()
 	d.apply(ctx, stored)
 
-	srv := rpc.NewServer(d.router(), rpc.Options{Hello: d.dir.hello, Logger: d.log})
+	srv := rpc.NewServer(d.router(), rpc.Options{Hello: d.clients.hello(d.dir.hello), Logger: d.log})
 	served := make(chan error, 1)
 	go func() { served <- srv.Serve(l) }()
 	d.log.Info("daemon: serving", "socket", cfg.Paths.Socket, "workspaces", len(d.dir.running()))
@@ -117,6 +134,7 @@ func newDaemon(ctx context.Context, cfg Config) *daemon {
 		cfg: cfg, log: cfg.Log, dir: newDirectory(),
 		cache:   identityCache{dir: cfg.Paths.Data},
 		engines: context.WithoutCancel(ctx),
+		clients: newClients(&notify.Views{}, time.Now),
 	}
 	d.hub = events.New(events.Options{
 		Summary: func(ctx context.Context) (wire.Summary, error) { return api.Summary(ctx, d.dir) },
@@ -126,10 +144,12 @@ func newDaemon(ctx context.Context, cfg Config) *daemon {
 	return d
 }
 
-// router is every method: the v1 methods and events.subscribe.
+// router is every method: the v1 methods, events.subscribe and
+// ui.viewing.
 func (d *daemon) router() rpc.Router {
 	r := api.Methods(d.dir, d.hub)
-	r["events.subscribe"] = d.hub.Subscribe()
+	r["events.subscribe"] = d.clients.subscribe(d.hub.Subscribe())
+	r["ui.viewing"] = d.clients.viewing()
 	return r
 }
 
@@ -144,6 +164,7 @@ func (d *daemon) wait(ctx context.Context, served <-chan error) error {
 			return fmt.Errorf("daemon: serve: %w", err)
 		case <-d.cfg.Reload:
 			d.reload(ctx)
+			d.loadNotifyConfig()
 		}
 	}
 }
@@ -270,7 +291,7 @@ func (d *daemon) open(ctx context.Context, team domain.TeamID, creds keyring.Cre
 	}
 	id := identify(ctx, d.cfg.Identify, d.cache, team, p, d.log)
 	eng := syncengine.New(syncengine.Config{
-		Provider: p, Store: st, Budget: budget, Publisher: d.hub, Self: id.Self,
+		Provider: p, Store: st, Budget: budget, Publisher: d.pub, Self: id.Self,
 		Log: d.log, // the engine names the workspace in each line
 	})
 	ectx, cancel := context.WithCancel(d.engines)

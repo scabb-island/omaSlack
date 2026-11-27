@@ -4,6 +4,7 @@ import (
 	"errors"
 	"path/filepath"
 
+	"gitlab.com/scabb-island/omaslack/internal/notify"
 	"gitlab.com/scabb-island/omaslack/internal/rpcclient"
 )
 
@@ -15,6 +16,9 @@ var ErrNoRuntimeDir = errors.New("XDG_RUNTIME_DIR is not set; run the daemon fro
 type Paths struct {
 	Socket string // the RPC socket, $XDG_RUNTIME_DIR/omaslack.sock
 	Data   string // one SQLite database per workspace: <Data>/<team>.db
+	// Config is config.toml ($XDG_CONFIG_HOME/omaslack/config.toml); ""
+	// means none, and the defaults apply.
+	Config string
 }
 
 // DefaultPaths resolves Paths from the environment, read through getenv
@@ -36,5 +40,6 @@ func DefaultPaths(getenv func(string) string) (Paths, error) {
 	return Paths{
 		Socket: filepath.Join(runtime, rpcclient.SocketName),
 		Data:   filepath.Join(data, "omaslack"),
+		Config: notify.DefaultConfigPath(getenv),
 	}, nil
 }

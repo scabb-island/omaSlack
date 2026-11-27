@@ -20,6 +20,21 @@
 //     auth add) when workspaces.list, hello or a connection.state event
 //     says auth_expired.
 //
+// Notifications (Config.Notifications; tasks 5.1, 5.2): the engines
+// publish to the events hub and to a notify.Notifier, which shows one
+// desktop notification per new message that passes the rules of
+// notify.Decide with the [notifications] settings of Paths.Config. The
+// daemon tells it what each connection views (ui.viewing {team, conv,
+// threadTS?, focused}; {} clears it; it goes when the connection
+// closes) and completes each message from the workspace: its
+// conversation, whether the user follows its thread (they started it or
+// replied in it, as far as the cache knows) and the names to show. A
+// click sends ui.focus to the plugin when "open" is "window" and a client
+// said hello as omaslack-plugin; otherwise it starts the TUI
+// (Config.LaunchTUI, omarchy-launch-or-focus-tui) and sends ui.focus to
+// every omaslack-tui connection, or, when none is connected yet, to the
+// first one that subscribes within 30 s.
+//
 // Hello adds {workspaces: []wire.Workspace, capabilities: {team: []string}}.
 //
 // Lifecycle (Run):
@@ -28,7 +43,8 @@
 //     fatal), start every workspace, then serve. Clients that connect
 //     meanwhile wait in the listen backlog.
 //   - Reload (Config.Reload; SIGHUP in `omaslack daemon`): read the
-//     keyring again; stop the workspaces removed, restart the ones whose
+//     notification settings again (a bad file is logged and the previous
+//     settings stay) and the keyring; stop the workspaces removed, restart the ones whose
 //     credentials changed or whose engine stopped, start the ones added.
 //     So `omaslack auth add|remove` followed by `systemctl --user reload
 //     omaslack` (or a restart) takes effect. Calls running on a workspace
