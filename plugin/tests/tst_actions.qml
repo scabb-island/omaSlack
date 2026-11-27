@@ -24,6 +24,11 @@ TestCase {
     compare(A.ownMessage(theirs, "", "edit"), "")
   }
 
+  function test_an_edit_starts_from_the_text_with_slacks_escapes_undone() {
+    compare(A.editText("a &lt;b&gt; &amp;amp; <@U2> <#C1|general>"), "a <b> &amp; <@U2> <#C1|general>")
+    compare(A.editText(undefined), "")
+  }
+
   function test_only_y_confirms_a_delete() {
     verify(A.confirmsDelete("y"))
     verify(A.confirmsDelete("Y"))

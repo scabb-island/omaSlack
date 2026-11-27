@@ -19,6 +19,13 @@ function ownMessage(message, self, verb) {
   return ""
 }
 
+// editText: what the composer starts an edit with: the message's text
+// with Slack's escapes (&lt; &gt; &amp;) undone, in one pass as the TUI
+// does. Mentions stay as Slack writes them (<@U…>), so they survive.
+function editText(text) {
+  return String(text || "").replace(/&(lt|gt|amp);/g, function(_, e) { return { lt: "<", gt: ">", amp: "&" }[e] })
+}
+
 // confirmsDelete: the answer to "Delete this message? y/n"; anything but
 // y keeps it.
 function confirmsDelete(text) { return text === "y" || text === "Y" }
