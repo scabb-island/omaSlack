@@ -132,9 +132,15 @@ TestCase {
   }
 
   function test_body_prefers_the_daemons_rich_text() {
-    compare(W.body({ text: "*hi*", html: "<b>hi</b>" }), { rich: true, text: "<b>hi</b>" })
-    compare(W.body({ text: "*hi*" }), { rich: false, text: "*hi*" })
-    compare(W.body({}), { rich: false, text: "" })
+    compare(W.body({ text: "*hi*", html: "<b>hi</b>" }, ""), { rich: true, text: "<b>hi</b>" })
+    compare(W.body({ text: "*hi*" }, "#112233"), { rich: false, text: "*hi*" })
+    compare(W.body({}, ""), { rich: false, text: "" })
+  }
+
+  function test_body_colors_links_with_the_theme() {
+    // RichText ignores Text.linkColor; a style sheet sets it.
+    compare(W.body({ html: "<a href=\"https://x\">x</a>" }, "#112233").text,
+            "<style>a { color: #112233; }</style><a href=\"https://x\">x</a>")
   }
 
   // ---- links ------------------------------------------------------------------
@@ -158,6 +164,7 @@ TestCase {
     var out = list.slice()
     ops.forEach(function(op) {
       if (op.op === "remove") out.splice(op.index, 1)
+      else if (op.op === "move") out.splice(op.to, 0, out.splice(op.from, 1)[0])
       else out.splice(op.index, 0, op.key)
     })
     return out
@@ -176,6 +183,17 @@ TestCase {
     compare(W.syncOps(["1", "2"], ["1", "2"]).length, 0)
     // A prepended page inserts before the rows on screen and touches none of them.
     compare(W.syncOps(["3"], ["1", "2", "3"]), [{ op: "insert", index: 0, key: "1" }, { op: "insert", index: 1, key: "2" }])
+  }
+
+  function test_sync_ops_also_reorder_unsorted_keys() {
+    // The sidebar's keys are not sorted: a conversation moves to Unread.
+    var cases = [
+      [["T1", "T1/a", "T1/b", "T1/c"], ["T1", "T1/c", "T1/a", "T1/b"]],
+      [["x", "y", "z"], ["z", "q", "x"]],
+      [["a", "b"], ["b", "a"]]
+    ]
+    cases.forEach(function(c) { compare(apply(c[0], W.syncOps(c[0], c[1])), c[1], JSON.stringify(c)) })
+    compare(W.syncOps(["a", "b"], ["b", "a"]), [{ op: "move", from: 1, to: 0 }])
   }
 
   function test_index_for_ts_finds_the_message_or_the_next_one() {

@@ -179,8 +179,10 @@ function fileLabel(f) {
 
 // body: what a message's Text shows: the daemon's rich text (html: mrkdwn
 // already parsed) when it is there, the raw text as plain text otherwise.
-function body(m) {
-  if (m.html) return { rich: true, text: m.html }
+// Text.RichText ignores Text.linkColor, so links get linkColor (the
+// theme's accent, as "#rrggbb") through a style sheet.
+function body(m, linkColor) {
+  if (m.html) return { rich: true, text: (linkColor ? "<style>a { color: " + linkColor + "; }</style>" : "") + m.html }
   return { rich: false, text: m.text || "" }
 }
 
@@ -201,23 +203,30 @@ function linkAction(url) {
 
 // ---- list syncing -------------------------------------------------------------
 
-// syncOps: the inserts and removes that turn the ListModel holding
-// oldKeys into newKeys, applied in order. Both are sorted ascending (the
-// message timestamps), so a walk over both finds them; rows kept are not
-// touched, which is what lets the ListView keep its scroll position when
-// an older page arrives above what is on screen.
+// syncOps: the removes, inserts and moves that turn a ListModel holding
+// oldKeys into newKeys, applied in order ({ op: "remove", index },
+// { op: "insert", index, key }, { op: "move", from, to }). Rows kept in
+// place are not touched, which is what lets a ListView keep its scroll
+// position when an older page arrives above what is on screen, and keeps
+// the sidebar's delegates when only their data changes. Keys are unique.
 function syncOps(oldKeys, newKeys) {
-  var ops = [], i = 0, j = 0
-  while (i < newKeys.length || j < oldKeys.length) {
-    if (i >= newKeys.length || (j < oldKeys.length && oldKeys[j] < newKeys[i])) {
-      ops.push({ op: "remove", index: i })
-      j++
-    } else if (j >= oldKeys.length || newKeys[i] < oldKeys[j]) {
-      ops.push({ op: "insert", index: i, key: newKeys[i] })
-      i++
+  var ops = []
+  var wanted = ({})
+  newKeys.forEach(function(k) { wanted[k] = true })
+  var cur = []
+  for (var r = oldKeys.length - 1; r >= 0; r--) {
+    if (wanted[oldKeys[r]]) cur.unshift(oldKeys[r])
+    else ops.push({ op: "remove", index: r })
+  }
+  for (var i = 0; i < newKeys.length; i++) {
+    if (cur[i] === newKeys[i]) continue
+    var from = cur.indexOf(newKeys[i], i + 1)
+    if (from >= 0) {
+      cur.splice(i, 0, cur.splice(from, 1)[0])
+      ops.push({ op: "move", from: from, to: i })
     } else {
-      i++
-      j++
+      cur.splice(i, 0, newKeys[i])
+      ops.push({ op: "insert", index: i, key: newKeys[i] })
     }
   }
   return ops
