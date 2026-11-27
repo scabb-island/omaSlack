@@ -82,6 +82,45 @@ TestCase {
     compare(v.channelCount, 0)
   }
 
+  // ---- dot ----------------------------------------------------------------
+
+  function test_dot_off_with_nothing_unread() {
+    verify(!view({}).dot)
+  }
+
+  function test_dot_on_for_a_dm_or_a_mention() {
+    verify(view(withCounts(counts(1, 0, 0, 0))).dot, "a DM")
+    verify(view(withCounts(counts(0, 1, 0, 0))).dot, "a mention")
+  }
+
+  function test_dot_shows_while_dnd() {
+    var o = withCounts(counts(1, 0, 0, 0))
+    o.dnd = { T1: { snoozed: true, until: 0 } }
+    var v = view(o)
+    compare(v.status, "dnd")
+    verify(v.dot, "DND is not an alert")
+  }
+
+  function test_alert_glyph_hides_the_dot() {
+    var base = withCounts(counts(2, 1, 5, 3))
+    var cases = [
+      { workspaces: [ws("T1", "Acme", "auth_expired")] },
+      { workspaces: [ws("T1", "Acme", "connecting")] },
+      { workspaces: [ws("T1", "Acme", "disconnected")] },
+      { connectionState: "incompatible" },
+      { connectionState: "unavailable", everConnected: true },
+      { connectionState: "unavailable", everConnected: false },
+      { connectionState: "connecting", everConnected: false },
+      { hasService: false }
+    ]
+    for (var i = 0; i < cases.length; i++) {
+      var o = { summary: base.summary, unreadScope: "all" }
+      for (var k in cases[i]) o[k] = cases[i][k]
+      var v = view(o)
+      verify(!v.dot, "dot shows with status " + v.status)
+    }
+  }
+
   // ---- state --------------------------------------------------------------
 
   function test_connected() {
@@ -241,14 +280,19 @@ TestCase {
   function test_quiet_states_hide() {
     var cases = [
       { connectionState: "connecting", everConnected: false },
-      { workspaces: [ws("T1", "Acme", "connecting")] },
-      { dnd: { T1: { snoozed: true, until: 0 } } }
+      { workspaces: [ws("T1", "Acme", "connecting")] }
     ]
     for (var i = 0; i < cases.length; i++) {
       cases[i].hideWhenEmpty = true
       var v = view(cases[i])
       verify(v.hidden, v.status)
     }
+  }
+
+  function test_dnd_keeps_the_icon_with_hide_when_empty() {
+    var v = view({ hideWhenEmpty: true, dnd: { T1: { snoozed: true, until: 0 } } })
+    compare(v.status, "dnd")
+    verify(!v.hidden, "DND would vanish from the bar")
   }
 
   // ---- layout ---------------------------------------------------------------

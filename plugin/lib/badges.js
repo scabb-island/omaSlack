@@ -19,15 +19,17 @@ var SIGN_IN_HINT = "Sign in again with: omaslack auth add"
 
 // The state glyph and tooltip header of each status. dimmed: the daemon
 // does not answer; alert: the user has to act; hideable: hideWhenEmpty may
-// remove the icon (never while something is wrong).
+// remove the icon (never while something is wrong, nor during DND, which
+// the user should still see); dot: the unread dot may show (only where no
+// connection glyph does, so one signal shows at a time).
 var STATUSES = {
-  starting: { glyph: GLYPH_SLACK, dimmed: true, alert: false, hideable: true },
-  down: { glyph: GLYPH_SLACK, dimmed: true, alert: false, hideable: false },
-  error: { glyph: GLYPH_ERROR, dimmed: false, alert: true, hideable: false },
-  auth_expired: { glyph: GLYPH_AUTH_EXPIRED, dimmed: false, alert: true, hideable: false },
-  reconnecting: { glyph: GLYPH_RECONNECTING, dimmed: false, alert: false, hideable: true },
-  dnd: { glyph: GLYPH_DND, dimmed: false, alert: false, hideable: true },
-  connected: { glyph: GLYPH_SLACK, dimmed: false, alert: false, hideable: true }
+  starting: { glyph: GLYPH_SLACK, dimmed: true, alert: false, hideable: true, dot: false },
+  down: { glyph: GLYPH_SLACK, dimmed: true, alert: false, hideable: false, dot: false },
+  error: { glyph: GLYPH_ERROR, dimmed: false, alert: true, hideable: false, dot: false },
+  auth_expired: { glyph: GLYPH_AUTH_EXPIRED, dimmed: false, alert: true, hideable: false, dot: false },
+  reconnecting: { glyph: GLYPH_RECONNECTING, dimmed: false, alert: false, hideable: true, dot: false },
+  dnd: { glyph: GLYPH_DND, dimmed: false, alert: false, hideable: false, dot: true },
+  connected: { glyph: GLYPH_SLACK, dimmed: false, alert: false, hideable: true, dot: true }
 }
 
 // A badge's label: empty for zero, capped at "99+" so it stays narrow.
@@ -44,7 +46,7 @@ function badgeText(n) {
 // (everConnected: the Service reached "connected" at least once, so a lost
 // connection reads as reconnecting rather than as a daemon never started.)
 //
-// returns: { status, glyph, dimmed, alert, mainCount, channelCount,
+// returns: { status, glyph, dimmed, alert, dot, mainCount, channelCount,
 //            mainText, channelText, hidden, tooltip }
 function view(input) {
   var daemonState = daemonStatus(input)
@@ -58,6 +60,7 @@ function view(input) {
     glyph: look.glyph,
     dimmed: look.dimmed || lost,
     alert: look.alert,
+    dot: look.dot && badges.main > 0,
     mainCount: badges.main,
     channelCount: badges.channel,
     mainText: badgeText(badges.main),
