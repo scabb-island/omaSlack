@@ -36,6 +36,11 @@ FocusScope {
   signal threadRequested(string ts)
   signal linkActivated(string url)
   signal messageClicked(int index)
+  // A reaction chip or a file of message was clicked.
+  signal reactionClicked(var message, string emoji)
+  signal fileClicked(var message, var file)
+
+  function messageAt(ts) { var r = root.list.rowByKey[ts]; return r ? r.message : null }
 
   ColumnLayout {
     anchors.fill: parent
@@ -103,6 +108,8 @@ FocusScope {
         onThreadRequested: function(ts) { root.threadRequested(ts) }
         onLinkActivated: function(url) { root.linkActivated(url) }
         onMessageClicked: function(index) { root.messageClicked(index) }
+        onReactionClicked: function(ts, emoji) { if (root.messageAt(ts)) root.reactionClicked(root.messageAt(ts), emoji) }
+        onFileClicked: function(ts, file) { if (root.messageAt(ts)) root.fileClicked(root.messageAt(ts), file) }
       }
 
       Text {
@@ -117,6 +124,17 @@ FocusScope {
         font.family: root.fontFamily
         font.pixelSize: Style.font.body
       }
+    }
+
+    Text {
+      visible: composer.editTS !== ""
+      Layout.fillWidth: true
+      textFormat: Text.PlainText
+      text: "Editing a message: Enter saves, Esc cancels"
+      color: Commons.Color.accent
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.caption
+      elide: Text.ElideRight
     }
 
     Composer {
