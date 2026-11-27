@@ -364,3 +364,23 @@ func mustConv(t *testing.T, s string) domain.ConversationID {
 	}
 	return id
 }
+
+func TestLaunch(t *testing.T) {
+	dir := t.TempDir()
+	out := filepath.Join(dir, "args")
+	script := filepath.Join(dir, "launcher")
+	writeConfig(t, script, "#!/bin/sh\necho \"$@\" > "+out+"\n")
+	if err := os.Chmod(script, 0o700); err != nil { //nolint:gosec // a test script
+		t.Fatal(err)
+	}
+	if err := launch(script, func() (string, error) { return "", errors.New("unknown") }); err != nil {
+		t.Fatal(err)
+	}
+	eventually(t, "the launcher to run", func() bool {
+		b, _ := os.ReadFile(out) //nolint:gosec // the test's own file
+		return string(b) == "omaslack tui\n"
+	})
+	if err := launch(filepath.Join(dir, "missing"), os.Executable); err == nil {
+		t.Error("a missing launcher is not an error")
+	}
+}

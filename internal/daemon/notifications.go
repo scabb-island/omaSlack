@@ -152,9 +152,14 @@ func follows(ctx context.Context, w api.Workspace, conv domain.ConversationID, m
 		return false, err
 	}
 	return slices.ContainsFunc(slices.Concat(replies, root), func(r domain.Message) bool {
-		u, ok := r.Author.User()
-		return ok && u == w.Self && (r.TS == m.ThreadTS || r.IsReply())
+		return wroteIn(r, w.Self, m.ThreadTS)
 	}), nil
+}
+
+// wroteIn reports whether self wrote r as the root of thread or a reply.
+func wroteIn(r domain.Message, self domain.UserID, thread domain.TS) bool {
+	u, ok := r.Author.User()
+	return ok && u == self && (r.TS == thread || r.IsReply())
 }
 
 // names names the people a notification shows: the ones asked for it,
@@ -217,16 +222,21 @@ func (d *daemon) openFocus(f notify.Focus, open notify.Open) {
 // LaunchTUI starts `omarchy-launch-or-focus-tui omaslack tui`, detached,
 // which focuses the TUI's window when one is open. It is
 // Config.LaunchTUI in `omaslack daemon`.
-func LaunchTUI() error {
-	self, err := os.Executable()
+func LaunchTUI() error { return launch("omarchy-launch-or-focus-tui", os.Executable) }
+
+// launch starts launcher with this executable (or "omaslack" from PATH
+// when it cannot be found) and "tui", in its own session, and reaps it
+// in the background.
+func launch(launcher string, executable func() (string, error)) error {
+	self, err := executable()
 	if err != nil {
 		self = "omaslack"
 	}
 	//nolint:gosec,noctx // self is this executable; detached on purpose, it outlives the click
-	cmd := exec.Command("omarchy-launch-or-focus-tui", self, "tui")
+	cmd := exec.Command(launcher, self, "tui")
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	if err := cmd.Start(); err != nil {
-		return errors.Join(errors.New("daemon: start omarchy-launch-or-focus-tui"), err)
+		return errors.Join(fmt.Errorf("daemon: start %s", launcher), err)
 	}
 	go func() { _ = cmd.Wait() }()
 	return nil
