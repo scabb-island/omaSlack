@@ -1,7 +1,7 @@
 .pragma library
 
 // What the bar icon shows (spec gui-client, "Bar icon with badges"): the
-// badges, the state glyph, the tooltip and whether the icon takes space.
+// unread dot, the state glyph, the tooltip and whether the icon takes space.
 // Pure: BarIcon.qml hands in the Service state and the widget settings and
 // draws what comes back, so every decision here is tested with
 // qmltestrunner (tests/tst_badges.qml).
@@ -19,50 +19,45 @@ var SIGN_IN_HINT = "Sign in again with: omaslack auth add"
 
 // The state glyph and tooltip header of each status. dimmed: the daemon
 // does not answer; alert: the user has to act; hideable: hideWhenEmpty may
-// remove the icon (never while something is wrong).
+// remove the icon (never while something is wrong, nor during DND, which
+// the user should still see); dot: the unread dot may show (only where no
+// connection glyph does, so one signal shows at a time).
 var STATUSES = {
-  starting: { glyph: GLYPH_SLACK, dimmed: true, alert: false, hideable: true },
-  down: { glyph: GLYPH_SLACK, dimmed: true, alert: false, hideable: false },
-  error: { glyph: GLYPH_ERROR, dimmed: false, alert: true, hideable: false },
-  auth_expired: { glyph: GLYPH_AUTH_EXPIRED, dimmed: false, alert: true, hideable: false },
-  reconnecting: { glyph: GLYPH_RECONNECTING, dimmed: false, alert: false, hideable: true },
-  dnd: { glyph: GLYPH_DND, dimmed: false, alert: false, hideable: true },
-  connected: { glyph: GLYPH_SLACK, dimmed: false, alert: false, hideable: true }
-}
-
-// A badge's label: empty for zero, capped at "99+" so it stays narrow.
-function badgeText(n) {
-  if (!(n > 0)) return ""
-  return n > 99 ? "99+" : String(n)
+  starting: { glyph: GLYPH_SLACK, dimmed: true, alert: false, hideable: true, dot: false },
+  down: { glyph: GLYPH_SLACK, dimmed: true, alert: false, hideable: false, dot: false },
+  error: { glyph: GLYPH_ERROR, dimmed: false, alert: true, hideable: false, dot: false },
+  auth_expired: { glyph: GLYPH_AUTH_EXPIRED, dimmed: false, alert: true, hideable: false, dot: false },
+  reconnecting: { glyph: GLYPH_RECONNECTING, dimmed: false, alert: false, hideable: true, dot: false },
+  dnd: { glyph: GLYPH_DND, dimmed: false, alert: false, hideable: false, dot: true },
+  connected: { glyph: GLYPH_SLACK, dimmed: false, alert: false, hideable: true, dot: true }
 }
 
 // view turns the icon's inputs into what it draws.
 //
 // input: { hasService, connectionState, connectionError, everConnected,
 //          workspaces, summary, dnd, nowSeconds,
-//          showChannelBadge, unreadScope, hideWhenEmpty }
+//          unreadScope, hideWhenEmpty }
 // (everConnected: the Service reached "connected" at least once, so a lost
 // connection reads as reconnecting rather than as a daemon never started.)
 //
-// returns: { status, glyph, dimmed, alert, mainCount, channelCount,
-//            mainText, channelText, hidden, tooltip }
+// returns: { status, glyph, dimmed, alert, dot, mainCount, channelCount,
+//            hidden, tooltip }
 function view(input) {
   var daemonState = daemonStatus(input)
   var status = daemonState || workspaceStatus(input)
   var look = STATUSES[status]
   var lost = status === "reconnecting" && daemonState === "reconnecting"
 
-  var badges = daemonState ? { main: 0, channel: 0 } : badgeCounts(input)
+  var counts = daemonState ? { main: 0, channel: 0 } : unreadCounts(input)
   return {
     status: status,
     glyph: look.glyph,
     dimmed: look.dimmed || lost,
     alert: look.alert,
-    mainCount: badges.main,
-    channelCount: badges.channel,
-    mainText: badgeText(badges.main),
-    channelText: badgeText(badges.channel),
-    hidden: !!input.hideWhenEmpty && look.hideable && !lost && badges.main === 0 && badges.channel === 0,
+    dot: look.dot && counts.main > 0,
+    mainCount: counts.main,
+    channelCount: counts.channel,
+    hidden: !!input.hideWhenEmpty && look.hideable && !lost && counts.main === 0,
     tooltip: daemonState ? daemonTooltip(daemonState, input) : workspacesTooltip(status, input)
   }
 }
@@ -105,7 +100,7 @@ function dndEntry(input, team) {
 
 function dndActive(input, team) { return dndEntry(input, team) !== null }
 
-// ---- badges ---------------------------------------------------------------
+// ---- counts ---------------------------------------------------------------
 
 // Counts from the wire, with anything that is not a non-negative number read
 // as zero.
@@ -115,36 +110,58 @@ function readCounts(raw) {
   return { dms: n(raw.dms), mentions: n(raw.mentions), channels: n(raw.channels), threads: n(raw.threads) }
 }
 
-function badgeCounts(input) {
+// main: the unread conversations in scope (what lights the dot); channel:
+// the channels and threads left out of it. Any scope but "dms-and-mentions"
+// reads as "all", the default.
+function unreadCounts(input) {
   var c = readCounts(input.summary ? input.summary.total : null)
   var direct = c.dms + c.mentions
   var rest = c.channels + c.threads
-  if (input.unreadScope === "all") return { main: direct + rest, channel: 0 }
-  return { main: direct, channel: input.showChannelBadge ? rest : 0 }
+  if (input.unreadScope === "dms-and-mentions") return { main: direct, channel: rest }
+  return { main: direct + rest, channel: 0 }
+}
+
+// ---- settings -------------------------------------------------------------
+
+// The manifest's barWidget.defaults.unreadScope: the shell hands the widget
+// only what shell.json sets, so this must stay equal to it.
+var DEFAULT_SCOPE = "all"
+var SCOPES = ["all", "dms-and-mentions"]
+
+// scopeSetting reads the unread scope from the widget's shell.json entry.
+// A saved scope wins; otherwise a showChannelBadge: false saved by an
+// earlier version (the channel pill turned off) maps to "dms-and-mentions",
+// which is what that user saw lit.
+function scopeSetting(settings) {
+  settings = settings || {}
+  if (SCOPES.indexOf(settings.unreadScope) >= 0) return settings.unreadScope
+  if (settings.showChannelBadge === false) return "dms-and-mentions"
+  return DEFAULT_SCOPE
 }
 
 // ---- layout ---------------------------------------------------------------
 
-// layout places the shown badges beside the glyph, never over it: they
-// start a gap after the glyph's right edge and stack top to bottom,
-// centered on the bar as a group, so a lone badge sits level with the
-// glyph. The slot grows only by the widest badge.
+// layout places the unread dot on the glyph's top-right corner, overlapping
+// the glyph's box by 55 % of the dot across and 35 % down (the corner
+// badge idiom of first-party widgets such as Tailscale), on whole pixels.
+// The same on horizontal and vertical bars: the dot stays inside the slot,
+// which never grows.
 //
-// input: { slotWidth, height, iconSize, gap, badges: [{ width, height }] }
-// (the button's width and height, the glyph's size, the spacing, and the
-// badges that show, top first)
-// returns: { width, x, ys } (the icon's width, the badges' left edge and
-// each badge's top)
+// input: { slotWidth, height, iconSize, dotSize }
+// (the button's width and height, the glyph's size, and the dot's outer
+// diameter, ring included)
+// returns: { width, x, y } (the icon's width and the dot's top-left)
 function layout(input) {
-  var badges = input.badges || []
-  var x = Math.round((input.slotWidth + input.iconSize) / 2 + input.gap)
-  if (badges.length === 0) return { width: input.slotWidth, x: x, ys: [] }
-  var total = input.gap * (badges.length - 1)
-  var widest = 0
-  badges.forEach(function(b) { total += b.height; widest = Math.max(widest, b.width) })
-  var y = Math.round((input.height - total) / 2)
-  var ys = badges.map(function(b) { var top = y; y += b.height + input.gap; return top })
-  return { width: Math.max(input.slotWidth, x + widest), x: x, ys: ys }
+  var w = input.dotSize
+  var glyphRight = (input.slotWidth + input.iconSize) / 2
+  var glyphTop = (input.height - input.iconSize) / 2
+  var x = Math.round(glyphRight - 0.55 * w)
+  var y = Math.round(glyphTop - 0.35 * w)
+  return {
+    width: input.slotWidth,
+    x: Math.max(0, Math.min(x, input.slotWidth - w)),
+    y: Math.max(0, Math.min(y, input.height - w))
+  }
 }
 
 // ---- tooltip --------------------------------------------------------------
