@@ -18,6 +18,7 @@ import (
 	"gitlab.com/scabb-island/omaslack/internal/provider/desktopsession/auth"
 	"gitlab.com/scabb-island/omaslack/internal/rpc"
 	"gitlab.com/scabb-island/omaslack/internal/rpcclient"
+	"gitlab.com/scabb-island/omaslack/internal/tui/app"
 	"gitlab.com/scabb-island/omaslack/internal/version"
 )
 
@@ -54,6 +55,9 @@ type Env struct {
 	// DialDaemon connects to the daemon as omaslack ctl. Nil means
 	// rpcclient.Dial on the real socket, starting the user service.
 	DialDaemon func(context.Context) (*rpcclient.Client, error)
+	// RunTUI runs the terminal client. Nil means app.Run, on the real
+	// terminal.
+	RunTUI func(context.Context, app.Options) error
 }
 
 // usageError reports a command line that does not parse. Run prints it
@@ -74,7 +78,7 @@ type command struct {
 func commands() map[string]command {
 	return map[string]command{
 		"daemon":  {summary: "run the local daemon that talks to Slack", run: runDaemon},
-		"tui":     {summary: "open the terminal client", milestone: "M3"},
+		"tui":     {summary: "open the terminal client", run: runTUI},
 		"ctl":     {summary: "call a daemon RPC method or stream its events", run: runCtl},
 		"auth":    {summary: "add, list or remove Slack workspaces", run: runAuth},
 		"doctor":  {summary: "check the installation and report problems", milestone: "M5"},
