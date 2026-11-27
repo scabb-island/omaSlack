@@ -18,10 +18,19 @@ import (
 )
 
 // defaultReadTimeout is how long the socket may stay silent before it is
-// taken for dead. Slack pings about every 30 seconds, and every frame or
-// ping restarts the clock, so a dropped TCP connection (a wifi change, a
-// suspend) is noticed within a minute instead of never.
+// taken for dead. Every frame (pongs included) or WebSocket ping restarts
+// the clock, so a dropped TCP connection (a wifi change, a suspend) is
+// noticed within a minute instead of never.
 const defaultReadTimeout = 60 * time.Second
+
+// defaultPingInterval is how often the socket sends Slack a ping frame,
+// {"type":"ping","id":N}, as the web client does. Slack answers each with
+// {"type":"pong","reply_to":N}, and that answer is what keeps a quiet
+// workspace's socket under defaultReadTimeout: without client pings Slack
+// sends nothing, and the socket was torn down every couple of minutes
+// with an i/o timeout. A pong that never comes needs no check of its own:
+// the read deadline ends the stream.
+const defaultPingInterval = 30 * time.Second
 
 // agentVersion is the web client build the socket declares: a unix
 // timestamp, the _x_version_ts of the web client's API calls. Checked
@@ -67,6 +76,9 @@ func (p *Provider) run(ctx context.Context, out chan<- domain.Event) {
 	// Closing the connection is what unblocks a read when ctx ends.
 	stop := context.AfterFunc(ctx, func() { _ = conn.Close() })
 	defer stop()
+	done := make(chan struct{})
+	defer close(done)
+	go p.keepAlive(ctx, done)
 	err = p.read(ctx, conn, out)
 	p.log.Info("desktop-session: socket closed", "team", p.team, "err", err)
 	provider.Emit(ctx, out, p.state(domain.Disconnected))
@@ -123,6 +135,31 @@ func (p *Provider) read(ctx context.Context, conn *websocket.Conn, out chan<- do
 		for _, ev := range evs {
 			greeted = greeted || isHello(ev)
 			provider.Emit(ctx, out, ev)
+		}
+	}
+}
+
+// pingFrame is the web client's keepalive. Its ID only has to grow.
+type pingFrame struct {
+	Type string `json:"type"`
+	ID   int    `json:"id"`
+}
+
+// keepAlive sends a ping every pingInterval over the live socket, through
+// its one writer, until done closes. A failed write stops it: the socket
+// is broken, and the read deadline ends the stream.
+func (p *Provider) keepAlive(ctx context.Context, done <-chan struct{}) {
+	ticker := time.NewTicker(p.pingInterval)
+	defer ticker.Stop()
+	for id := 1; ; id++ {
+		select {
+		case <-done:
+			return
+		case <-ticker.C:
+		}
+		if err := p.live.write(ctx, pingFrame{Type: "ping", ID: id}); err != nil {
+			p.log.Debug("desktop-session: ping not sent", "team", p.team, "err", err)
+			return
 		}
 	}
 }

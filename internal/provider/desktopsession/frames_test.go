@@ -57,6 +57,8 @@ func TestRecordedFramesMapToDomainEvents(t *testing.T) {
 		"thread_marked.json":        nil,
 		"reconnect_url.json":        nil,
 		"goodbye.json":              nil,
+		// The answer to the provider's own keepalive ping.
+		"pong.json": nil,
 	}
 	for name, want := range cases {
 		t.Run(name, func(t *testing.T) {

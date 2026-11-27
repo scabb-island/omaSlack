@@ -16,11 +16,12 @@ import (
 )
 
 // Frames the provider writes to the web client's socket: presence_sub
-// (provider.PresenceSubscriber) and typing (provider.TypingSender). Both
-// go over the socket Connect opened. Typing works only while a stream is
-// live; otherwise it fails with ErrNotConnected and sends nothing. The
-// presence subscription is remembered instead: Slack forgets it whenever
-// the socket reconnects, so it is sent on every socket that opens.
+// (provider.PresenceSubscriber), typing (provider.TypingSender) and the
+// keepalive ping (socket.go). All go over the socket Connect opened.
+// Typing and pings work only while a stream is live; otherwise they fail
+// with ErrNotConnected and send nothing. The presence subscription is
+// remembered instead: Slack forgets it whenever the socket reconnects, so
+// it is sent on every socket that opens.
 
 var (
 	_ provider.PresenceSubscriber = (*Provider)(nil)
@@ -38,7 +39,8 @@ const writeTimeout = 10 * time.Second
 
 // liveSocket is the socket of the live Connect stream, if any. Its mutex
 // makes every write go through one writer at a time, which is all
-// gorilla/websocket allows; the read loop only reads, and gorilla's
+// gorilla/websocket allows (the keepalive pings take it too); the read
+// loop only reads, and gorilla's
 // answers to pings use WriteControl, which is safe alongside a write.
 type liveSocket struct {
 	mu       sync.Mutex
