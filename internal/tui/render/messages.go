@@ -1,6 +1,7 @@
 package render
 
 import (
+	"cmp"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -153,7 +154,7 @@ func (p painter) message(m wire.Message, l messageLayout, width int) []string {
 }
 
 func (p painter) header(m wire.Message, t time.Time) string {
-	name := firstOf(oneLine(p.d.UserName(m.Author)), oneLine(m.Author), "unknown")
+	name := cmp.Or(oneLine(p.d.UserName(m.Author)), oneLine(m.Author), "unknown")
 	h := p.base.Bold(true).Render(name)
 	if strings.HasPrefix(m.Author, "B") {
 		h += p.space(1) + p.muted().Render("[bot]")
@@ -220,7 +221,7 @@ func (p painter) file(f wire.File) string {
 	if strings.HasPrefix(f.MIMEType, "image/") && isFileID(f.ID) {
 		tag = p.muted().Hyperlink(ImageScheme + f.ID).Render("[image]")
 	}
-	row := tag + p.space(1) + p.accent().Render(firstOf(oneLine(f.Name), oneLine(f.Title), oneLine(f.ID)))
+	row := tag + p.space(1) + p.accent().Render(cmp.Or(oneLine(f.Name), oneLine(f.Title), oneLine(f.ID)))
 	row += p.muted().Render(" · " + size(f.Size))
 	if f.MIMEType != "" {
 		row += p.muted().Render(" · " + oneLine(f.MIMEType))

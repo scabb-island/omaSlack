@@ -1,6 +1,7 @@
 package render
 
 import (
+	"cmp"
 	"strings"
 	"unicode"
 
@@ -103,7 +104,7 @@ func (v inliner) Shortcode(s mrkdwn.Shortcode) string {
 }
 
 func (v inliner) User(u mrkdwn.User) string {
-	name := firstOf(oneLine(v.d.UserName(u.ID)), u.Label, u.ID)
+	name := cmp.Or(oneLine(v.d.UserName(u.ID)), u.Label, u.ID)
 	style := v.base.Foreground(v.t.Accent).Bold(true)
 	if u.ID == v.d.Self() {
 		style = v.base.Foreground(v.t.Mention).Bold(true)
@@ -112,7 +113,7 @@ func (v inliner) User(u mrkdwn.User) string {
 }
 
 func (v inliner) Channel(c mrkdwn.Channel) string {
-	name := firstOf(c.Label, oneLine(v.d.ConversationName(c.ID)), c.ID)
+	name := cmp.Or(c.Label, oneLine(v.d.ConversationName(c.ID)), c.ID)
 	return v.base.Foreground(v.t.Accent).Render("#" + name)
 }
 
@@ -122,18 +123,18 @@ func (v inliner) Special(s mrkdwn.Special) string {
 	case "here", "channel", "everyone":
 		return v.base.Foreground(v.t.Mention).Bold(true).Render("@" + s.Name())
 	case "subteam":
-		return v.base.Foreground(v.t.Accent).Bold(true).Render(firstOf(s.Label, "@"+s.Arg()))
+		return v.base.Foreground(v.t.Accent).Bold(true).Render(cmp.Or(s.Label, "@"+s.Arg()))
 	case "date":
-		return v.base.Render(firstOf(s.Label, s.Cmd))
+		return v.base.Render(cmp.Or(s.Label, s.Cmd))
 	}
-	return v.base.Render(firstOf(s.Label, "@"+s.Name()))
+	return v.base.Render(cmp.Or(s.Label, "@"+s.Name()))
 }
 
 // Link shows the label (or the URL) as an OSC 8 hyperlink, so terminals
 // that support it open the URL on click. A target that does not look like
 // a URL is shown without one: a space would let wrapping split the escape.
 func (v inliner) Link(l mrkdwn.Link) string {
-	text := firstOf(l.Label, strings.TrimPrefix(l.URL, "mailto:"))
+	text := cmp.Or(l.Label, strings.TrimPrefix(l.URL, "mailto:"))
 	style := v.base.Foreground(v.t.Accent)
 	if isURL(l.URL) {
 		style = style.Hyperlink(l.URL)
@@ -143,13 +144,4 @@ func (v inliner) Link(l mrkdwn.Link) string {
 
 func isURL(s string) bool {
 	return (strings.Contains(s, "://") || strings.HasPrefix(s, "mailto:")) && !strings.ContainsFunc(s, unicode.IsSpace)
-}
-
-func firstOf(s ...string) string {
-	for _, v := range s {
-		if v != "" {
-			return v
-		}
-	}
-	return ""
 }
