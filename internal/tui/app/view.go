@@ -40,6 +40,7 @@ func (m *Model) View() tea.View {
 	v := tea.NewView(m.frame())
 	v.AltScreen = true
 	v.WindowTitle = "omaslack"
+	v.ReportFocus = true // FocusMsg and BlurMsg, for ui.viewing
 	return v
 }
 

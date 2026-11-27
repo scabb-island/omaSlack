@@ -75,7 +75,9 @@ type Model struct {
 	help          bool
 	status        string
 	statusIsError bool
-	gone          bool // the daemon connection ended
+	gone          bool    // the daemon connection ended
+	blurred       bool    // the terminal reported losing focus
+	viewing       viewing // what ui.viewing last reported
 
 	marked     map[convKey]string    // newest TS already sent to conversations.markRead
 	asked      map[userKey]time.Time // when users.info was last asked about a user
@@ -140,7 +142,7 @@ func (m *Model) Init() tea.Cmd {
 
 // Update applies one message: a key, a size, a daemon result or event.
 func (m *Model) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
-	defer func() { cmd = tea.Batch(cmd, m.imagesAfter(msg)) }() // inline images (images.go)
+	defer func() { cmd = tea.Batch(cmd, m.imagesAfter(msg), m.reportViewing()) }() // inline images (images.go), ui.viewing (viewing.go)
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		return m, m.key(msg)
@@ -158,6 +160,10 @@ func (m *Model) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
 	case ThemeMsg:
 		m.theme = theme.Theme(msg)
 		m.applyTheme()
+	case tea.FocusMsg:
+		m.blurred = false
+	case tea.BlurMsg:
+		m.blurred = true
 	}
 	return m, nil
 }

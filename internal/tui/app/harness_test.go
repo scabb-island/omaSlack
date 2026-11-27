@@ -239,6 +239,7 @@ func daemon(handlers map[string]client.Handler) *client.Fake {
 		"conversations.markRead": client.Result(nil),
 		"conversations.close":    client.Result(nil),
 		"drafts.set":             client.Result(nil),
+		"ui.viewing":             client.Result(nil),
 		"drafts.get":             client.Result(draftResult{}),
 		"messages.replies":       client.Result([]wire.Message{}),
 		"messages.history":       client.Result([]wire.Message{}),
