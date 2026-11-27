@@ -10,11 +10,7 @@ import (
 	"github.com/godbus/dbus/v5"
 )
 
-// Chromium's KWallet backend names the folder and entry after the product.
 const (
-	kwalletFolder = "Slack Keys"
-	kwalletEntry  = "Slack Safe Storage"
-
 	// Shown in KWallet's access prompt and kept in its allow list. Slack's
 	// own ID would inherit Slack's grant and misname who is asking.
 	kwalletAppID = "omaslack"
@@ -48,7 +44,7 @@ type kwalletConn interface {
 // kwalletPasswords asks every running kwalletd for the key. A daemon that
 // is not running is never called: calling its name would D-Bus-activate
 // kwalletd and prompt a user who has the package but no wallet.
-func kwalletPasswords(ctx context.Context, conn *dbus.Conn) ([][]byte, error) {
+func kwalletPasswords(ctx context.Context, conn *dbus.Conn, app keyringApp) ([][]byte, error) {
 	var running []string
 	if err := callKWallet(ctx, conn.BusObject(), "org.freedesktop.DBus.ListNames", &running); err != nil {
 		return nil, err
@@ -57,7 +53,7 @@ func kwalletPasswords(ctx context.Context, conn *dbus.Conn) ([][]byte, error) {
 	for _, d := range kwalletDaemons {
 		if slices.Contains(running, d.name) {
 			wallet := dbusKWallet{conn.Object(d.name, d.path)}
-			attempts = append(attempts, func(ctx context.Context) ([][]byte, error) { return kwalletKey(ctx, wallet) })
+			attempts = append(attempts, func(ctx context.Context) ([][]byte, error) { return kwalletKey(ctx, wallet, app) })
 		}
 	}
 	return gather(ctx, attempts)
@@ -66,7 +62,7 @@ func kwalletPasswords(ctx context.Context, conn *dbus.Conn) ([][]byte, error) {
 // kwalletKey reads the key without raising a prompt: a closed wallet is
 // reported as locked instead of opened, since its unlock dialog over a
 // full-screen terminal reads as a hang.
-func kwalletKey(ctx context.Context, c kwalletConn) ([][]byte, error) {
+func kwalletKey(ctx context.Context, c kwalletConn, app keyringApp) ([][]byte, error) {
 	wallet, err := openWallet(ctx, c)
 	if err != nil {
 		return nil, err
@@ -81,12 +77,13 @@ func kwalletKey(ctx context.Context, c kwalletConn) ([][]byte, error) {
 	}
 	defer func() { _ = c.Close(ctx, handle, kwalletAppID) }()
 
+	folder, entry := app.kwalletFolder(), app.kwalletEntry()
 	// readPassword returns "" for a missing entry too, hence hasEntry.
-	has, err := c.HasEntry(ctx, handle, kwalletFolder, kwalletEntry, kwalletAppID)
+	has, err := c.HasEntry(ctx, handle, folder, entry, kwalletAppID)
 	if err != nil || !has {
 		return nil, notFoundUnless(err)
 	}
-	pw, err := c.ReadPassword(ctx, handle, kwalletFolder, kwalletEntry, kwalletAppID)
+	pw, err := c.ReadPassword(ctx, handle, folder, entry, kwalletAppID)
 	return single([]byte(pw), err)
 }
 
