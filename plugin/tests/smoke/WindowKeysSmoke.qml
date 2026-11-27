@@ -230,10 +230,22 @@ Item {
     check(edited && edited.ts === mineTS && edited.text === "see <#C2> & <@U2>!", "the edit saved " + JSON.stringify(edited))
     focusOn(keys, "after the edit, the window's keys")
 
-    // Delete, then y.
+    // Delete, then y: the status line says so, apart from errors, and
+    // clears itself.
+    win.infoDelay = 200
     kd.press(Qt.Key_Delete)
     kd.type("y")
     check(last("messages.delete") && last("messages.delete").ts === mineTS, "y did not delete")
+    var line = child(win.sidebarView.parent.parent, "statusLine")
+    check(win.info === "Message deleted." && win.status === "" && line && line.visible && !line.error,
+          "the status line says " + JSON.stringify([win.info, win.status]))
+    kd.wait(300)
+    check(win.info === "" && !line.visible, "the note did not clear itself: " + JSON.stringify(win.info))
+    win.status = "Could not do it: nope"
+    check(line.visible && line.error, "an error does not show as one")
+    win.inform("Done.")
+    check(win.status === "" && !line.error, "a note did not replace the error")
+    win.infoDelay = 4000
     focusOn(keys, "after deleting, the window's keys")
 
     // Esc from the message list with nothing else open closes the window.

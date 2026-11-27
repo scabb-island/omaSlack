@@ -166,6 +166,7 @@ Item {
     check(actions.chooser.opened && actions.chooser.files.length === 2, "o with two files did not offer a choice")
     actions.chooser.handleKey(Qt.Key_2, "2")
     check(last("files.fetch") && last("files.fetch").fileId === "F2", "2 fetched " + JSON.stringify(last("files.fetch")))
+    check(win.info === "Opening b.pdf…", "opening a file says " + JSON.stringify(win.info))
     check(!actions.chooser.opened, "the chooser stayed open")
     win.conversationView.fileClicked(s.messageLists["T1/C1"][2], { id: "F1", name: "a.pdf" })
     check(last("files.fetch").fileId === "F1", "clicking a file did not open it")
@@ -188,6 +189,7 @@ Item {
           ":attach uploaded " + JSON.stringify(up))
     check(callsOf("messages.send").length === 0, ":attach was sent as a message")
     check(composer.text === "", "the composer kept the command")
+    check(win.info === "Uploaded my cat.png.", "the upload says " + JSON.stringify(win.info))
     composer.input.text = ":attach notes.txt"
     composer.handleKey(Qt.Key_Return, 0)
     check(callsOf("files.upload").length === 1 && win.status.indexOf("absolute") >= 0, "a relative path: " + win.status)

@@ -78,8 +78,13 @@ Item {
   // The pane with the keyboard: "sidebar", "messages" or "thread".
   property string pane: "sidebar"
   property int sidebarIndex: -1
-  // The last error of an action, shown at the bottom.
+  // The status line at the bottom: the last error of an action (status,
+  // until something replaces it), or a short note on what just happened
+  // (info: "Message deleted.", set with inform(), gone after infoDelay
+  // ms), as the TUI's status line.
   property string status: ""
+  property string info: ""
+  property int infoDelay: 4000
   // The newest ts this window sent to conversations.markRead.
   property string marked: ""
 
@@ -131,6 +136,20 @@ Item {
   function currentMessage() {
     if (pane === "sidebar") return null
     return paneList(pane).currentMessage()
+  }
+
+  function inform(text) {
+    info = text
+    status = ""
+    infoTimer.restart()
+  }
+
+  onStatusChanged: if (status !== "") { info = ""; infoTimer.stop() }
+
+  Timer {
+    id: infoTimer
+    interval: root.infoDelay
+    onTriggered: root.info = ""
   }
 
   function failed(what) {
@@ -481,7 +500,7 @@ Item {
 
       RowLayout {
         anchors.fill: parent
-        anchors.bottomMargin: statusText.visible ? statusText.height : 0
+        anchors.bottomMargin: statusLine.visible ? statusLine.height : 0
         spacing: 0
 
         WindowSidebar {
@@ -580,16 +599,20 @@ Item {
         }
       }
 
+      // An error in the urgent color with a warning sign; a note in the
+      // text color with an info sign.
       Text {
-        id: statusText
-        visible: root.status !== ""
+        id: statusLine
+        objectName: "statusLine"
+        readonly property bool error: root.status !== ""
+        visible: error || root.info !== ""
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         padding: Style.spacing.md
         textFormat: Text.PlainText
-        text: root.status
-        color: Commons.Color.urgent
+        text: (error ? "󰀦  " + root.status : "󰋽  " + root.info)
+        color: error ? Commons.Color.urgent : root.foreground
         font.family: root.fontFamily
         font.pixelSize: Style.font.bodySmall
         wrapMode: Text.WordWrap

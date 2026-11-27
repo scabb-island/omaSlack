@@ -48,6 +48,8 @@ Item {
 
   function self() { return window.selfUser(window.team) }
   function say(text) { window.status = text }
+  // inform: a note on what just happened, in the window's status line.
+  function inform(text) { window.inform(text) }
   function failed(what) { return function(err) { root.say(err ? what + ": " + (err.message || err.code) : "") } }
 
   function selected() {
@@ -127,7 +129,11 @@ Item {
   function deleteConfirmed() {
     var p = pending
     done()
-    if (p) service.remove(p.team, p.conv, p.ts, failed("Could not delete"))
+    if (!p) return
+    service.remove(p.team, p.conv, p.ts, function(err) {
+      if (err) root.say("Could not delete: " + (err.message || err.code))
+      else root.inform("Message deleted.")
+    })
   }
 
   // ---- reactions -------------------------------------------------------------------
@@ -193,7 +199,7 @@ Item {
   function openOne(file) {
     if (!A.can(window.workspace(window.team), "files")) { say("This workspace cannot download files (no files capability)."); return }
     var name = A.fileName(file)
-    say("")
+    inform("Opening " + name + "…")
     Files.path(service, window.team, file.id, function(path) {
       if (path === "") root.say("Could not download " + name + ".")
       else root.opener(A.fileUrl(path))
@@ -208,9 +214,11 @@ Item {
     var params = { team: t.team, conv: t.conv, paths: [attach.path] }
     if (t.threadTS) params.threadTS = t.threadTS
     if (attach.caption !== "") params.caption = attach.caption
-    say("")
+    var name = attach.path.replace(/^.*\//, "")
+    inform("Uploading " + name + "…")
     service.call("files.upload", params, function(err) {
       if (err) { root.say("Could not attach " + attach.path + ": " + (err.message || err.code)); return }
+      root.inform("Uploaded " + name + ".")
       composer.clear()
     })
   }
@@ -241,6 +249,6 @@ Item {
     foreground: root.foreground
     fontFamily: root.fontFamily
     onConfirmed: root.deleteConfirmed()
-    onCanceled: root.done()
+    onCanceled: { root.done(); root.inform("Kept the message.") }
   }
 }
