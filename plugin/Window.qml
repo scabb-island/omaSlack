@@ -30,9 +30,16 @@ import "lib/window.js" as W
 //   i                 write in the pane's composer (the conversation's
 //                     from the sidebar)
 //   R                 reply in the selected message's thread
+//   e                 edit your selected message (in its pane's composer)
+//   D, x, Delete      delete your selected message (asks y/n first)
+//   r                 react to the selected message (the emoji picker)
+//   o                 open the selected message's file (a chooser for
+//                     several)
 //   Esc               leave the composer, then close the thread, then the
 //                     window
-// In a composer: Enter sends, Shift+Enter is a new line, Esc leaves.
+// In a composer: Enter sends, Shift+Enter is a new line, Esc leaves;
+// ":attach <path> [caption]" uploads a file there. The message actions
+// live in MessageActions.qml.
 //
 // Seams for the rest of 4.5 (see textKey() and the `overlays` layer):
 // message actions (e edit, D delete) act on currentMessage(); the
@@ -82,6 +89,7 @@ Item {
   readonly property alias conversationView: convPane
   readonly property alias threadView: threadPane
   readonly property alias overlayLayer: overlays
+  readonly property alias messageActions: actions
 
   function nameOf(team, conv) {
     void service.messagesRevision
@@ -241,6 +249,7 @@ Item {
   // send posts text from a composer to its target (the conversation or the
   // thread), and empties the composer once the daemon took it.
   function send(composer, text) {
+    if (actions.submit(composer, text)) return
     var t = composer.target
     if (!service || !t || text.trim() === "") return
     service.send(t.team, t.conv, text.trim(), t.threadTS, function(err) {
@@ -314,8 +323,8 @@ Item {
       var m = currentMessage()
       if (m) { openThread(pane === "thread" ? threadTS : m.ts); compose("thread") }
     }
-    // Next: e (edit), D (delete), r (react), / (search), Ctrl+K (finder),
-    // o (open file).
+    else if (actions.textKey(t)) {}
+    // Next: / (search), Ctrl+K (finder).
   }
 
   // ---- view -------------------------------------------------------------------------
@@ -334,7 +343,7 @@ Item {
     PanelKeyCatcher {
       id: keys
       anchors.fill: parent
-      blocked: root.composing
+      blocked: root.composing || actions.active
       onMoveRequested: function(dx, dy) {
         if (dx !== 0) root.pane = W.movePane(root.pane, dx, root.threadOpen, false)
         else root.moveVertical(dy)
@@ -342,6 +351,7 @@ Item {
       onTabRequested: function(direction) { root.pane = W.movePane(root.pane, direction, root.threadOpen, true) }
       onActivateRequested: root.activate()
       onCloseRequested: root.stepBack()
+      onDeleteRequested: actions.askDelete()
       onTextKey: function(t, modifiers) { root.textKey(t, modifiers) }
 
       RowLayout {
@@ -394,6 +404,8 @@ Item {
           foreground: root.foreground
           fontFamily: root.fontFamily
           onSubmitted: function(text) { root.send(convPane.composer, text) }
+          onReactionClicked: function(message, emoji) { actions.toggleReaction(message, emoji) }
+          onFileClicked: function(message, file) { actions.openOne(file) }
           onComposerEscaped: root.leaveComposer()
           onThreadRequested: function(ts) { root.openThread(ts) }
           onLinkActivated: function(url) { root.openLink(url) }
@@ -431,6 +443,8 @@ Item {
           fontFamily: root.fontFamily
           onCloseRequested: { root.closeThread(); root.focusKeys() }
           onSubmitted: function(text) { root.send(threadPane.composer, text) }
+          onReactionClicked: function(message, emoji) { actions.toggleReaction(message, emoji) }
+          onFileClicked: function(message, file) { actions.openOne(file) }
           onComposerEscaped: root.leaveComposer()
           onLinkActivated: function(url) { root.openLink(url) }
           onMessageClicked: function(index) {
@@ -461,6 +475,15 @@ Item {
         id: overlays
         objectName: "overlays"
         anchors.fill: parent
+
+        MessageActions {
+          id: actions
+          anchors.fill: parent
+          window: root
+          service: root.service
+          foreground: root.foreground
+          fontFamily: root.fontFamily
+        }
       }
     }
   }
