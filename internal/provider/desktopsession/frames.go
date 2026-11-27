@@ -4,6 +4,7 @@ package desktopsession
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
@@ -40,6 +41,14 @@ type frame struct {
 	Users     []string `json:"users"`
 	Presence  string   `json:"presence"`
 	Ephemeral bool     `json:"is_ephemeral"`
+	// Failure is set on an error frame: Slack's answer to start arguments
+	// it rejects.
+	Failure *frameError `json:"error"`
+}
+
+type frameError struct {
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
 }
 
 // frameMapper builds the domain events of one kind of frame. It returns
@@ -50,6 +59,7 @@ type frameMapper func(domain.TeamID, frame) ([]domain.Event, error)
 // back to slackwire's mappers.
 var frameMappers = map[string]frameMapper{
 	"hello":           hello,
+	"error":           errorFrame,
 	"channel_marked":  readChanged,
 	"im_marked":       readChanged,
 	"group_marked":    readChanged,
@@ -105,6 +115,15 @@ func mapperFor(kind string) (frameMapper, bool) {
 
 func hello(team domain.TeamID, _ frame) ([]domain.Event, error) {
 	return []domain.Event{domain.ConnectionChanged{Team: team, State: domain.Connected}}, nil
+}
+
+// errorFrame turns Slack's error frame into an error naming its code and
+// message, so the caller logs why Slack refused the socket.
+func errorFrame(_ domain.TeamID, f frame) ([]domain.Event, error) {
+	if f.Failure == nil {
+		return nil, errors.New("no details")
+	}
+	return nil, fmt.Errorf("code %d: %s", f.Failure.Code, f.Failure.Msg)
 }
 
 func readChanged(team domain.TeamID, f frame) ([]domain.Event, error) {
