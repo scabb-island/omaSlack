@@ -146,23 +146,19 @@ Item {
     kd.press(Qt.Key_K, Qt.ControlModifier)
     check(finder.visible, "Ctrl+K did not open the finder")
     focusOn(finder.field, "the finder's field")
-    kd.wait(50) // a frame: the card lays its list out
     check(cursorShown(finder.list), "the finder shows no cursor")
     kd.press(Qt.Key_Escape)
     check(!finder.visible && win.opened, "Esc did not close only the finder")
-    kd.wait(1)
     focusOn(keys, "after the finder, the window's keys")
     kd.press(Qt.Key_T, Qt.ControlModifier)
     check(finder.visible, "Ctrl+T did not open the finder")
     kd.type("random")
     kd.press(Qt.Key_Return)
     check(win.conv === "C2" && !finder.visible, "the finder opened " + win.conv)
-    kd.wait(1)
     focusOn(keys, "after a pick in the finder, the window's keys")
     kd.press(Qt.Key_K, Qt.ControlModifier)
     kd.type("general")
     kd.press(Qt.Key_Return)
-    kd.wait(1)
     check(win.conv === "C1", "the finder did not go back to C1")
 
     // Search and help.
@@ -170,14 +166,12 @@ Item {
     check(win.searchView.visible, "/ did not open the search")
     focusOn(win.searchView.field, "the search field")
     kd.press(Qt.Key_Escape)
-    kd.wait(1)
     check(!win.searchView.visible && win.opened, "Esc did not close only the search")
     focusOn(keys, "after the search, the window's keys")
     kd.type("?")
     check(win.helpView.visible, "? did not open the help")
     focusOn(win.helpView, "the help")
     kd.press(Qt.Key_Escape)
-    kd.wait(1)
     check(!win.helpView.visible && win.opened, "Esc did not close only the help")
     focusOn(keys, "after the help, the window's keys")
 
@@ -218,14 +212,16 @@ Item {
 
     // ---- editing and deleting your message ------------------------------------
 
+    // The edit shows people and channels by name and saves them as mentions.
+
     kd.type("e")
     var convComposer = win.conversationView.composer
     check(convComposer.editTS === mineTS, "e did not start the edit")
+    check(convComposer.text === "see #random & @Bo", "the edit shows " + JSON.stringify(convComposer.text))
     kd.type("!")
     kd.press(Qt.Key_Return)
     var edited = last("messages.edit")
-    check(edited && edited.ts === mineTS, "Enter did not save the edit")
-    kd.wait(1)
+    check(edited && edited.ts === mineTS && edited.text === "see <#C2> & <@U2>!", "the edit saved " + JSON.stringify(edited))
     focusOn(keys, "after the edit, the window's keys")
 
     // Delete, then y.

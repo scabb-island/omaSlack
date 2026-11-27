@@ -4,9 +4,11 @@ import qs.Commons
 import qs.Commons as Commons
 import "lib/actions.js" as A
 import "lib/filecache.js" as Files
+import "lib/nav.js" as N
 
 // The window's message actions (task 4.5), with the TUI's keys: e edits
-// your own selected message in its pane's composer, D (and x, Delete)
+// your own selected message in its pane's composer (people and channels
+// by name, saved back as mentions, as a composed message is), D (and x, Delete)
 // deletes it after an inline y/n, r opens the reaction picker, o opens
 // the message's file (a chooser when it has several), reaction chips and
 // files react to clicks, and ":attach <path> [caption]" sent from a
@@ -74,7 +76,19 @@ Item {
     var m = window.currentMessage()
     var why = A.ownMessage(m, self(), "edit")
     say(why)
-    if (why === "") window.paneComposer(window.pane).startEdit(m.ts, A.editText(m.text))
+    if (why === "") window.paneComposer(window.pane).startEdit(m.ts, displayText(m.text))
+  }
+
+  // displayText: a message's text as the composer shows it (lib/nav.js
+  // toDisplay), its mentions added to the window's tokens so the save
+  // sends them back as mentions.
+  function displayText(text) {
+    var team = window.team
+    var shown = N.toDisplay(String(text || ""),
+      function(id) { var n = service.userName(team, id); return n !== id ? n : "" },
+      function(id) { var c = window.conversation(team, id); return c && c.name ? c.name : "" })
+    for (var k in shown.tokens) window.addMentionToken(k, shown.tokens[k])
+    return shown.text
   }
 
   // submit handles what a composer sends when it is not a plain message:
@@ -91,7 +105,7 @@ Item {
     var t = composer.target
     var ts = composer.editTS
     if (text.trim() === "") { say("An edit cannot be empty; to delete the message, press D."); return }
-    service.edit(t.team, t.conv, ts, text.trim(), function(err) {
+    service.edit(t.team, t.conv, ts, N.toWire(text.trim(), window.mentionTokens), function(err) {
       if (err) { root.say("Could not edit: " + (err.message || err.code)); return }
       root.say("")
       if (composer.editTS === ts) composer.cancelEdit()
