@@ -290,8 +290,19 @@ func newRigWith(t *testing.T, wrap func(*providertest.Fake) provider.Provider) *
 	return newRigFrom(t, wrap, func(s store.Store) store.Store { return s })
 }
 
+// newRigWithSelf is a rig whose signed-in user is self.
+func newRigWithSelf(t *testing.T, self domain.UserID) *rig {
+	t.Helper()
+	return newRigAs(t, self, nil, func(s store.Store) store.Store { return s })
+}
+
 // newRigFrom also lets the test stand between the engine and the store.
 func newRigFrom(t *testing.T, wrap func(*providertest.Fake) provider.Provider, wrapStore func(store.Store) store.Store) *rig {
+	t.Helper()
+	return newRigAs(t, me, wrap, wrapStore)
+}
+
+func newRigAs(t *testing.T, self domain.UserID, wrap func(*providertest.Fake) provider.Provider, wrapStore func(store.Store) store.Store) *rig {
 	t.Helper()
 	st, err := sqlite.Open(context.Background(), filepath.Join(t.TempDir(), "cache.db"))
 	if err != nil {
@@ -315,7 +326,7 @@ func newRigFrom(t *testing.T, wrap func(*providertest.Fake) provider.Provider, w
 		Store:     wrapStore(st),
 		Budget:    r.budget,
 		Publisher: r.pub,
-		Self:      me,
+		Self:      self,
 		Clock:     r.clock,
 		Rand:      func() float64 { return 0.5 },
 		PageSize:  pageSize,

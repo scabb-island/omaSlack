@@ -187,20 +187,33 @@ function clockLabel(epochSeconds) {
   return pad2(d.getHours()) + ":" + pad2(d.getMinutes())
 }
 
+// awayStatus of a scope: whether the user is away in every team of it
+// (presence is Service.presence; each workspace's own is under its self).
+function awayStatus(presence, workspaces, teams) {
+  var p = presence || {}
+  if (teams.length === 0) return false
+  var self = {}
+  var list = workspaces || []
+  for (var i = 0; i < list.length; i++) self[list[i].team] = list[i].self || ""
+  return teams.every(function(t) { return !!p[t] && p[t][self[t] || ""] === "away" })
+}
+
 // dndButtons: the header's buttons, left to right. The scope button (only
 // with several workspaces) cycles the scope; the snooze buttons snooze it;
-// "End" (only while snoozed) ends DND.
-function dndButtons(scopes, scopeIndex, choices, snoozed) {
+// "End" (only while snoozed) ends DND; the last one sets the scope away,
+// or back to automatic when it is away.
+function dndButtons(scopes, scopeIndex, choices, snoozed, away) {
   var out = []
   if (scopes.length > 1) out.push({ id: "scope", label: scopes[scopeIndex].label })
   choices.forEach(function(c) { out.push({ id: "snooze", label: c.label, minutes: c.minutes }) })
   if (snoozed) out.push({ id: "end", label: "End" })
+  out.push({ id: "presence", label: away ? "Back" : "Away", away: !away })
   return out
 }
 
-// dndCalls: the Service calls a DND button makes, one per team:
-// [{ method: "snooze" | "end", team, minutes }].
+// dndCalls: the Service calls a header button makes, one per team:
+// [{ method: "snooze" | "end" | "presence", team, minutes, away }].
 function dndCalls(button, teams) {
-  if (button.id !== "snooze" && button.id !== "end") return []
-  return teams.map(function(t) { return { method: button.id, team: t, minutes: button.minutes || 0 } })
+  if (button.id !== "snooze" && button.id !== "end" && button.id !== "presence") return []
+  return teams.map(function(t) { return { method: button.id, team: t, minutes: button.minutes || 0, away: !!button.away } })
 }

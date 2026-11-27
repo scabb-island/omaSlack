@@ -53,9 +53,14 @@ Item {
   property var summary: ({ workspaces: ({}), total: ({ dms: 0, mentions: 0, channels: 0, threads: 0 }) })
   // { <team>: [wire.Conversation] }: every conversation the user is in.
   property var conversations: ({})
-  // { <team>: { snoozed: bool, until: epoch seconds } }, as known from this
-  // client's own dnd.snooze/dnd.end calls (the daemon sends no DND event).
+  // { <team>: { snoozed: bool, until: epoch seconds } }: the user's snooze,
+  // from dnd.info on connect and dnd.changed events (wire.DNDEvent).
   property var dnd: ({})
+  // { <team>: { <user>: "active" | "away" } }: presence as the daemon
+  // reported it, from presence.changed events; the user's own sits under
+  // the workspace's self (presence.get on connect). Missing while unknown:
+  // the internal-app provider reports nobody's but the user's.
+  property var presence: ({})
   // Bumped whenever any cached message list or a user name changes; bind
   // to it and read messages(team, conv) to stay current. messages(),
   // userName() and conversationName() read it, so bindings calling them
@@ -163,18 +168,12 @@ Item {
   // conversations.markRead up to ts (the newest message when empty).
   function markRead(team, conv, ts, callback) { call("conversations.markRead", { team: team, conv: conv, ts: ts || undefined }, callback) }
   function setDraft(team, conv, threadTS, text, callback) { call("drafts.set", { team: team, conv: conv, threadTS: threadTS || undefined, text: text }, callback) }
-  function snoozeDND(team, minutes, callback) {
-    call("dnd.snooze", { team: team, minutes: minutes }, function(err, res) {
-      if (!err) root._publish(Store.applyDND(root._st, team, true, Math.floor(Date.now() / 1000) + minutes * 60))
-      root._answer(callback, err, res)
-    })
-  }
-  function endDND(team, callback) {
-    call("dnd.end", { team: team }, function(err, res) {
-      if (!err) root._publish(Store.applyDND(root._st, team, false, 0))
-      root._answer(callback, err, res)
-    })
-  }
+  // dnd.snooze, dnd.end and presence.set: their effect arrives as
+  // dnd.changed and presence.changed.
+  function snoozeDND(team, minutes, callback) { call("dnd.snooze", { team: team, minutes: minutes }, callback) }
+  function endDND(team, callback) { call("dnd.end", { team: team }, callback) }
+  // away: true for away, false for automatic.
+  function setPresence(team, away, callback) { call("presence.set", { team: team, presence: away ? "away" : "auto" }, callback) }
   // files.fetch: the local path of a file's bytes, for Image and Qt.openUrlExternally.
   function fetchFile(team, id, callback) { call("files.fetch", { team: team, fileId: id }, callback) }
 
@@ -214,7 +213,7 @@ Item {
     "message.created", "message.updated", "message.deleted",
     "reaction.changed", "conversation.updated", "read.changed",
     "draft.changed", "typing", "presence.changed", "connection.state",
-    "unread.summary", "ui.focus"
+    "unread.summary", "ui.focus", "dnd.changed"
   ]
 
   property var _st: Store.empty()
@@ -245,6 +244,7 @@ Item {
     if (root.summary !== st.summary) root.summary = st.summary
     if (root.conversations !== st.conversations) root.conversations = st.conversations
     if (root.dnd !== st.dnd) root.dnd = st.dnd
+    if (root.presence !== st.presence) root.presence = st.presence
   }
 
   function _changed(keys) {
@@ -302,7 +302,21 @@ Item {
   function _onWorkspaces(err, list) {
     if (err || !list) return
     root._publish(Store.applyWorkspaces(root._st, list))
-    for (var i = 0; i < list.length; i++) root._loadConversations(list[i].team)
+    for (var i = 0; i < list.length; i++) {
+      root._loadConversations(list[i].team)
+      root._loadOwn(list[i].team, list[i].self || "")
+    }
+  }
+
+  // _loadOwn asks for the user's snooze and presence in team. An older
+  // daemon without these methods leaves them unknown.
+  function _loadOwn(team, self) {
+    root._send("dnd.info", { team: team }, function(err, res) {
+      if (!err && res) root._publish(Store.applyDND(root._st, team, res.snoozed, res.until))
+    })
+    root._send("presence.get", { team: team }, function(err, res) {
+      if (!err && res && res.presence) root._publish(Store.applyPresence(root._st, team, self, res.presence))
+    })
   }
 
   function _loadConversations(team) {

@@ -75,7 +75,7 @@ func TestWritesSendTheirArguments(t *testing.T) {
 		{func() error { return api.Delete(ctx, conv, ts) }, url.Values{"channel": {"C0001"}, "ts": {"1700000100.000100"}}},
 		{func() error { return api.AddReaction(ctx, conv, ts, "+1") }, url.Values{"channel": {"C0001"}, "timestamp": {"1700000100.000100"}, "name": {"+1"}}},
 		{func() error { return api.RemoveReaction(ctx, conv, ts, "smile::skin-tone-2") }, url.Values{"channel": {"C0001"}, "timestamp": {"1700000100.000100"}, "name": {"smile::skin-tone-2"}}},
-		{func() error { return api.SnoozeDND(ctx, 30) }, url.Values{"num_minutes": {"30"}}},
+		{func() error { return second(api.SnoozeDND(ctx, 30)) }, url.Values{"num_minutes": {"30"}}},
 		{func() error { return api.EndDND(ctx) }, url.Values{}},
 	}
 	for i, tc := range cases {
@@ -128,7 +128,7 @@ func TestWritesReportSlackErrors(t *testing.T) {
 			t.Errorf("%s err = %v, want a plain message_not_found", method, err)
 		}
 	}
-	for method, err := range map[string]error{"dnd.setSnooze": api.SnoozeDND(ctx, 5), "dnd.endSnooze": api.EndDND(ctx)} {
+	for method, err := range map[string]error{"dnd.setSnooze": second(api.SnoozeDND(ctx, 5)), "dnd.endSnooze": api.EndDND(ctx)} {
 		if !errors.Is(err, provider.ErrAuthExpired) {
 			t.Errorf("%s err = %v, want ErrAuthExpired", method, err)
 		}
@@ -139,7 +139,7 @@ func TestSnoozeDNDRejectsANonPositiveLengthWithoutCallingSlack(t *testing.T) {
 	api, s, _ := fakeSlack(t, nil)
 
 	for _, minutes := range []int{0, -5} {
-		if err := api.SnoozeDND(context.Background(), minutes); err == nil {
+		if _, err := api.SnoozeDND(context.Background(), minutes); err == nil {
 			t.Errorf("SnoozeDND(%d) = nil, want an error", minutes)
 		}
 	}

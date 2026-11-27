@@ -19,6 +19,7 @@ Item {
   property var summary: ({ workspaces: ({}), total: ({ dms: 0, mentions: 0, channels: 0, threads: 0 }) })
   property var conversations: ({})
   property var dnd: ({})
+  property var presence: ({})
   property int messagesRevision: 0
 
   signal daemonEvent(string method, var params)
@@ -76,6 +77,7 @@ Item {
   function setDraft(team, conv, threadTS, text, callback) { call("drafts.set", { team: team, conv: conv, threadTS: threadTS || undefined, text: text }, callback) }
   function snoozeDND(team, minutes, callback) { call("dnd.snooze", { team: team, minutes: minutes }, callback) }
   function endDND(team, callback) { call("dnd.end", { team: team }, callback) }
+  function setPresence(team, away, callback) { call("presence.set", { team: team, presence: away ? "away" : "auto" }, callback) }
   function fetchFile(team, id, callback) { call("files.fetch", { team: team, fileId: id }, callback) }
 
   function openWindow(team, conv) { record("openWindow", { team: team, conv: conv }) }

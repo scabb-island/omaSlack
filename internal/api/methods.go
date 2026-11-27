@@ -342,6 +342,34 @@ func presenceSet(ctx context.Context, p *params) (any, error) {
 	return nil, w.Engine.SetPresence(ctx, away)
 }
 
+type presenceResult struct {
+	Presence string `json:"presence"`
+}
+
+func presenceGet(ctx context.Context, p *params) (any, error) {
+	w := p.workspace()
+	if err := p.err(); err != nil {
+		return nil, err
+	}
+	now, err := w.Engine.Presence(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return presenceResult{Presence: wire.PresenceName(now)}, nil
+}
+
+func dndInfo(ctx context.Context, p *params) (any, error) {
+	w := p.workspace()
+	if err := p.err(); err != nil {
+		return nil, err
+	}
+	until, err := w.Engine.DND(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return wire.FromDND(w.Team.String(), until), nil
+}
+
 func dndSnooze(ctx context.Context, p *params) (any, error) {
 	w := p.workspace()
 	minutes := p.positive("minutes")

@@ -21,7 +21,11 @@ function empty() {
     messages: ({}),
     // { <team>: { <user>: name } }
     users: ({}),
-    dnd: ({})
+    // { <team>: { snoozed, until } }: the user's snooze (wire.DNDEvent).
+    dnd: ({}),
+    // { <team>: { <user>: "active" | "away" } }: presence the daemon
+    // reported, the user's own under their ID (presence.get, presence.changed).
+    presence: ({})
   }
 }
 
@@ -121,13 +125,20 @@ function applyDND(state, team, snoozed, until) {
   return withKey(state, "dnd", team, { snoozed: !!snoozed, until: until || 0 })
 }
 
+// applyPresence records one user's presence in team.
+function applyPresence(state, team, user, presence) {
+  var users = copy((state.presence || ({}))[team] || ({}))
+  users[user] = presence
+  return withKey(state, "presence", team, users)
+}
+
 // ---- events -----------------------------------------------------------------
 
 // applyEvent applies one daemon notification (method, params) and returns
 // { state, changed: [key] } where changed names the message lists touched
 // ("<team>/<conv>" or "<team>/<conv>/<threadTS>"). Topics with no state
-// here (typing, presence.changed, draft.changed, ui.focus, unknown ones)
-// return the same state.
+// here (typing, draft.changed, ui.focus, unknown ones) return the same
+// state.
 function applyEvent(state, method, params) {
   var handler = eventHandlers[method]
   if (!handler || !params) return { state: state, changed: [] }
@@ -142,6 +153,8 @@ var eventHandlers = {
   "read.changed": readChanged,
   "conversation.updated": conversationUpdated,
   "connection.state": connectionChanged,
+  "dnd.changed": function(state, p) { return unchangedLists(applyDND(state, p.team, p.snoozed, p.until)) },
+  "presence.changed": function(state, p) { return unchangedLists(applyPresence(state, p.team, p.user, p.presence)) },
   "unread.summary": function(state, p) { return unchangedLists(applySummary(state, p)) }
 }
 
@@ -274,6 +287,12 @@ function messages(state, team, conv, threadTS) {
   var entry = state.messages[listKey(team, conv, threadTS)]
   if (!entry) return []
   return threadTS ? entry.messages : entry.messages.filter(isTopLevel)
+}
+
+// presence: a user's presence in team, "" while the daemon has not said.
+function presence(state, team, user) {
+  var users = (state.presence || ({}))[team]
+  return (users && users[user]) || ""
 }
 
 function hasMore(state, team, conv) {

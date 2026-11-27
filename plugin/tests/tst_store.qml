@@ -202,12 +202,44 @@ TestCase {
 
   function test_events_without_state_change_nothing() {
     var s = loaded()
-    var topics = ["typing", "presence.changed", "draft.changed", "ui.focus", "something.new"]
+    var topics = ["typing", "draft.changed", "ui.focus", "something.new"]
     for (var i = 0; i < topics.length; i++) {
       var r = Store.applyEvent(s, topics[i], { team: "T1", conv: "C1" })
       compare(r.changed, [], topics[i])
       compare(r.state, s, topics[i])
     }
+  }
+
+  // ---- own state and presence (task 5.3) -------------------------------------
+
+  function test_dnd_changed_replaces_the_workspaces_snooze() {
+    var s = loaded()
+    var r = Store.applyEvent(s, "dnd.changed", { team: "T1", snoozed: true, until: 1700003600 })
+    compare(r.changed, [])
+    compare(r.state.dnd.T1.snoozed, true)
+    compare(r.state.dnd.T1.until, 1700003600)
+    compare(s.dnd.T1, undefined)
+    r = Store.applyEvent(r.state, "dnd.changed", { team: "T1", snoozed: false, until: 0 })
+    compare(r.state.dnd.T1.snoozed, false)
+    compare(r.state.dnd.T1.until, 0)
+  }
+
+  function test_presence_changed_records_each_users_presence() {
+    var s = loaded()
+    var r = Store.applyEvent(s, "presence.changed", { team: "T1", user: "U2", presence: "away" })
+    compare(r.changed, [])
+    compare(Store.presence(r.state, "T1", "U2"), "away")
+    compare(Store.presence(r.state, "T1", "U3"), "")
+    compare(Store.presence(s, "T1", "U2"), "")
+    r = Store.applyEvent(r.state, "presence.changed", { team: "T1", user: "U2", presence: "active" })
+    compare(Store.presence(r.state, "T1", "U2"), "active")
+    compare(r.state.presence.T1.U2, "active")
+  }
+
+  function test_apply_presence_is_what_presence_get_answers_for_the_user() {
+    var s = Store.applyPresence(loaded(), "T1", "U0", "away")
+    compare(Store.presence(s, "T1", "U0"), "away")
+    compare(Store.presence(s, "T2", "U0"), "")
   }
 
   // ---- queries -------------------------------------------------------------

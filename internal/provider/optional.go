@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"io"
+	"time"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 )
@@ -83,9 +84,20 @@ type PresenceSetter interface {
 	SetPresence(ctx context.Context, away bool) error
 }
 
-// DNDController snoozes notifications for minutes, or ends the snooze.
+// PresenceReader reads the signed-in user's own presence
+// (users.getPresence).
+type PresenceReader interface {
+	Presence(ctx context.Context) (domain.Presence, error)
+}
+
+// DNDController reads and changes the signed-in user's Do Not Disturb
+// snooze. Times are when the snooze ends; zero means it is off.
 type DNDController interface {
-	SnoozeDND(ctx context.Context, minutes int) error
+	// DND is the current snooze (dnd.info).
+	DND(ctx context.Context) (time.Time, error)
+	// SnoozeDND snoozes notifications for minutes and returns when that
+	// snooze ends.
+	SnoozeDND(ctx context.Context, minutes int) (time.Time, error)
 	EndDND(ctx context.Context) error
 }
 

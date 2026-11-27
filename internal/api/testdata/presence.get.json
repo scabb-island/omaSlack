@@ -1,0 +1,57 @@
+[
+  {
+    "name": "away",
+    "params": {
+      "team": "T0ACME"
+    },
+    "calls": [
+      "T0ACME Presence"
+    ],
+    "result": {
+      "presence": "away"
+    }
+  },
+  {
+    "name": "active",
+    "params": {
+      "team": "T0BETA"
+    },
+    "calls": [
+      "T0BETA Presence"
+    ],
+    "result": {
+      "presence": "active"
+    }
+  },
+  {
+    "name": "credentials expired",
+    "params": {
+      "team": "T0EXPIRED"
+    },
+    "calls": [
+      "T0EXPIRED Presence"
+    ],
+    "error": {
+      "code": -32003,
+      "message": "auth_expired"
+    }
+  },
+  {
+    "name": "missing team",
+    "params": {},
+    "error": {
+      "code": -32602,
+      "message": "team: missing"
+    }
+  },
+  {
+    "name": "unknown workspace",
+    "params": {
+      "team": "T0NOPE"
+    },
+    "error": {
+      "code": -32602,
+      "message": "unknown workspace"
+    }
+  }
+]

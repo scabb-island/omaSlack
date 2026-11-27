@@ -16,6 +16,7 @@ package api
 
 import (
 	"context"
+	"time"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 	"gitlab.com/scabb-island/omaslack/internal/rpc"
@@ -52,6 +53,8 @@ type Actions interface {
 	SetPresence(ctx context.Context, away bool) error
 	SnoozeDND(ctx context.Context, minutes int) error
 	EndDND(ctx context.Context) error
+	DND(ctx context.Context) (time.Time, error)
+	Presence(ctx context.Context) (domain.Presence, error)
 	UploadFiles(ctx context.Context, conv domain.ConversationID, thread domain.TS, paths []string, caption string) ([]domain.File, error)
 	FetchFile(ctx context.Context, id domain.FileID) (string, error)
 	Users(ctx context.Context, ids []domain.UserID) ([]domain.User, error)
@@ -122,8 +125,10 @@ type Focuser interface {
 //	search.messages{team, query, limit?}               → []wire.SearchHit
 //	users.search{team, q, limit?}                      → []wire.User
 //	presence.set{team, presence: "auto"|"away"}        → null
+//	presence.get{team}                                 → {presence: "active"|"away"}
 //	dnd.snooze{team, minutes}                          → null
 //	dnd.end{team}                                      → null
+//	dnd.info{team}                                     → wire.DNDEvent
 //	unread.summary{}                                   → wire.Summary
 //	ui.focus{team, conv, ts?}                          → {clients: n}
 //
@@ -170,6 +175,13 @@ type Focuser interface {
 //     once per 30 minutes, so the first call of a workspace waits for that
 //     load) and looks up at most 20 others per call with users.info; a
 //     client asks again for the ones still missing.
+//   - presence.get and dnd.info answer the signed-in user's own presence
+//     and snooze as the engine last learned them (Slack's dnd.info on
+//     every connect, the stream, and the user's own presence.set,
+//     dnd.snooze and dnd.end), asking Slack only when it has learned
+//     nothing yet. Every change reaches clients as presence.changed (with
+//     the user's ID) and dnd.changed; presence.set's "auto" is published
+//     as active.
 //   - emoji.list answers the custom emoji by name (no colons): an image
 //     URL, or "alias:<name>" for an alias. The provider keeps it an hour.
 //   - typing.send tells the conversation the user is typing; Slack shows
@@ -209,8 +221,10 @@ func Methods(dir Directory, focus Focuser) rpc.Router {
 		"search.messages":        searchMessages,
 		"users.search":           usersSearch,
 		"presence.set":           presenceSet,
+		"presence.get":           presenceGet,
 		"dnd.snooze":             dndSnooze,
 		"dnd.end":                dndEnd,
+		"dnd.info":               dndInfo,
 		"unread.summary":         unreadSummary(dir),
 		"ui.focus":               uiFocus(focus),
 	}

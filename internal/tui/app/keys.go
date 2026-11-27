@@ -95,4 +95,7 @@ var commandHelp = [][2]string{
 	{":attach <path>", "send a file here; any text after it is the caption"},
 	{":search <query>", "search messages in this workspace"},
 	{":react <emoji>", "react to the selected message (:react +1)"},
+	{":away / :back", "set your presence to away / automatic"},
+	{":dnd <length>", "do not disturb: 30m, 1h, 2h, tomorrow"},
+	{":dnd off", "end do not disturb"},
 }

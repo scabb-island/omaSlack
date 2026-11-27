@@ -10,7 +10,7 @@ import "lib/contrast.js" as C
 
 // The quick-view popup under the bar icon (task 4.4): conversations with
 // unread messages, DMs and mentions first, each with a preview; a quick
-// reply that sends and marks the conversation read; mark as read; DND; and
+// reply that sends and marks the conversation read; mark as read; DND and Away/Back; and
 // opening a conversation in the window or the TUI.
 //
 // Previews come from messages.history (limit 3), which only reads the
@@ -69,7 +69,8 @@ FocusScope {
   readonly property var dndState: Lib.dndStatus(service ? service.dnd : null, scopeTeams)
   // Rebuilt when the panel opens, so "Tomorrow" counts from now.
   property var choices: Lib.dndChoices(new Date())
-  readonly property var dndButtons: Lib.dndButtons(scopes, Math.min(scopeIndex, scopes.length - 1), choices, dndState.snoozed)
+  readonly property bool awayState: Lib.awayStatus(service ? service.presence : null, service ? service.workspaces : [], scopeTeams)
+  readonly property var dndButtons: Lib.dndButtons(scopes, Math.min(scopeIndex, scopes.length - 1), choices, dndState.snoozed, awayState)
 
   readonly property color foreground: Commons.Color.foreground
   readonly property color dim: C.muted(root.foreground, Commons.Color.popups.background)
@@ -161,9 +162,11 @@ FocusScope {
     if (!button) return
     if (button.id === "scope") { scopeIndex = Lib.nextScope(scopeIndex, scopes.length); return }
     Lib.dndCalls(button, scopeTeams).forEach(function(c) {
-      var done = function(err) { if (err) root.status = "Could not change DND: " + err.message }
+      var what = c.method === "presence" ? "presence" : "DND"
+      var done = function(err) { if (err) root.status = "Could not change " + what + ": " + err.message }
       if (c.method === "snooze") root.service.snoozeDND(c.team, c.minutes, done)
-      else root.service.endDND(c.team, done)
+      else if (c.method === "end") root.service.endDND(c.team, done)
+      else root.service.setPresence(c.team, c.away, done)
     })
   }
 
@@ -240,7 +243,8 @@ FocusScope {
         meta: !root.service || !root.service.daemonAvailable
           ? "Daemon not running"
           : (root.empty ? "Nothing unread" : root.rows.length + " unread")
-        detail: root.dndState.snoozed ? "DND until " + Lib.clockLabel(root.dndState.until) : ""
+        detail: [root.dndState.snoozed ? "DND until " + Lib.clockLabel(root.dndState.until) : "",
+                 root.awayState ? "Away" : ""].filter(function(s) { return s !== "" }).join(" · ")
         foreground: root.foreground
         fontFamily: root.fontFamily
         iconComponent: Component {
@@ -268,7 +272,7 @@ FocusScope {
       PanelSeparator { foreground: root.foreground }
 
       PanelSectionHeader {
-        text: "Do not disturb"
+        text: "Do not disturb and presence"
         foreground: root.foreground
         fontFamily: root.fontFamily
       }

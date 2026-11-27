@@ -38,6 +38,12 @@ var slackLimits = map[string]ratebudget.Limit{
 	"users.setPresence":     tier2,
 	"dnd.setSnooze":         tier2,
 	"dnd.endSnooze":         tier2,
+	// The user's own state: dnd.info on every connect (and when a client
+	// asks before it is known), users.getPresence only until known.
+	"dnd.info":          tier3,
+	"users.getPresence": tier3,
+	// presence_sub is a socket frame, sent after each conversation list.
+	"presence_sub": tier2,
 	// Names: users.info is tier 4, and most calls never reach Slack (the
 	// provider answers from its directory), so clients rendering a page
 	// of messages are not held back.
