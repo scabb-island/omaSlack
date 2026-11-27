@@ -133,9 +133,9 @@ func (e *Engine) SetDraft(ctx context.Context, conv domain.ConversationID, threa
 	return e.do(ctx, func(ctx context.Context, w *writer) error { return w.setDraft(ctx, conv, thread, text) })
 }
 
-// SearchMessages, SearchUsers, SetPresence, SnoozeDND and EndDND pass
-// through to the provider's optional interface, through the budget. They
-// touch neither the Store nor the published events.
+// SearchMessages and SearchUsers pass through to the provider's optional
+// interface, through the budget. They touch neither the Store nor the
+// published events. SetPresence, SnoozeDND and EndDND are in own.go.
 
 func (e *Engine) SearchMessages(ctx context.Context, query string, limit int) ([]domain.SearchHit, error) {
 	s, err := optional[provider.MessageSearcher](e, "search messages", domain.Search)
@@ -155,30 +155,6 @@ func (e *Engine) SearchUsers(ctx context.Context, query string, limit int) ([]do
 	return ask(ctx, e, methodSearchUsers, func(ctx context.Context) ([]domain.User, error) {
 		return s.SearchUsers(ctx, query, limit)
 	})
-}
-
-func (e *Engine) SetPresence(ctx context.Context, away bool) error {
-	p, err := optional[provider.PresenceSetter](e, "set presence", domain.PresenceWrite)
-	if err != nil {
-		return err
-	}
-	return e.interactive(ctx, methodSetPresence, func(ctx context.Context) error { return p.SetPresence(ctx, away) })
-}
-
-func (e *Engine) SnoozeDND(ctx context.Context, minutes int) error {
-	d, err := optional[provider.DNDController](e, "snooze notifications")
-	if err != nil {
-		return err
-	}
-	return e.interactive(ctx, methodSnoozeDND, func(ctx context.Context) error { return d.SnoozeDND(ctx, minutes) })
-}
-
-func (e *Engine) EndDND(ctx context.Context) error {
-	d, err := optional[provider.DNDController](e, "end the snooze")
-	if err != nil {
-		return err
-	}
-	return e.interactive(ctx, methodEndDND, d.EndDND)
 }
 
 // live is ErrStopped unless Run is serving ops. Checking first keeps an

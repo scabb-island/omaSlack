@@ -27,9 +27,16 @@ import (
 //   - presence_change → one PresenceChanged per user. With
 //     batch_presence_aware=1 the socket sends "users" instead of "user".
 //   - user_typing → UserTyping.
+//   - manual_presence_change → PresenceChanged with a zero User: the
+//     signed-in user set their own presence, in any client. The provider
+//     does not know who that is; the sync engine fills it in.
+//   - dnd_updated → DNDChanged: the signed-in user's snooze changed, in
+//     any client (its dnd_status carries the snooze; a schedule alone is
+//     not one).
 //
 // Ignored: ephemeral messages (Slack never returns them from history, so
-// a store must not keep them), every other message subtype, thread_marked
+// a store must not keep them), every other message subtype,
+// dnd_updated_user (other people's schedules, with no snooze in them), thread_marked
 // (the domain has no per-thread read marker yet), reconnect_url (the sync
 // engine reconnects with a fresh URL), goodbye (the server closes the
 // socket right after it, which ends the stream), and every other frame.
@@ -41,6 +48,8 @@ type frame struct {
 	Users     []string `json:"users"`
 	Presence  string   `json:"presence"`
 	Ephemeral bool     `json:"is_ephemeral"`
+	// DND is set on a dnd_updated frame.
+	DND *slackwire.DNDStatus `json:"dnd_status"`
 	// Failure is set on an error frame: Slack's answer to start arguments
 	// it rejects.
 	Failure *frameError `json:"error"`
@@ -66,6 +75,9 @@ var frameMappers = map[string]frameMapper{
 	"mpim_marked":     readChanged,
 	"presence_change": presenceChanged,
 	"user_typing":     userTyping,
+
+	"manual_presence_change": ownPresenceChanged,
+	"dnd_updated":            dndChanged,
 }
 
 // mapFrame maps one socket frame to the domain events it means. It returns
@@ -134,13 +146,10 @@ func readChanged(team domain.TeamID, f frame) ([]domain.Event, error) {
 	return []domain.Event{domain.ReadChanged{Team: team, Conversation: conv, LastRead: ts}}, nil
 }
 
-// presences are the presence values Slack sends.
-var presences = map[string]domain.Presence{"active": domain.Active, "away": domain.Away}
-
 func presenceChanged(team domain.TeamID, f frame) ([]domain.Event, error) {
-	presence, ok := presences[f.Presence]
-	if !ok {
-		return nil, fmt.Errorf("unknown presence %q", f.Presence)
+	presence, err := slackwire.ParsePresence(f.Presence)
+	if err != nil {
+		return nil, err
 	}
 	ids := f.Users
 	if len(ids) == 0 {
@@ -167,4 +176,21 @@ func userTyping(team domain.TeamID, f frame) ([]domain.Event, error) {
 		return nil, err
 	}
 	return []domain.Event{domain.UserTyping{Team: team, Conversation: conv, User: user}}, nil
+}
+
+// ownPresenceChanged leaves User zero: the frame is about the signed-in
+// user, whose ID the provider does not know.
+func ownPresenceChanged(team domain.TeamID, f frame) ([]domain.Event, error) {
+	presence, err := slackwire.ParsePresence(f.Presence)
+	if err != nil {
+		return nil, err
+	}
+	return []domain.Event{domain.PresenceChanged{Team: team, Presence: presence}}, nil
+}
+
+func dndChanged(team domain.TeamID, f frame) ([]domain.Event, error) {
+	if f.DND == nil {
+		return nil, errors.New("no dnd_status")
+	}
+	return []domain.Event{domain.DNDChanged{Team: team, Until: f.DND.Until()}}, nil
 }

@@ -22,7 +22,8 @@ func TestWritesAreSignedLikeTheWebClient(t *testing.T) {
 	f := newFakeSlack(t, map[string]http.HandlerFunc{
 		"/api/chat.update": fixtureBody(t, "chat.update.json"), "/api/chat.delete": ok,
 		"/api/reactions.add": ok, "/api/reactions.remove": ok, "/api/users.setPresence": ok,
-		"/api/dnd.setSnooze": ok, "/api/dnd.endSnooze": ok,
+		"/api/dnd.setSnooze": ok, "/api/dnd.endSnooze": ok, "/api/dnd.info": ok,
+		"/api/users.getPresence": jsonBody(http.StatusOK, `{"ok":true,"presence":"away"}`),
 	})
 	p, _ := f.provider(t)
 	ctx, conv, ts := context.Background(), parse(t, domain.ParseConversationID, "C0001"), parse(t, domain.ParseTS, "1700000500.000500")
@@ -34,8 +35,10 @@ func TestWritesAreSignedLikeTheWebClient(t *testing.T) {
 		p.AddReaction(ctx, conv, ts, "smile::skin-tone-2"),
 		p.RemoveReaction(ctx, conv, ts, "smile::skin-tone-2"),
 		p.SetPresence(ctx, false),
-		p.SnoozeDND(ctx, 15),
+		second(p.SnoozeDND(ctx, 15)),
 		p.EndDND(ctx),
+		second(p.DND(ctx)),
+		second(p.Presence(ctx)),
 	} {
 		if e != nil {
 			t.Fatal(e)
@@ -46,8 +49,8 @@ func TestWritesAreSignedLikeTheWebClient(t *testing.T) {
 		t.Errorf("Edit() = %+v, want the stored text and edited ts", edited)
 	}
 	reqs := f.requests()
-	if len(reqs) != 7 {
-		t.Fatalf("%d requests, want 7", len(reqs))
+	if len(reqs) != 9 {
+		t.Fatalf("%d requests, want 9", len(reqs))
 	}
 	for _, r := range reqs {
 		if r.Form.Get("token") != testToken || r.Cookie != testCookie {
@@ -103,7 +106,7 @@ func TestWriteFailuresKeepTheirKind(t *testing.T) {
 	if err := p.AddReaction(ctx, conv, ts, "+1"); !errors.Is(err, provider.ErrAuthExpired) {
 		t.Errorf("AddReaction() err = %v, want ErrAuthExpired", err)
 	}
-	if err := p.SnoozeDND(ctx, 10); !errors.Is(err, provider.ErrAuthExpired) {
+	if _, err := p.SnoozeDND(ctx, 10); !errors.Is(err, provider.ErrAuthExpired) {
 		t.Errorf("SnoozeDND() err = %v, want ErrAuthExpired", err)
 	}
 	if _, err := p.Edit(ctx, conv, ts, "x"); !slackwire.HasCode(err, "cant_update_message") || errors.Is(err, provider.ErrAuthExpired) {

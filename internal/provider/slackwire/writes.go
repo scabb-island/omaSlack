@@ -2,17 +2,15 @@ package slackwire
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/url"
-	"strconv"
 	"time"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 )
 
 // The writes behind provider.MessageEditor, provider.Reactor and
-// provider.DNDController. Both providers call the same Web API methods
+// provider.DNDController (dnd.go). Both providers call the same Web API methods
 // with their own credentials.
 //
 // Writes that find their work already done succeed, so a client that
@@ -76,24 +74,6 @@ func (a *WebAPI) RemoveReaction(ctx context.Context, conv domain.ConversationID,
 
 func reactionForm(conv domain.ConversationID, ts domain.TS, emoji string) url.Values {
 	return url.Values{"channel": {conv.String()}, "timestamp": {ts.String()}, "name": {emoji}}
-}
-
-// errSnoozeLength reports a snooze shorter than a minute.
-var errSnoozeLength = errors.New("dnd.setSnooze: the snooze must last at least one minute")
-
-// SnoozeDND calls dnd.setSnooze, which turns Do Not Disturb on for
-// minutes (at least 1), or changes the length of the current snooze.
-func (a *WebAPI) SnoozeDND(ctx context.Context, minutes int) error {
-	if minutes < 1 {
-		return errSnoozeLength
-	}
-	return a.Call(ctx, "dnd.setSnooze", url.Values{"num_minutes": {strconv.Itoa(minutes)}}, &Envelope{})
-}
-
-// EndDND calls dnd.endSnooze. Ending a snooze that is not on is not an
-// error.
-func (a *WebAPI) EndDND(ctx context.Context) error {
-	return a.callUnlessDone(ctx, "dnd.endSnooze", url.Values{}, "snooze_not_active")
 }
 
 // callUnlessDone calls method, and treats done, the error code that says

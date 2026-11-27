@@ -37,7 +37,8 @@ func TestWritesReachTheirMethods(t *testing.T) {
 	ok := okJSON([]byte(`{"ok":true}`))
 	f := newFakeSlack(t, map[string]http.HandlerFunc{
 		"chat.delete": ok, "reactions.add": ok, "reactions.remove": ok,
-		"users.setPresence": ok, "dnd.setSnooze": ok, "dnd.endSnooze": ok,
+		"users.setPresence": ok, "dnd.setSnooze": ok, "dnd.endSnooze": ok, "dnd.info": ok,
+		"users.getPresence": okJSON([]byte(`{"ok":true,"presence":"active"}`)),
 	})
 	p, _ := newTestProvider(t, f)
 	ctx, conv, ts := context.Background(), mustConv(t, "C0001"), mustTS(t, "1700000500.000500")
@@ -47,8 +48,10 @@ func TestWritesReachTheirMethods(t *testing.T) {
 		p.AddReaction(ctx, conv, ts, "+1"),
 		p.RemoveReaction(ctx, conv, ts, "+1"),
 		p.SetPresence(ctx, true),
-		p.SnoozeDND(ctx, 60),
+		second(p.SnoozeDND(ctx, 60)),
 		p.EndDND(ctx),
+		second(p.DND(ctx)),
+		second(p.Presence(ctx)),
 	} {
 		if err != nil {
 			t.Fatal(err)
@@ -59,7 +62,7 @@ func TestWritesReachTheirMethods(t *testing.T) {
 	for _, c := range f.recorded() {
 		methods = append(methods, c.Method)
 	}
-	want := []string{"chat.delete", "reactions.add", "reactions.remove", "users.setPresence", "dnd.setSnooze", "dnd.endSnooze"}
+	want := []string{"chat.delete", "reactions.add", "reactions.remove", "users.setPresence", "dnd.setSnooze", "dnd.endSnooze", "dnd.info", "users.getPresence"}
 	if !reflect.DeepEqual(methods, want) {
 		t.Fatalf("methods = %v, want %v", methods, want)
 	}

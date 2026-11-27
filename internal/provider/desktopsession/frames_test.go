@@ -3,6 +3,7 @@ package desktopsession
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 )
@@ -43,7 +44,13 @@ func TestRecordedFramesMapToDomainEvents(t *testing.T) {
 			domain.PresenceChanged{Team: team, User: user("U0002"), Presence: domain.Away},
 			domain.PresenceChanged{Team: team, User: user("U0003"), Presence: domain.Away},
 		},
-		"user_typing.json": {domain.UserTyping{Team: team, Conversation: conv("C0001"), User: user("U0002")}},
+		"user_typing.json":     {domain.UserTyping{Team: team, Conversation: conv("C0001"), User: user("U0002")}},
+		"dnd_updated.json":     {domain.DNDChanged{Team: team, Until: time.Unix(1700003600, 0)}},
+		"dnd_updated_off.json": {domain.DNDChanged{Team: team}},
+		// The signed-in user: a zero User, which the sync engine fills in.
+		"manual_presence_change.json": {domain.PresenceChanged{Team: team, Presence: domain.Away}},
+		// Someone else's schedule, with no snooze in it.
+		"dnd_updated_user.json": nil,
 		// Nothing the domain tracks: ignored without an error.
 		"message_ephemeral.json":    nil,
 		"message_channel_join.json": nil,
@@ -79,6 +86,8 @@ func TestMalformedFramesAreRejected(t *testing.T) {
 		"typing bad channel":        `{"type":"user_typing","channel":"","user":"U0002"}`,
 		"typing bad user":           `{"type":"user_typing","channel":"C0001","user":"B0001"}`,
 		"users as a string":         `{"type":"presence_change","presence":"away","users":"U0002"}`,
+		"manual presence unknown":   `{"type":"manual_presence_change","presence":"busy"}`,
+		"dnd without a status":      `{"type":"dnd_updated","user":"U0001"}`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			got, err := mapFrame(team, []byte(frame))

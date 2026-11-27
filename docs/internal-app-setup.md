@@ -63,7 +63,12 @@ Not available to Slack apps, so omaslack hides them for this provider:
 - **Read state from other devices in real time.** The Events API has no
   "marked read" event, so a conversation you read on your phone is updated in
   omaslack the next time it syncs that conversation, not instantly.
-- **Presence changes of other people in real time.** They are polled instead.
+- **Other people's presence.** Slack sends presence changes only to its own
+  clients, so DMs show no presence dot. Your own presence is read when a
+  client asks and follows what you set in omaslack.
+- **Do Not Disturb set in another client, in real time.** omaslack reads your
+  snooze each time it connects and follows the ones you set in omaslack; a
+  snooze set on your phone shows after the next reconnect.
 
 ## Revoking access
 

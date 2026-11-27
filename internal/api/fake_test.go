@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 	"gitlab.com/scabb-island/omaslack/internal/provider"
@@ -117,6 +118,9 @@ type fakeEngine struct {
 	older map[domain.ConversationID][]domain.Message // what LoadOlder fetches
 	err   error
 
+	dnd      time.Time       // what DND answers
+	presence domain.Presence // what Presence answers
+
 	mu    sync.Mutex
 	calls []string
 }
@@ -212,6 +216,12 @@ func (e *fakeEngine) SnoozeDND(_ context.Context, minutes int) error {
 }
 
 func (e *fakeEngine) EndDND(context.Context) error { return e.record("EndDND") }
+
+func (e *fakeEngine) DND(context.Context) (time.Time, error) { return e.dnd, e.record("DND") }
+
+func (e *fakeEngine) Presence(context.Context) (domain.Presence, error) {
+	return e.presence, e.record("Presence")
+}
 
 // UploadFiles fails the way the engine does for paths named after a
 // failure ("missing", "dir", "big"), and otherwise returns one file per

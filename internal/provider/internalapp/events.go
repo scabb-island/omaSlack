@@ -16,8 +16,16 @@ import (
 //     group_marked) exist only in the RTM API. Read state reaches this
 //     provider only through the Web API.
 //   - UserTyping: user_typing is RTM-only too.
-//   - PresenceChanged: presence_change is RTM-only; apps must poll
-//     users.getPresence.
+//   - PresenceChanged: presence_change and manual_presence_change are
+//     RTM-only; apps must poll users.getPresence. The sync engine reads
+//     the user's own presence that way (provider.PresenceReader) and
+//     publishes the changes omaslack makes; other people's presence is
+//     not shown for this provider.
+//   - DNDChanged: dnd_updated is RTM-only, and the Events API's
+//     dnd_updated_user carries the schedule but no snooze. The sync engine
+//     reads the snooze with dnd.info on every connect and publishes the
+//     changes omaslack makes; a snooze set in another client shows after
+//     the next reconnect.
 //
 // Ignored: every event slackwire has no mapper for, and event types this
 // package does not subscribe to. Reactions on files are logged and dropped.

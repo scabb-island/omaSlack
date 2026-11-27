@@ -1,0 +1,5 @@
+{
+  "type": "manual_presence_change",
+  "presence": "away",
+  "event_ts": "1700000000.000400"
+}

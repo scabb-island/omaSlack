@@ -113,3 +113,6 @@ func jsonBody(status int, body string) http.HandlerFunc {
 		_, _ = w.Write([]byte(body))
 	}
 }
+
+// second is the error of a call that also returns a value.
+func second[T any](_ T, err error) error { return err }

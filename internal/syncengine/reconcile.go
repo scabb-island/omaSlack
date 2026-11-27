@@ -21,16 +21,18 @@ const (
 )
 
 // reconcile runs, at Background priority, after every connection. It
-// stores the provider's conversation list and the read markers it
+// first reads the user's own snooze (own.go). Then it stores the provider's conversation list and the read markers it
 // reports, so unread state is known before any client opens a
 // conversation (a list that could not be fetched leaves the stored one
 // alone), and hands it to the read-state fill when the provider needs
-// one (readstate.go). After an outage it also catches up every
+// one (readstate.go), and subscribes to the presence of DM partners when
+// the provider needs that (own.go). After an outage it also catches up every
 // conversation open in a client, with activity since startup, or that
 // the list says is unread or mentions the user (spec sync-engine,
 // "Reconciliation after reconnecting"), with its read marker. Without a
 // list it catches up the rest.
 func (e *Engine) reconcile(ctx context.Context, outage bool) {
+	e.refreshOwn(ctx)
 	list, err := e.conversations(ctx)
 	if stopping(err) {
 		return
@@ -40,6 +42,7 @@ func (e *Engine) reconcile(ctx context.Context, outage bool) {
 			return
 		}
 		e.offerList(ctx, list)
+		e.subscribePresence(ctx, list)
 	}
 	if !outage {
 		return

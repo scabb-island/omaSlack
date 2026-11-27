@@ -1,0 +1,61 @@
+[
+  {
+    "name": "snoozed",
+    "params": {
+      "team": "T0ACME"
+    },
+    "calls": [
+      "T0ACME DND"
+    ],
+    "result": {
+      "team": "T0ACME",
+      "snoozed": true,
+      "until": 1700003600
+    }
+  },
+  {
+    "name": "not snoozed",
+    "params": {
+      "team": "T0BETA"
+    },
+    "calls": [
+      "T0BETA DND"
+    ],
+    "result": {
+      "team": "T0BETA",
+      "snoozed": false,
+      "until": 0
+    }
+  },
+  {
+    "name": "credentials expired",
+    "params": {
+      "team": "T0EXPIRED"
+    },
+    "calls": [
+      "T0EXPIRED DND"
+    ],
+    "error": {
+      "code": -32003,
+      "message": "auth_expired"
+    }
+  },
+  {
+    "name": "missing team",
+    "params": {},
+    "error": {
+      "code": -32602,
+      "message": "team: missing"
+    }
+  },
+  {
+    "name": "unknown workspace",
+    "params": {
+      "team": "T0NOPE"
+    },
+    "error": {
+      "code": -32602,
+      "message": "unknown workspace"
+    }
+  }
+]
