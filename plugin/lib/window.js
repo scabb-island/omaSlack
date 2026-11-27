@@ -1,5 +1,6 @@
 .pragma library
 .import "quickpanel.js" as QP
+.import "actions.js" as A
 
 // The full window's logic (task 4.5), pure so qmltestrunner covers it
 // (tests/tst_window.qml). Window.qml and its parts only draw what these
@@ -157,11 +158,13 @@ function threadLabel(m) {
 }
 
 // reactionChips: [{ emoji, count, mine, label }] for a message's reactions;
-// mine when self is among the users.
+// mine when self is among the users. The label shows a standard emoji as
+// its character and any other (custom) one as :name:.
 function reactionChips(reactions, self) {
   return (reactions || []).map(function(r) {
     var users = r.users || []
-    return { emoji: r.emoji, count: users.length, mine: users.indexOf(self) >= 0, label: ":" + r.emoji + ": " + users.length }
+    var glyph = A.emojiGlyph(r.emoji) || ":" + r.emoji + ":"
+    return { emoji: r.emoji, count: users.length, mine: users.indexOf(self) >= 0, label: glyph + " " + users.length }
   })
 }
 
