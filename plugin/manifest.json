@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "ar.scabb.omaslack",
   "name": "omaslack",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "author": "Scabb Island",
   "license": "MIT",
   "description": "Slack for Omarchy, from the bar and from the terminal, on one local daemon: an unread dot, a quick-view panel with quick replies, and a full window.",

@@ -21,6 +21,13 @@ The PKGBUILD SHALL download one release tarball per architecture and verify each
 - **WHEN** the PKGBUILD is inspected
 - **THEN** `sha256sums_x86_64` and `sha256sums_aarch64` hold the real checksums of the release tarballs
 
+### Requirement: Signed releases
+Each release SHALL publish `checksums.txt` with a keyless cosign signature bundle (`checksums.txt.sigstore.json`) made in the release job with the GitLab CI OIDC identity, so no signing key is stored anywhere. The release notes SHALL show the `cosign verify-blob` command with the expected identity and issuer.
+
+#### Scenario: Verifying a release
+- **WHEN** a user downloads `checksums.txt` and its bundle from a release and runs the documented `cosign verify-blob` command
+- **THEN** the signature verifies against the project's release job identity, and every tarball matches its line in `checksums.txt`
+
 ### Requirement: Optional dependencies
 The package SHALL list in `optdepends`, not in `depends`, what improves omaslack but is not required: a Secret Service provider (`gnome-keyring` or `kwallet`) and a terminal with graphics support for inline images.
 
@@ -29,7 +36,7 @@ The package SHALL list in `optdepends`, not in `depends`, what improves omaslack
 - **THEN** the installation succeeds and pacman lists the optional dependencies
 
 ### Requirement: Installed file layout
-The package SHALL install only these files: `/usr/bin/omaslack`, `/usr/lib/systemd/user/omaslack.service`, `/usr/share/applications/omaslack.desktop`, `/usr/share/omaslack/omaslack.toml.tpl`, `/usr/share/omaslack/theme-set.hook`, and the `LICENSE` and `THIRD_PARTY_NOTICES.md` files under `/usr/share/licenses/omaslack-bin/`.
+The package SHALL install only these files: `/usr/bin/omaslack`, `/usr/lib/systemd/user/omaslack.service`, `/usr/share/applications/omaslack.desktop`, `/usr/share/omaslack/omaslack.toml.tpl`, `/usr/share/omaslack/theme-set.hook`, `/usr/share/omaslack/hypr/omaslack.lua` (the window rule `omaslack setup` offers), and the `LICENSE` and `THIRD_PARTY_NOTICES.md` files under `/usr/share/licenses/omaslack-bin/`.
 
 #### Scenario: File list
 - **WHEN** `pacman -Ql omaslack-bin` runs after installation
@@ -45,6 +52,24 @@ The package MUST NOT write to `$HOME`. Per-user setup (copying the theme templat
 #### Scenario: Fresh install
 - **WHEN** `omaslack-bin` is installed and the user has not run `omaslack setup`
 - **THEN** nothing under the user's home directory has changed
+
+### Requirement: Per-user setup
+`omaslack setup` SHALL copy the theme template and the executable theme hook from `/usr/share/omaslack/` to `~/.config/omarchy/themed/` and `~/.config/omarchy/hooks/theme-set.d/`, render the theme once, and enable and start the user service. With `--window-rule` it SHALL also install the Hyprland window rule and say how to load it, without editing the user's Hyprland config. Running it twice SHALL change nothing the second time.
+
+#### Scenario: Second run
+- **WHEN** the user runs `omaslack setup` twice
+- **THEN** the second run reports every item as already in place and changes nothing
+
+### Requirement: Setup keeps the user's changes
+`omaslack setup` SHALL NOT overwrite a file the user changed; it SHALL report that a newer version is available and how to compare. `omaslack setup --remove` SHALL disable the service, remove only the files `setup` installed that the user did not change, and say how to remove credentials and data.
+
+#### Scenario: Edited template
+- **WHEN** `~/.config/omarchy/themed/omaslack.toml.tpl` differs from the packaged one
+- **THEN** `setup` leaves it untouched and reports that a newer version is available
+
+#### Scenario: Removal
+- **WHEN** the user runs `omaslack setup --remove`
+- **THEN** the user service is disabled and the unchanged template, hook and window rule are gone, and the output says how to remove credentials (`omaslack auth remove`) and data
 
 ### Requirement: Package validation
 Every PKGBUILD SHALL pass `namcap` without errors, ship a `.SRCINFO` generated from it with `makepkg --printsrcinfo`, and build and install in a clean Arch environment. The repository SHALL provide `make aur-check` to run these checks locally in an `archlinux:base-devel` container, outside CI.
