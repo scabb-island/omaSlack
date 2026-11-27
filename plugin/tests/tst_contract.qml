@@ -44,4 +44,12 @@ TestCase {
     compare(fake.calls[0].method, "messages.send")
     compare(fake.calls[0].params.text, "hi")
   }
+
+  // files.fetch names the file "fileId" (internal/api/files.go).
+  function test_fetch_file_names_the_file_id() {
+    fake.reset()
+    fake.fetchFile("T1", "F1", null)
+    compare(fake.calls[0].method, "files.fetch")
+    compare(fake.calls[0].params.fileId, "F1")
+  }
 }

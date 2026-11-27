@@ -74,7 +74,7 @@ Item {
   function setDraft(team, conv, threadTS, text, callback) { call("drafts.set", { team: team, conv: conv, threadTS: threadTS || undefined, text: text }, callback) }
   function snoozeDND(team, minutes, callback) { call("dnd.snooze", { team: team, minutes: minutes }, callback) }
   function endDND(team, callback) { call("dnd.end", { team: team }, callback) }
-  function fetchFile(team, id, callback) { call("files.fetch", { team: team, id: id }, callback) }
+  function fetchFile(team, id, callback) { call("files.fetch", { team: team, fileId: id }, callback) }
 
   function openWindow(team, conv) { record("openWindow", { team: team, conv: conv }) }
   function openTui(team, conv) { record("openTui", { team: team, conv: conv }) }
