@@ -1,7 +1,7 @@
 import QtQuick
 import QtTest
 import "../lib/nav.js" as N
-import "../lib/emoji.js" as E
+import "../lib/actions.js" as A
 
 // The window's navigation logic (lib/nav.js): the conversation finder,
 // the compose autocomplete, search results, workspace keys and help.
@@ -223,15 +223,16 @@ TestCase {
   function test_emoji_suggestions_mix_standard_and_custom() {
     var s = N.emojiSuggestions(["tada_parrot", "partyparrot"], "tad")
     compare(s.map(function(x) { return x.text }), [":tada:", ":tada_parrot:"])
-    compare(s[0].label, E.GLYPHS["tada"] + " :tada:")
+    compare(s[0].label, A.emojiGlyph("tada") + " :tada:")
     compare(s[1].label, ":tada_parrot:")
     compare(s[0].wire, "")
   }
 
-  function test_emoji_table_skips_skin_tones() {
-    verify(E.NAMES.indexOf("+1") >= 0)
-    verify(E.NAMES.indexOf("skin-tone-2") < 0)
-    compare(E.NAMES.slice().sort(), E.NAMES)
+  function test_emoji_names_are_the_shared_standard_ones_sorted() {
+    compare(N.STANDARD_NAMES.length, A.STANDARD.length)
+    compare(N.STANDARD_NAMES.slice().sort(), N.STANDARD_NAMES)
+    // A custom emoji named like a standard one is listed once.
+    compare(N.emojiSuggestions(["tada"], "tada").length, 1)
   }
 
   // ---- autocomplete: accepting and wire text -------------------------------------
@@ -337,7 +338,7 @@ TestCase {
       section.keys.forEach(function(k) { verify(k[1] !== "", k[0]); keys.push(k[0]) })
     })
     ;["j/↓", "k/↑", "g", "G", "h/←", "l/→", "Tab", "Shift+Tab", "Enter", "1–9", "Ctrl+K", "i", "R",
-      "e", "D", "r", "o", "/", "?", "Esc", "Shift+Enter", "@ # :", "Tab/Enter"].forEach(function(k) {
+      "e", "D/x/Del", "r", "o", ":attach", "/", "?", "Esc", "Shift+Enter", "@ # :", "Tab/Enter"].forEach(function(k) {
       verify(keys.indexOf(k) >= 0, k)
     })
   }

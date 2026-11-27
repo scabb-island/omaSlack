@@ -169,7 +169,7 @@ Item {
     })
   }
   // files.fetch: the local path of a file's bytes, for Image and Qt.openUrlExternally.
-  function fetchFile(team, id, callback) { call("files.fetch", { team: team, id: id }, callback) }
+  function fetchFile(team, id, callback) { call("files.fetch", { team: team, fileId: id }, callback) }
 
   // ---- opening the clients --------------------------------------------------
 

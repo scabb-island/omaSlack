@@ -1,5 +1,5 @@
 .pragma library
-.import "emoji.js" as E
+.import "actions.js" as A
 
 // The full window's navigation logic (task 4.5): the conversation finder
 // and the compose autocomplete, pure so qmltestrunner covers it (tests/tst_nav.qml). It follows the
@@ -290,12 +290,16 @@ function channelSuggestions(convs, q) {
 // emojiSuggestions offers the standard emoji (with their glyph) and the
 // workspace's custom ones (custom: their names, from emoji.list) matching
 // q. The text is the shortcode, already what Slack wants.
+// The standard ones are lib/actions.js STANDARD (shared with the reaction
+// picker), sorted by name as the TUI's StandardEmojiNames.
+var STANDARD_NAMES = A.STANDARD.map(function(e) { return e[0] }).sort()
+
 function emojiSuggestions(custom, q) {
-  var names = E.NAMES.concat(custom || [])
-  var standard = E.NAMES.length
+  var names = STANDARD_NAMES.concat((custom || []).filter(function(n) { return STANDARD_NAMES.indexOf(n) < 0 }))
+  var standard = STANDARD_NAMES.length
   return capped(rank(names, q)).map(function(i) {
     var code = ":" + names[i] + ":"
-    return { label: i < standard ? E.GLYPHS[names[i]] + " " + code : code, text: code, wire: "" }
+    return { label: i < standard ? A.emojiGlyph(names[i]) + " " + code : code, text: code, wire: "" }
   })
 }
 
@@ -451,13 +455,14 @@ var HELP = [
     ["i", "write a message"],
     ["R", "reply in the message's thread"],
     ["e", "edit your message"],
-    ["D", "delete your message"],
+    ["D/x/Del", "delete your message (y confirms)"],
     ["r", "react to the message"],
-    ["o", "open the message's file"]
+    ["o", "open the message's file (1–9 picks one of several)"]
   ] },
   { title: "Compose", keys: [
     ["Enter", "send"],
     ["Shift+Enter", "new line"],
+    [":attach", ":attach <path> [caption] uploads a file here"],
     ["Esc", "leave the composer"]
   ] },
   { title: "Autocomplete", keys: [
