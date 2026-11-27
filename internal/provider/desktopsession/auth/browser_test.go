@@ -88,18 +88,20 @@ func TestBrowserWorkspacesWithoutTheKey(t *testing.T) {
 	}
 }
 
+// profileWithStorage makes a browser profile directory with a Local
+// Storage leveldb, so FindBrowsers treats it as a profile.
+func profileWithStorage(t *testing.T, dir string) {
+	t.Helper()
+	writeLevelDB(t, filepath.Join(dir, "Local Storage", "leveldb"), append([]byte{0x01}, `{"teams":{}}`...))
+}
+
 func TestFindBrowsersDetectsInstalledProfiles(t *testing.T) {
 	cfg := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", cfg)
 	t.Setenv("HOME", t.TempDir()) // no ~/.config browsers
-	for _, p := range []string{
-		filepath.Join("BraveSoftware", "Brave-Browser", "Default"),
-		filepath.Join("chromium", "Default"),
-	} {
-		if err := os.MkdirAll(filepath.Join(cfg, p), 0o700); err != nil {
-			t.Fatal(err)
-		}
-	}
+	t.Setenv("TMPDIR", t.TempDir())
+	profileWithStorage(t, filepath.Join(cfg, "BraveSoftware", "Brave-Browser", "Default"))
+	profileWithStorage(t, filepath.Join(cfg, "chromium", "Default"))
 	var names []string
 	for _, b := range FindBrowsers() {
 		names = append(names, b.Name)
@@ -109,13 +111,39 @@ func TestFindBrowsersDetectsInstalledProfiles(t *testing.T) {
 	}
 }
 
+func TestFindBrowsersReadsEveryProfile(t *testing.T) {
+	cfg := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", cfg)
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("TMPDIR", t.TempDir())
+	root := filepath.Join(cfg, "BraveSoftware", "Brave-Browser")
+	profileWithStorage(t, filepath.Join(root, "Default"))
+	profileWithStorage(t, filepath.Join(root, "Profile 1"))
+	profileWithStorage(t, filepath.Join(root, "Profile 2"))
+	// Skipped: System Profile, and a profile with no Local Storage.
+	profileWithStorage(t, filepath.Join(root, "System Profile"))
+	if err := os.MkdirAll(filepath.Join(root, "Profile 3"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, filepath.Join(root, "Local State"),
+		`{"profile":{"info_cache":{"Default":{"name":"Personal"},"Profile 1":{"name":"Primary"}}}}`)
+	var names []string
+	for _, b := range FindBrowsers() {
+		names = append(names, b.Name)
+	}
+	// Default first and plain; non-Default named by its display name, or
+	// the directory when Local State has none.
+	if !reflect.DeepEqual(names, []string{"Brave", "Brave (Primary)", "Brave (Profile 2)"}) {
+		t.Errorf("FindBrowsers names = %v", names)
+	}
+}
+
 func TestFindBrowsersDeduplicatesAcrossConfigHomes(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config")) // same as ~/.config
-	if err := os.MkdirAll(filepath.Join(home, ".config", "chromium", "Default"), 0o700); err != nil {
-		t.Fatal(err)
-	}
+	t.Setenv("TMPDIR", t.TempDir())
+	profileWithStorage(t, filepath.Join(home, ".config", "chromium", "Default"))
 	if got := FindBrowsers(); len(got) != 1 || got[0].Name != "Chromium" {
 		t.Errorf("FindBrowsers = %+v, want one Chromium", got)
 	}

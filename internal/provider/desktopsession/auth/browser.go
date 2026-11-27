@@ -3,10 +3,12 @@ package auth
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"gitlab.com/scabb-island/omaslack/internal/keyring"
 )
@@ -42,29 +44,104 @@ type Browser struct {
 	app keyringApp
 }
 
-// FindBrowsers returns a Browser for every Chromium browser whose default
-// profile exists, in catalog order. It does not read the profiles, so a
-// browser that is installed but signed out of Slack is still returned;
-// Workspaces reports that with ErrNotSignedIn.
+// FindBrowsers returns a Browser for every profile of every Chromium
+// browser that is installed, in catalog order, Default profile first. It
+// does not read the profiles' sessions, so a profile that is signed out of
+// Slack is still returned; Workspaces reports that with ErrNotSignedIn. A
+// non-Default profile is named after the browser and its display name, for
+// example "Brave (Primary)".
 func FindBrowsers() []Browser {
 	var found []Browser
+	seen := map[string]bool{}
 	for _, base := range configHomes() {
 		for _, b := range chromiumBrowsers {
-			profile := filepath.Join(base, b.subdir, "Default")
-			if info, err := os.Stat(profile); err != nil || !info.IsDir() {
-				continue
+			root := filepath.Join(base, b.subdir)
+			names := profileNames(root)
+			for _, dir := range profileDirs(root) {
+				key := b.name + "\x00" + dir
+				if seen[key] {
+					continue
+				}
+				seen[key] = true
+				name := b.name
+				if dir != "Default" {
+					name += " (" + cmp.Or(names[dir], dir) + ")"
+				}
+				found = append(found, Browser{Name: name, Dir: filepath.Join(root, dir), app: b.app})
 			}
-			if hasBrowser(found, b.name) {
-				continue
-			}
-			found = append(found, Browser{Name: b.name, Dir: profile, app: b.app})
 		}
 	}
 	return found
 }
 
-func hasBrowser(found []Browser, name string) bool {
-	return slices.ContainsFunc(found, func(b Browser) bool { return b.Name == name })
+// profileDirs lists the profile directories of a browser root that hold a
+// Local Storage (Default first, then "Profile N" in order), skipping the
+// System and Guest profiles, which never hold a user's Slack session.
+func profileDirs(root string) []string {
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		return nil
+	}
+	var dirs []string
+	for _, e := range entries {
+		if isProfileDir(root, e) {
+			dirs = append(dirs, e.Name())
+		}
+	}
+	slices.SortFunc(dirs, defaultFirst)
+	return dirs
+}
+
+// isProfileDir reports a browser profile directory that holds a Slack-able
+// Local Storage: Default or "Profile N", never the System or Guest profile.
+func isProfileDir(root string, e os.DirEntry) bool {
+	name := e.Name()
+	if !e.IsDir() || name == "System Profile" || name == "Guest Profile" {
+		return false
+	}
+	if name != "Default" && !strings.HasPrefix(name, "Profile ") {
+		return false
+	}
+	_, err := os.Stat(filepath.Join(root, name, "Local Storage", "leveldb"))
+	return err == nil
+}
+
+// defaultFirst orders the Default profile before the others, then by name.
+func defaultFirst(a, b string) int {
+	if (a == "Default") != (b == "Default") {
+		if a == "Default" {
+			return -1
+		}
+		return 1
+	}
+	return cmp.Compare(a, b)
+}
+
+// profileNames maps each profile directory to its display name, from the
+// browser's Local State. An unreadable Local State leaves the map empty,
+// and callers fall back to the directory name.
+func profileNames(root string) map[string]string {
+	data, err := os.ReadFile(filepath.Join(root, "Local State")) //nolint:gosec // the browser's own file under HOME
+	if err != nil {
+		return nil
+	}
+	var state struct {
+		Profile struct {
+			InfoCache map[string]struct {
+				Name string `json:"name"`
+			} `json:"info_cache"`
+		} `json:"profile"`
+	}
+	if json.Unmarshal(data, &state) != nil {
+		return nil
+	}
+	names := make(map[string]string, len(state.Profile.InfoCache))
+	for dir, info := range state.Profile.InfoCache {
+		if info.Name != "" {
+			names[dir] = info.Name
+		}
+	}
+	return names
 }
 
 // configHomes is where browser profiles live: $XDG_CONFIG_HOME first when
