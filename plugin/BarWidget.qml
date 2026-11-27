@@ -22,12 +22,18 @@ Panel {
     ? bar.shell.serviceFor(moduleName)
     : null
 
-  // Widget settings (manifest barWidget.schema), with the manifest defaults.
+  // Widget settings (manifest barWidget.schema). The shell keeps
+  // barWidget.defaults only as registry metadata: `settings` holds just what
+  // shell.json sets (omarchy-bar set ar.scabb.omaslack <key> <value>), so
+  // these fallbacks must stay equal to the manifest defaults.
   readonly property bool showChannelBadge: setting("showChannelBadge", true)
   readonly property string unreadScope: setting("unreadScope", "dms-and-mentions")
   readonly property string openWith: setting("openWith", "window")
   readonly property bool hideWhenEmpty: setting("hideWhenEmpty", false)
 
+  // hideWhenEmpty: the slot leaves the bar too, as first-party widgets do
+  // (SystemUpdate), so the bar keeps no gap for it.
+  visible: !icon.hidden
   implicitWidth: icon.implicitWidth
   implicitHeight: icon.implicitHeight
 
