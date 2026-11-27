@@ -185,18 +185,95 @@ func (a adder) desktopSession(browser bool) ([]newWorkspace, error) {
 	if browser {
 		return a.browserSession()
 	}
-	listed, err := a.env.DesktopWorkspaces(a.ctx)
-	if err != nil {
-		fmt.Fprintf(a.env.Stdout, "Cannot use the Slack desktop app: %v\n", err)
-		return a.browserSession()
-	}
-	return a.pickDesktop(listed)
+	return a.pickSource(a.sessionSources())
 }
 
-// pickDesktop lists the desktop app's workspaces and adds the ones the
-// user picks. One that needs sign-in is added from a browser session.
-func (a adder) pickDesktop(listed []auth.Workspace) ([]newWorkspace, error) {
-	fmt.Fprintln(a.env.Stdout, "Workspaces in the Slack desktop app:")
+// sessionSource is one place a desktop-session comes from: the Slack
+// desktop app or a browser, with the workspaces it is signed in to.
+type sessionSource struct {
+	name   string
+	listed []auth.Workspace
+}
+
+// sessionSources gathers the desktop-session sources that are signed in:
+// the Slack desktop app first, then each detected browser. A source that
+// cannot be read is reported and skipped; a browser that is signed out of
+// Slack is simply not a source.
+func (a adder) sessionSources() []sessionSource {
+	var sources []sessionSource
+	if a.env.DesktopWorkspaces != nil {
+		if listed, err := a.env.DesktopWorkspaces(a.ctx); err != nil {
+			fmt.Fprintf(a.env.Stdout, "Cannot use the Slack desktop app: %v\n", err)
+		} else {
+			sources = append(sources, sessionSource{"the Slack desktop app", listed})
+		}
+	}
+	if a.env.Browsers != nil {
+		for _, b := range a.env.Browsers() {
+			switch listed, err := b.Workspaces(a.ctx); {
+			case errors.Is(err, auth.ErrNotSignedIn):
+				// installed, but signed out of Slack: not a source
+			case err != nil:
+				fmt.Fprintf(a.env.Stdout, "Cannot use %s: %v\n", b.Name, err)
+			default:
+				sources = append(sources, sessionSource{b.Name, listed})
+			}
+		}
+	}
+	return sources
+}
+
+// pickSource adds workspaces from one session source. With several sources
+// the user chooses one; with none detected, the user pastes a browser
+// session.
+func (a adder) pickSource(sources []sessionSource) ([]newWorkspace, error) {
+	switch len(sources) {
+	case 0:
+		return a.browserSession()
+	case 1:
+		return a.pickWorkspaces(sources[0])
+	default:
+		return a.chooseSource(sources)
+	}
+}
+
+// chooseSource asks which detected source to read, or lets the user paste
+// a browser session instead.
+func (a adder) chooseSource(sources []sessionSource) ([]newWorkspace, error) {
+	fmt.Fprintln(a.env.Stdout, "A Slack session was found in more than one place. Choose a source:")
+	for i, s := range sources {
+		fmt.Fprintf(a.env.Stdout, "  %d. %s (%s)\n", i+1, s.name, countWorkspaces(s.listed))
+	}
+	answer, err := a.con.Ask(`Read which? A number, or "b" to paste a browser session instead [1]: `)
+	if err != nil {
+		return nil, err
+	}
+	if answer == "b" {
+		return a.browserSession()
+	}
+	if answer == "" {
+		answer = "1"
+	}
+	i, err := strconv.Atoi(answer)
+	if err != nil || i < 1 || i > len(sources) {
+		return nil, fmt.Errorf("no source %q", answer)
+	}
+	return a.pickWorkspaces(sources[i-1])
+}
+
+// countWorkspaces is a short count for the source menu, e.g. "1 workspace".
+func countWorkspaces(listed []auth.Workspace) string {
+	if len(listed) == 1 {
+		return "1 workspace"
+	}
+	return fmt.Sprintf("%d workspaces", len(listed))
+}
+
+// pickWorkspaces lists a source's workspaces and adds the ones the user
+// picks. One that needs sign-in is added from a browser session.
+func (a adder) pickWorkspaces(src sessionSource) ([]newWorkspace, error) {
+	listed := src.listed
+	fmt.Fprintf(a.env.Stdout, "Workspaces in %s:\n", src.name)
 	for i, w := range listed {
 		line := fmt.Sprintf("  %d. %s (%s)", i+1, w.Name, w.Team)
 		if w.NeedsSignIn() {

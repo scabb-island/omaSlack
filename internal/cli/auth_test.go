@@ -44,6 +44,7 @@ type authFixture struct {
 	store      keyring.ClosableStore
 	desktop    []auth.Workspace
 	desktopErr error
+	browsers   []BrowserSession
 	keyringErr error
 	piped      bool // stdin is not a terminal
 	opened     bool
@@ -113,6 +114,7 @@ func (f *authFixture) env(stdin string, out, errOut *bytes.Buffer) Env {
 			return f.store, f.keyringErr
 		},
 		DesktopWorkspaces: func(context.Context) ([]auth.Workspace, error) { return f.desktop, f.desktopErr },
+		Browsers:          func() []BrowserSession { return f.browsers },
 		SlackAPIURL:       srv.URL + "/api/",
 	}
 }
@@ -347,6 +349,87 @@ func TestAuthAddDesktopASignedOutPickWithABadPasteStoresNothing(t *testing.T) {
 		t.Errorf("exit code = %d", code)
 	}
 	wantIn(t, "stderr", errOut, "Browser (T0BRWSR) needs sign-in", "invalid_auth")
+	f.wantStored(nil)
+}
+
+// browserSessionCreds is the Browser (T0BRWSR) session as a browser source
+// hands it over: the full cookie header, which Slack's auth.test accepts.
+var browserSessionCreds = keyring.DesktopSession{
+	Token: browserToken, Cookie: browserCookie, Cookies: "d=" + browserCookie,
+	WorkspaceURL: "https://browser.slack.com/",
+}
+
+// browserSource is a detected browser whose single Slack workspace is
+// Browser (T0BRWSR), or one that reports err (e.g. ErrNotSignedIn).
+func browserSource(t *testing.T, name string, err error) BrowserSession {
+	t.Helper()
+	return BrowserSession{Name: name, Workspaces: func(context.Context) ([]auth.Workspace, error) {
+		if err != nil {
+			return nil, err
+		}
+		return []auth.Workspace{{
+			Team: team(t, "T0BRWSR"), Name: "Browser", URL: "https://browser.slack.com/",
+			Credentials: browserSessionCreds,
+		}}, nil
+	}}
+}
+
+// Spec slack-connection, "Browser session read automatically": a browser is
+// the only source, so it is read without a source menu.
+func TestAuthAddReadsABrowserWhenItIsTheOnlySource(t *testing.T) {
+	f := newAuthFixture(t)
+	f.desktopErr = auth.ErrDesktopNotFound
+	f.browsers = []BrowserSession{browserSource(t, "Brave", nil)}
+	code, out, errOut := f.run("yes\nall\n", "auth", "add", "--provider", "desktop-session")
+	if code != ExitOK {
+		t.Fatalf("exit code = %d, stderr %q", code, errOut)
+	}
+	wantIn(t, "stdout", out, "Workspaces in Brave:", "1. Browser", "T0BRWSR", "Added Browser (T0BRWSR)")
+	f.wantStored(map[string]keyring.Credentials{"T0BRWSR": browserSessionCreds})
+}
+
+// With the desktop app and a browser both signed in, the user chooses.
+func TestAuthAddChoosesBetweenSources(t *testing.T) {
+	f := newAuthFixture(t)
+	f.browsers = []BrowserSession{browserSource(t, "Brave", nil)}
+	code, out, errOut := f.run("yes\n2\nall\n", "auth", "add", "--provider", "desktop-session")
+	if code != ExitOK {
+		t.Fatalf("exit code = %d, stderr %q", code, errOut)
+	}
+	wantIn(t, "stdout", out, "more than one place", "1. the Slack desktop app (3 workspaces)",
+		"2. Brave (1 workspace)", "Workspaces in Brave:", "Added Browser (T0BRWSR)")
+	f.wantStored(map[string]keyring.Credentials{"T0BRWSR": browserSessionCreds})
+}
+
+// A browser that is installed but signed out of Slack is not a source.
+func TestAuthAddSkipsASignedOutBrowser(t *testing.T) {
+	f := newAuthFixture(t)
+	f.browsers = []BrowserSession{browserSource(t, "Brave", auth.ErrNotSignedIn)}
+	code, out, errOut := f.run("yes\n2\n", "auth", "add", "--provider", "desktop-session")
+	if code != ExitOK {
+		t.Fatalf("exit code = %d, stderr %q", code, errOut)
+	}
+	// Only the desktop app is a source, so it is read straight away.
+	wantIn(t, "stdout", out, "Workspaces in the Slack desktop app:", "Added Beta Corp (T0BETA1)")
+	if strings.Contains(out, "more than one place") || strings.Contains(out, "Brave") {
+		t.Errorf("offered a signed-out browser:\n%s", out)
+	}
+}
+
+// Spec slack-connection, "A browser session Slack no longer accepts".
+func TestAuthAddBrowserRejectedBySlackGivesTheBoundHelp(t *testing.T) {
+	f := newAuthFixture(t)
+	f.desktopErr = auth.ErrDesktopNotFound
+	rejected := browserSessionCreds
+	rejected.Token = "xoxc-rejected"
+	f.browsers = []BrowserSession{{Name: "Brave", Workspaces: func(context.Context) ([]auth.Workspace, error) {
+		return []auth.Workspace{{Team: team(t, "T0BRWSR"), Name: "Browser", Credentials: rejected}}, nil
+	}}}
+	code, _, errOut := f.run("yes\nall\n", "auth", "add", "--provider", "desktop-session")
+	if code != ExitError {
+		t.Errorf("exit code = %d, want %d", code, ExitError)
+	}
+	wantIn(t, "stderr", errOut, "invalid_auth", "bind sessions", "--provider internal-app")
 	f.wantStored(nil)
 }
 

@@ -7,9 +7,9 @@
 - [x] 1.4 `auth`: unit tests with a fixture Chromium profile (fake leveldb + Cookies + fake keyring), including the locked-while-open path (temporary copies) and the two `Cookies` locations
 
 ## auth add integration
-- [ ] 2.1 `cli`: `auth add --provider desktop-session` lists session sources — the Slack desktop app and each detected browser — and reads the picked source; the manual cURL paste stays as a fallback
-- [ ] 2.2 `cli`: a browser session rejected by Slack gives the same `invalid_auth`/bound-session help as the desktop-app and pasted paths
-- [ ] 2.3 `cli`: tests for the new source selection and the rejection help
+- [x] 2.1 `cli`: `auth add --provider desktop-session` lists session sources — the Slack desktop app and each detected browser — and reads the picked source; the manual cURL paste stays as a fallback
+- [x] 2.2 `cli`: a browser session rejected by Slack gives the same `invalid_auth`/bound-session help as the desktop-app and pasted paths
+- [x] 2.3 `cli`: tests for the new source selection and the rejection help
 
 ## doctor
 - [ ] 3.1 `doctor`: report the available `desktop-session` sources (desktop app + detected browsers), through injected probes, as OK/WARN
