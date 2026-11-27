@@ -27,7 +27,7 @@ func TestConversationsListsEveryKindWithoutReadState(t *testing.T) {
 		{ID: mustConv(t, "C0001"), Kind: domain.Channel, Name: "general"},
 		{ID: mustConv(t, "C0002"), Kind: domain.PrivateChannel, Name: "secret"},
 		{ID: mustConv(t, "G0001"), Kind: domain.GroupMessage, Name: "mpdm-alice--bob--me-1"},
-		{ID: mustConv(t, "D0001"), Kind: domain.DirectMessage},
+		{ID: mustConv(t, "D0001"), Kind: domain.DirectMessage, User: mustUser(t, "U0002")},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("Conversations() =\n%+v\nwant\n%+v", got, want)
@@ -64,7 +64,7 @@ func TestLastReadReadsTheMarkerFromConversationsInfo(t *testing.T) {
 func TestConversationStateReadsWhatConversationsInfoReports(t *testing.T) {
 	for fixture, want := range map[string]domain.Conversation{
 		// A DM: Slack sends the latest message and the unread count.
-		"conversations.info.im.json": {ID: mustConv(t, "D0001"), Kind: domain.DirectMessage,
+		"conversations.info.im.json": {ID: mustConv(t, "D0001"), Kind: domain.DirectMessage, User: mustUser(t, "U0002"),
 			Latest: mustTS(t, "1700000700.000700"), LastRead: mustTS(t, "1700000500.000500"), Mentions: 2},
 		// A channel: only the marker. The latest stays zero (unknown), and
 		// the unread count is not a mention count.

@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
@@ -59,14 +58,6 @@ type usersResponse struct {
 	} `json:"response_metadata"`
 }
 
-// directory is the workspace's users as last loaded. Its mutex is held
-// during a load, so concurrent searches share one.
-type directory struct {
-	mu     sync.Mutex
-	users  []domain.User
-	loaded time.Time // zero until the first successful load
-}
-
 // SearchUsers returns up to limit users (every match when limit < 1)
 // whose handle, real name or display name contains query, ignoring case
 // and a leading "@". Users with a field that starts with query come
@@ -74,35 +65,24 @@ type directory struct {
 // out; bots are not, since people message them too. A blank query
 // matches nobody.
 func (a *WebAPI) SearchUsers(ctx context.Context, query string, limit int) ([]domain.User, error) {
-	users, err := a.directoryUsers(ctx)
+	idx, err := a.directory(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return matchUsers(users, query, limit), nil
+	return matchUsers(idx.active, query, limit), nil
 }
 
-// directoryUsers returns the directory, loading it first when it is
-// missing or stale. A failed load is not kept.
-func (a *WebAPI) directoryUsers(ctx context.Context) ([]domain.User, error) {
-	d := &a.dir
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	if !d.loaded.IsZero() && a.now().Sub(d.loaded) < directoryTTL {
-		return d.users, nil
-	}
-	users, err := a.listUsers(ctx)
-	if err != nil {
-		return nil, err
-	}
-	d.users, d.loaded = users, a.now()
-	return users, nil
+// directory returns the directory, loading it first when it is missing
+// or stale.
+func (a *WebAPI) directory(ctx context.Context) (*userIndex, error) {
+	return a.dir.get(a.now(), directoryTTL, func() (*userIndex, error) { return a.listUsers(ctx) })
 }
 
-// listUsers calls users.list until the last page and returns the users
-// that are not deleted. Users that do not parse are logged and dropped.
-func (a *WebAPI) listUsers(ctx context.Context) ([]domain.User, error) {
+// listUsers calls users.list until the last page and indexes every user
+// in it. Users that do not parse are logged and dropped.
+func (a *WebAPI) listUsers(ctx context.Context) (*userIndex, error) {
 	form := url.Values{"limit": {strconv.Itoa(usersPageSize)}}
-	var users []domain.User
+	idx := newUserIndex()
 	for {
 		var resp usersResponse
 		if err := a.Call(ctx, "users.list", form, &resp); err != nil {
@@ -114,12 +94,10 @@ func (a *WebAPI) listUsers(ctx context.Context) ([]domain.User, error) {
 				a.log.Warn("dropped a user", "err", err)
 				continue
 			}
-			if !w.Deleted {
-				users = append(users, u)
-			}
+			idx.list(u, w.Deleted)
 		}
 		if resp.Metadata.NextCursor == "" {
-			return users, nil
+			return idx, nil
 		}
 		form.Set("cursor", resp.Metadata.NextCursor)
 	}

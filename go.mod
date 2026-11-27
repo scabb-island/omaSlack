@@ -11,12 +11,14 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/slack-go/slack v0.23.0
 	github.com/syndtr/goleveldb v1.0.0
-	golang.org/x/sys v0.47.0
+	golang.org/x/image v0.48.0
+	golang.org/x/sys v0.50.0
 	golang.org/x/term v0.45.0
 	modernc.org/sqlite v1.58.0
 )
 
 require (
+	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
 	github.com/charmbracelet/ultraviolet v0.0.0-20261008173134-6b8d4baf91b4 // indirect
 	github.com/charmbracelet/x/term v0.2.2 // indirect

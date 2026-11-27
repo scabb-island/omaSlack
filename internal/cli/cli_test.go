@@ -51,11 +51,13 @@ func TestUsageMarksOnlyPlaceholders(t *testing.T) {
 			lines[f[0]] = l
 		}
 	}
-	if !strings.HasSuffix(lines["tui"], "(not implemented yet, M3)") {
-		t.Errorf("tui line does not say it is pending: %q", lines["tui"])
+	if !strings.HasSuffix(lines["doctor"], "(not implemented yet, M5)") {
+		t.Errorf("doctor line does not say it is pending: %q", lines["doctor"])
 	}
-	if strings.Contains(lines["version"], "not implemented") {
-		t.Errorf("version line claims it is pending: %q", lines["version"])
+	for _, name := range []string{"version", "tui"} {
+		if strings.Contains(lines[name], "not implemented") {
+			t.Errorf("%s line claims it is pending: %q", name, lines[name])
+		}
 	}
 }
 
@@ -86,7 +88,7 @@ func TestUnknownCommand(t *testing.T) {
 }
 
 func TestPlaceholdersSayWhichMilestone(t *testing.T) {
-	cases := map[string]string{"tui": "M3", "doctor": "M5"}
+	cases := map[string]string{"doctor": "M5"}
 	for name, milestone := range cases {
 		code, _, errOut := run(name)
 		if code != ExitNotImplemented {

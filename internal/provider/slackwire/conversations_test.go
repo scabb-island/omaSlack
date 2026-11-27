@@ -35,8 +35,11 @@ func TestConversationsParseWithTheirKind(t *testing.T) {
 		// An mpim is private too: is_mpim decides first.
 		"group DM": {`{"id":"G0002","name":"mpdm-a--b--c-1","is_group":true,"is_private":true,"is_mpim":true}`,
 			domain.Conversation{ID: conv("G0002"), Kind: domain.GroupMessage, Name: "mpdm-a--b--c-1"}},
+		// A DM names the other person.
 		"DM": {`{"id":"D0001","is_im":true,"user":"U0002"}`,
-			domain.Conversation{ID: conv("D0001"), Kind: domain.DirectMessage}},
+			domain.Conversation{ID: conv("D0001"), Kind: domain.DirectMessage, User: must(t, domain.ParseUserID, "U0002")}},
+		"DM with Slackbot": {`{"id":"D0002","is_im":true,"user":"USLACKBOT"}`,
+			domain.Conversation{ID: conv("D0002"), Kind: domain.DirectMessage, User: must(t, domain.ParseUserID, "USLACKBOT")}},
 		"with a read marker": {`{"id":"C0001","name":"general","is_channel":true,"last_read":"1700000100.000100"}`,
 			domain.Conversation{ID: conv("C0001"), Kind: domain.Channel, Name: "general", LastRead: must(t, domain.ParseTS, "1700000100.000100")}},
 		// Slack's "never read" marker is the zero timestamp.
@@ -77,6 +80,7 @@ func TestConversationsWithABadFieldAreRejected(t *testing.T) {
 		err  error
 	}{
 		"bad id":        {`{"id":"U0001","is_im":true}`, domain.ErrInvalidID},
+		"bad DM user":   {`{"id":"D0001","is_im":true,"user":"nobody"}`, domain.ErrInvalidID},
 		"bad last_read": {`{"id":"C0001","last_read":"yesterday"}`, domain.ErrInvalidTS},
 		"bad latest":    {`{"id":"C0001","latest":{"ts":"soon"}}`, domain.ErrInvalidTS},
 		"odd latest":    {`{"id":"C0001","latest":42}`, errOddLatest},
@@ -104,7 +108,7 @@ func TestUserConversationsFollowsEveryPageAndDropsWhatDoesNotParse(t *testing.T)
 
 	want := []domain.Conversation{
 		{ID: must(t, domain.ParseConversationID, "C0001"), Kind: domain.Channel, Name: "general"},
-		{ID: must(t, domain.ParseConversationID, "D0001"), Kind: domain.DirectMessage},
+		{ID: must(t, domain.ParseConversationID, "D0001"), Kind: domain.DirectMessage, User: must(t, domain.ParseUserID, "U0002")},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("UserConversations() =\n%+v\nwant\n%+v", got, want)

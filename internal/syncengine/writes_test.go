@@ -38,6 +38,9 @@ var (
 	_ provider.UserSearcher    = (*writes)(nil)
 	_ provider.PresenceSetter  = (*writes)(nil)
 	_ provider.DNDController   = (*writes)(nil)
+	_ provider.UserDirectory   = (*writes)(nil)
+	_ provider.EmojiLister     = (*writes)(nil)
+	_ provider.TypingSender    = (*writes)(nil)
 )
 
 // newWritesRig is a rig whose provider can do every write and declares
@@ -123,3 +126,15 @@ func (w *writes) SnoozeDND(_ context.Context, minutes int) error {
 }
 
 func (w *writes) EndDND(context.Context) error { return w.record("dnd.endSnooze") }
+
+func (w *writes) Users(_ context.Context, ids []domain.UserID) ([]domain.User, error) {
+	return w.users, w.record("users.info", ids)
+}
+
+func (w *writes) Emoji(context.Context) (map[string]string, error) {
+	return map[string]string{"shipit": "alias:squirrel"}, w.record("emoji.list")
+}
+
+func (w *writes) SendTyping(_ context.Context, conv domain.ConversationID) error {
+	return w.record("typing", conv)
+}

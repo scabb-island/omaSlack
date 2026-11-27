@@ -66,7 +66,7 @@ type Workspace struct {
 	State        string   `json:"state"`
 }
 
-// User is one person, as users.search returns them.
+// User is one person, as users.search and users.info return them.
 type User struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
