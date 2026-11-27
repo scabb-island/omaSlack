@@ -82,6 +82,8 @@ type Model struct {
 	without    map[string]bool       // optional methods the daemon cannot do
 	lastTyping time.Time
 	actions    []action
+
+	cx composeState // autocomplete, mention tokens, edit and delete (complete.go, edit.go)
 }
 
 // action is what a NORMAL mode key does.

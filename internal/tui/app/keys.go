@@ -14,6 +14,9 @@ type Keys struct {
 	Open, Workspace          key.Binding // NORMAL: open a conversation or thread; 1–9
 	Sidebar, Narrower, Wider key.Binding // NORMAL: show, hide and resize the sidebar
 	Send, Newline            key.Binding // INSERT
+
+	Edit, Delete, Reply                 key.Binding // NORMAL: on the selected message
+	Suggest, Accept, NextItem, PrevItem key.Binding // INSERT: the autocomplete popup
 }
 
 // DefaultKeys is the key map omaslack ships with.
@@ -43,6 +46,14 @@ func DefaultKeys() Keys {
 		Quit:      b([]string{"q", "ctrl+c"}, "q", "quit"),
 		Send:      b([]string{"enter"}, "Enter", "send"),
 		Newline:   b([]string{"alt+enter", "ctrl+j"}, "A-Enter/C-j", "new line"),
+
+		Edit:     b([]string{"e"}, "e", "edit your message"),
+		Delete:   b([]string{"D"}, "D", "delete your message (asks y/n)"),
+		Reply:    b([]string{"R"}, "R", "reply in the message's thread"),
+		Suggest:  b([]string{"@", "#", ":"}, "@ # :", "suggest people, channels, emoji"),
+		Accept:   b([]string{"tab", "enter"}, "Tab/Enter", "pick the suggestion (Esc closes)"),
+		NextItem: b([]string{"down", "ctrl+n"}, "↓/C-n", "next suggestion"),
+		PrevItem: b([]string{"up", "ctrl+p"}, "↑/C-p", "previous suggestion"),
 	}
 }
 
@@ -60,6 +71,8 @@ func (k Keys) groups() []helpGroup {
 		{"Conversations", []key.Binding{k.Open, k.Workspace, k.Finder, k.Sidebar, k.Narrower, k.Wider}},
 		{"Modes", []key.Binding{k.Insert, k.Command, k.Back, k.Help, k.Quit}},
 		{"Compose (INSERT)", []key.Binding{k.Send, k.Newline, k.Back}},
+		{"Messages (NORMAL)", []key.Binding{k.Edit, k.Delete, k.Reply}},
+		{"Autocomplete (INSERT)", []key.Binding{k.Suggest, k.Accept, k.NextItem, k.PrevItem}},
 	}
 }
 

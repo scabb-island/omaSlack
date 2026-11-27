@@ -82,12 +82,12 @@ func then(first, next tea.Cmd) tea.Cmd {
 // optional are the methods newer daemons answer (task 3.8): an older one
 // says -32601, and a provider without the capability -32002. Either way
 // the TUI does without, silently.
-var optional = map[string]bool{"users.info": true, "emoji.list": true, "typing.send": true}
+var optional = map[string]bool{"users.info": true, "emoji.list": true, "typing.send": true, "users.search": true}
 
 // quiet are the methods whose failures the user need not see: typing.send
 // fails while the daemon's socket to Slack reconnects, and a name that
 // does not arrive is asked again later.
-var quiet = map[string]bool{"typing.send": true, "users.info": true}
+var quiet = map[string]bool{"typing.send": true, "users.info": true, "users.search": true}
 
 // Asking users.info: at most usersPerCall IDs per call (the daemon's
 // limit), and an ID it did not answer is asked again after usersRetry
