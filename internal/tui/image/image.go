@@ -15,11 +15,6 @@ const (
 	Kitty
 )
 
-// Detect picks the best protocol from the environment (TERM, TERM_PROGRAM,
-// KITTY_WINDOW_ID, …), never by querying the terminal, so it is cheap and
-// testable (task 3.5).
-func Detect(getenv func(string) string) Protocol { return HalfBlock }
-
 // Render returns the escape sequence or half-block text that shows the
 // image at path within cols×rows cells (task 3.5).
 func Render(path string, p Protocol, cols, rows int) (string, error) {
