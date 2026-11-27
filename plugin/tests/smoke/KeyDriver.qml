@@ -25,19 +25,23 @@ Item {
     return item.Window.active
   }
 
+  // A frame and then some: a person's keys are never closer than that.
+  readonly property int frame: 20
+
   // press clicks key (a Qt.Key_*) with modifiers; type clicks each
-  // character of text. Both let queued work (a focus handed back with
-  // Qt.callLater) run before and after, as a person's typing would.
+  // character of text. Both let a frame pass before and after, so queued
+  // work (a focus handed back with Qt.callLater) and layouts (a pane that
+  // just appeared) are done, as they would be for a person typing.
   function press(key, modifiers) {
-    wait(1)
+    wait(frame)
     var ok = events.keyClick(key, modifiers || Qt.NoModifier, -1)
-    wait(1)
+    wait(frame)
     return ok
   }
 
   function type(text) {
-    wait(1)
+    wait(frame)
     for (var i = 0; i < text.length; i++) events.keyClickChar(text[i], Qt.NoModifier, -1)
-    wait(1)
+    wait(frame)
   }
 }
