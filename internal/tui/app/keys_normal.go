@@ -233,25 +233,29 @@ func (m *Model) commandKey(k tea.KeyPressMsg) tea.Cmd {
 // runCommand runs a COMMAND mode line (without the colon).
 func (m *Model) runCommand(line string) tea.Cmd {
 	name, arg, _ := strings.Cut(strings.TrimSpace(line), " ")
-	switch name {
-	case "":
+	if name == "" {
 		return nil
-	case "q", "quit":
-		return m.quit()
-	case "help":
-		m.help = true
-		return nil
-	case "open":
-		return m.openByName(strings.TrimSpace(arg))
-	case "attach":
-		return m.attach(arg)
-	case "search":
-		return m.search(strings.TrimSpace(arg))
-	case "react":
-		return m.react(strings.TrimSpace(arg))
+	}
+	if run, ok := commands[name]; ok {
+		return run(m, arg)
 	}
 	m.setError("Not a command: " + name)
 	return nil
+}
+
+// commands are the COMMAND mode commands by name; each gets the rest of
+// the line, untrimmed (:attach keeps its spaces).
+var commands = map[string]func(m *Model, arg string) tea.Cmd{
+	"q":      func(m *Model, _ string) tea.Cmd { return m.quit() },
+	"quit":   func(m *Model, _ string) tea.Cmd { return m.quit() },
+	"help":   func(m *Model, _ string) tea.Cmd { m.help = true; return nil },
+	"open":   func(m *Model, arg string) tea.Cmd { return m.openByName(strings.TrimSpace(arg)) },
+	"attach": (*Model).attach,
+	"search": func(m *Model, arg string) tea.Cmd { return m.search(strings.TrimSpace(arg)) },
+	"react":  func(m *Model, arg string) tea.Cmd { return m.react(strings.TrimSpace(arg)) },
+	"away":   func(m *Model, _ string) tea.Cmd { return m.setPresence(true) },
+	"back":   func(m *Model, _ string) tea.Cmd { return m.setPresence(false) },
+	"dnd":    (*Model).dnd,
 }
 
 // openByName opens the conversation whose title matches name, with or

@@ -1,40 +1,40 @@
-
-
 ╭─ Help ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│Move (NORMAL)                                           Files                                                         │
-│  j/↓         move down (newer)                           o           open the message's file (xdg-open)              │
-│  k/↑         move up (older; loads history at the top)   I           show or hide inline images                      │
-│  g           go to the top                               C-o         attach a file (:attach)                         │
-│  G           go to the newest                                                                                        │
-│  h/←         pane to the left                          Find, search, react                                           │
-│  l/→         pane to the right                           /           search messages in this workspace               │
-│  Tab         next pane                                   r           react to the selected message                   │
-│  S-Tab       previous pane                               ↓/C-n       next (j too in search results)                  │
-│                                                          ↑/C-p       previous (k too in search results)              │
-│Conversations                                             Enter       pick                                            │
+│Move (NORMAL)                                           Find, search, react                                           │
+│  j/↓         move down (newer)                           /           search messages in this workspace               │
+│  k/↑         move up (older; loads history at the top)   r           react to the selected message                   │
+│  g           go to the top                               ↓/C-n       next (j too in search results)                  │
+│  G           go to the newest                            ↑/C-p       previous (k too in search results)              │
+│  h/←         pane to the left                            Enter       pick                                            │
+│  l/→         pane to the right                                                                                       │
+│  Tab         next pane                                 Messages (NORMAL)                                             │
+│  S-Tab       previous pane                               e           edit your message                               │
+│                                                          D           delete your message (asks y/n)                  │
+│Conversations                                             R           reply in the message's thread                   │
 │  Enter       open conversation / thread of message                                                                   │
-│  1–9         switch workspace                          Messages (NORMAL)                                             │
-│  C-k/C-t     find a conversation in any workspace        e           edit your message                               │
-│  C-b         show or hide the sidebar                    D           delete your message (asks y/n)                  │
-│  <           narrower sidebar                            R           reply in the message's thread                   │
-│  >           wider sidebar                                                                                           │
-│                                                        Autocomplete (INSERT)                                         │
-│Modes                                                     @ # :       suggest people, channels, emoji                 │
-│  i           write a message (INSERT)                    Tab/Enter   pick the suggestion (Esc closes)                │
-│  :           command line (COMMAND)                      ↓/C-n       next suggestion                                 │
-│  Esc         back to NORMAL / close the thread           ↑/C-p       previous suggestion                             │
-│  ?           this help                                                                                               │
-│  q           quit                                      Commands (COMMAND)                                            │
-│                                                          :q              quit                                        │
-│Compose (INSERT)                                          :open <name>    open a conversation by name (#general, @ana)│
-│  Enter       send                                        :help           this help                                   │
-│  A-Enter/C-j new line                                    :attach <path>  send a file here; any text after it is the …│
-│  Esc         back to NORMAL / close the thread           :search <query> search messages in this workspace           │
+│  1–9         switch workspace                          Autocomplete (INSERT)                                         │
+│  C-k/C-t     find a conversation in any workspace        @ # :       suggest people, channels, emoji                 │
+│  C-b         show or hide the sidebar                    Tab/Enter   pick the suggestion (Esc closes)                │
+│  <           narrower sidebar                            ↓/C-n       next suggestion                                 │
+│  >           wider sidebar                               ↑/C-p       previous suggestion                             │
+│                                                                                                                      │
+│Modes                                                   Commands (COMMAND)                                            │
+│  i           write a message (INSERT)                    :q              quit                                        │
+│  :           command line (COMMAND)                      :open <name>    open a conversation by name (#general, @ana)│
+│  Esc         back to NORMAL / close the thread           :help           this help                                   │
+│  ?           this help                                   :attach <path>  send a file here; any text after it is the …│
+│  q           quit                                        :search <query> search messages in this workspace           │
 │                                                          :react <emoji>  react to the selected message (:react +1)   │
+│Compose (INSERT)                                          :away / :back   set your presence to away / automatic       │
+│  Enter       send                                        :dnd <length>   do not disturb: 30m, 1h, 2h, tomorrow       │
+│  A-Enter/C-j new line                                    :dnd off        end do not disturb                          │
+│  Esc         back to NORMAL / close the thread                                                                       │
+│                                                                                                                      │
+│Files                                                                                                                 │
+│  o           open the message's file (xdg-open)                                                                      │
+│  I           show or hide inline images                                                                              │
+│  C-o         attach a file (:attach)                                                                                 │
+│                                                                                                                      │
 │                                                                                                                      │
 │Press any key to close.                                                                                               │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-
-
-
  NORMAL  │ Acme │ ● connected                                                                                    ? help

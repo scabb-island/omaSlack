@@ -82,12 +82,13 @@ func then(first, next tea.Cmd) tea.Cmd {
 // optional are the methods newer daemons answer (task 3.8): an older one
 // says -32601, and a provider without the capability -32002. Either way
 // the TUI does without, silently.
-var optional = map[string]bool{"users.info": true, "emoji.list": true, "typing.send": true, "users.search": true}
+var optional = map[string]bool{"users.info": true, "emoji.list": true, "typing.send": true, "users.search": true, "dnd.info": true, "presence.get": true}
 
 // quiet are the methods whose failures the user need not see: typing.send
 // fails while the daemon's socket to Slack reconnects, and a name that
 // does not arrive is asked again later.
-var quiet = map[string]bool{"typing.send": true, "users.info": true, "users.search": true}
+// dnd.info and presence.get only decorate the status bar.
+var quiet = map[string]bool{"typing.send": true, "users.info": true, "users.search": true, "dnd.info": true, "presence.get": true}
 
 // Asking users.info: at most usersPerCall IDs per call (the daemon's
 // limit), and an ID it did not answer is asked again after usersRetry
@@ -138,13 +139,15 @@ var subscribedTopics = []string{
 	"message.created", "message.updated", "message.deleted",
 	"reaction.changed", "conversation.updated", "read.changed",
 	"draft.changed", "typing", "connection.state", "unread.summary", "ui.focus",
+	"dnd.changed", "presence.changed",
 }
 
 func (m *Model) subscribe() tea.Cmd {
 	return call[json.RawMessage](m.client, "events.subscribe", map[string]any{"topics": subscribedTopics}, nil)
 }
 
-// loadWorkspace asks for a workspace's conversations and custom emoji.
+// loadWorkspace asks for a workspace's conversations, custom emoji, and
+// the user's own snooze and presence there.
 func (m *Model) loadWorkspace(team string) tea.Cmd {
 	return tea.Batch(
 		call(m.client, "conversations.list", map[string]any{"team": team}, func(m *Model, list []wire.Conversation) tea.Cmd {
@@ -156,6 +159,7 @@ func (m *Model) loadWorkspace(team string) tea.Cmd {
 			m.st.SetEmoji(team, e.Emoji)
 			return nil
 		}),
+		m.loadOwn(team),
 	)
 }
 

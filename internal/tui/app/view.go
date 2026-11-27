@@ -224,7 +224,11 @@ func (m *Model) sidebarRow(r Row) string {
 	if r.Conv.Unread {
 		style = style.Foreground(m.theme.Unread).Bold(true)
 	}
-	line := cursor + style.Render(mark+" "+r.Title)
+	gap := style.Render(" ")
+	if r.Conv.Kind == "im" {
+		gap = m.presenceDot(r.Conv, style)
+	}
+	line := cursor + style.Render(mark) + gap + style.Render(r.Title)
 	if r.Conv.Mentions > 0 {
 		line += lipgloss.NewStyle().Foreground(m.theme.Mention).Render(fmt.Sprintf(" (%d)", r.Conv.Mentions))
 	}
@@ -352,6 +356,7 @@ func (m *Model) statusBar() string {
 	}
 	if m.team != "" {
 		parts = append(parts, m.st.Workspace(m.team).Name, m.connection())
+		parts = append(parts, m.ownStatus()...)
 	}
 	right := m.muted("? help")
 	if m.status != "" {
