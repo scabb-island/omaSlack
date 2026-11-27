@@ -15,6 +15,12 @@ import qs.Ui
 // insertText() edits at the cursor, and keyFilter, when set, sees every
 // key first and returns true to take it (a suggestion popup's Up/Down,
 // Tab and Enter).
+//
+// Editing a message (e): startEdit(ts, text) puts the field in edit mode
+// (editTS set) with the message's text, saving the draft first and
+// leaving it alone while editing; submitted(text) then means "save the
+// edit" (the window checks editTS). cancelEdit(), Esc or loading another
+// target give the draft back.
 Item {
   id: root
 
@@ -28,6 +34,8 @@ Item {
   property var keyFilter: null
   // The field grows with its text up to this many lines, then scrolls.
   property int maxLines: 8
+  // The ts of the message being edited; "" while composing a new one.
+  property string editTS: ""
 
   readonly property alias input: area
   readonly property alias text: area.text
@@ -43,6 +51,8 @@ Item {
   property bool _dirty: false
   // A non-empty draft is stored in the daemon for target.
   property bool _stored: false
+  // The field's text when the edit started, given back when it ends.
+  property string _draftBeforeEdit: ""
 
   implicitHeight: Math.min(area.implicitHeight, area.font.pixelSize * 1.5 * maxLines + area.topPadding + area.bottomPadding)
 
@@ -53,9 +63,27 @@ Item {
 
   function insertText(t) { area.insert(area.cursorPosition, t) }
 
+  // startEdit edits the message ts, starting from text.
+  function startEdit(ts, text) {
+    flush()
+    if (root.editTS === "") root._draftBeforeEdit = area.text
+    root.editTS = ts
+    _setText(text)
+    focusInput()
+  }
+
+  // cancelEdit ends an edit, if one is going, and gives the draft back.
+  function cancelEdit() {
+    if (root.editTS === "") return
+    root.editTS = ""
+    _setText(root._draftBeforeEdit)
+    root._draftBeforeEdit = ""
+  }
+
   // load points the field at target with its draft, saving the draft of
   // the target it leaves first.
   function load(next, draft) {
+    cancelEdit()
     flush()
     root.target = next
     _setText(draft || "")
@@ -103,6 +131,7 @@ Item {
   // Enter sends, Shift+Enter starts a new line, Esc hands the keyboard back.
   function handleKey(key, modifiers) {
     if (key === Qt.Key_Escape) {
+      cancelEdit()
       root.escaped()
       return true
     }
@@ -152,7 +181,7 @@ Item {
       }
 
       onTextChanged: {
-        if (root._loading) return
+        if (root._loading || root.editTS !== "") return
         root._dirty = true
         draftTimer.restart()
       }

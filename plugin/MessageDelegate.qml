@@ -6,6 +6,7 @@ import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
 import "lib/window.js" as W
+import "lib/actions.js" as A
 
 // One message in a MessageList: the day separator above it when the day
 // changes, the author and time (unless it continues the previous
@@ -13,10 +14,10 @@ import "lib/window.js" as W
 // until it is there), "(edited)", files, reactions and "↳ N replies".
 // It draws and reports; MessageList owns the cursor.
 //
-// Seams: reactions and files are read-only here. The reactions picker
-// and toggling a reaction plug in at reactionClicked; opening or
-// previewing a file at fileClicked; message actions (edit, delete) act on
-// the list's currentMessage(), not on this item.
+// Image files also show a thumbnail (FileThumb). Clicking a reaction
+// chip (toggle) or a file (open) is reported through reactionClicked and
+// fileClicked; message actions (edit, delete) act on the list's
+// currentMessage(), not on this item.
 Column {
   id: root
 
@@ -179,6 +180,20 @@ Column {
             cursorShape: Qt.PointingHandCursor
             onClicked: root.fileClicked(parent.modelData)
           }
+        }
+      }
+
+      Repeater {
+        model: (root.message.files || []).filter(A.isImage)
+
+        FileThumb {
+          required property var modelData
+          Layout.preferredWidth: Math.min(implicitWidth, body.width)
+          Layout.preferredHeight: implicitHeight
+          service: root.service
+          team: root.team
+          file: modelData
+          onClicked: root.fileClicked(modelData)
         }
       }
 
