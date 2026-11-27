@@ -107,4 +107,5 @@
 - [ ] 6.1d Plugin: detect `omaslack-bin` with `omarchy-pkg-present`, check the protocol, and offer install/update through `omarchy-launch-floating-terminal-with-presentation omarchy-pkg-aur-add omaslack-bin`
 - [ ] 6.2 Plugin README with install and removal instructions, `LICENSE` and `preview.png`
 - [ ] 6.3 Marketplace submission (`SUBMISSION.md`), with `installation.mode: manual` if needed
-- [ ] 6.4 `openspec archive add-omaslack-v1`
+- [ ] 6.4 `openspec archive add-omaslack-v1`, then `update-bar-unread-indicator` (it modifies v1's requirements)
+- [x] 6.5 M6 contracts: file layout with the window rule, signed releases (cosign keyless on `checksums.txt`), the `omaslack setup` requirement; first release `v0.1.0` (plugin manifest 0.1.0)
