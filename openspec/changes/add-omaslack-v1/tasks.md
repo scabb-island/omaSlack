@@ -68,6 +68,7 @@
   - `internal/tui/theme`: `Load` (omaslack.toml, else colors.toml through `roles.go`) and `Watch`. The app wires `signal.Notify(SIGUSR1)` into `Watch`.
 - [x] 3.7 Golden view tests
 - [x] 3.8 Daemon methods the clients need to show names: `users.info{team, ids[]}`, the other person of each DM in `conversations.list` (`user`), `emoji.list{team}` and `typing.send{team, conv}`
+- [x] 3.9 Who is signed in and thread reply counts: `self` in each workspace of `hello` and `workspaces.list` (the TUI's `Directory.Self`), and `replyCount`/`latestReply` on thread roots, kept current as replies arrive in real time, so the TUI shows "N replies"
 
 ## M4 — QML UI MVP
 - [x] 4.1 Spike: Quickshell `Socket` versus the `ctl --stream` bridge. A direct `Socket` won (see `docs/spikes/m4.1-quickshell-socket.md`)
