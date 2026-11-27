@@ -200,6 +200,8 @@ func (m *Model) insertKey(k tea.KeyPressMsg) tea.Cmd {
 	case key.Matches(k, m.keys.Newline):
 		m.compose.InsertString("\n")
 		return nil
+	case key.Matches(k, m.keys.Attach):
+		return m.startAttach()
 	}
 	before := m.compose.Value()
 	var cmd tea.Cmd

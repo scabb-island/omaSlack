@@ -83,8 +83,9 @@ type Model struct {
 	lastTyping time.Time
 	actions    []action
 
-	pick pickState    // finder, search results and reaction picker
-	cx   composeState // autocomplete, mention tokens, edit and delete (complete.go, edit.go)
+	media media        // files and inline images (media.go)
+	pick  pickState    // finder, search results and reaction picker
+	cx    composeState // autocomplete, mention tokens, edit and delete (complete.go, edit.go)
 }
 
 // action is what a NORMAL mode key does.
@@ -102,6 +103,7 @@ func newModel(o Options) *Model {
 		now: o.Now, loc: o.Loc, sidebarWidth: defaultSidebarWidth,
 		sel: map[string]string{}, open: map[string]string{},
 		marked: map[convKey]string{}, asked: map[userKey]time.Time{}, without: map[string]bool{},
+		media: newMedia(o),
 	}
 	if m.now == nil {
 		m.now = time.Now
@@ -137,7 +139,8 @@ func (m *Model) Init() tea.Cmd {
 }
 
 // Update applies one message: a key, a size, a daemon result or event.
-func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *Model) Update(msg tea.Msg) (_ tea.Model, cmd tea.Cmd) {
+	defer func() { cmd = tea.Batch(cmd, m.imagesAfter(msg)) }() // inline images (images.go)
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		return m, m.key(msg)
