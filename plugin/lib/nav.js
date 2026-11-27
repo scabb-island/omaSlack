@@ -1,7 +1,8 @@
 .pragma library
+.import "emoji.js" as E
 
-// The full window's navigation logic (task 4.5): the conversation finder,
-// pure so qmltestrunner covers it (tests/tst_nav.qml). It follows the
+// The full window's navigation logic (task 4.5): the conversation finder
+// and the compose autocomplete, pure so qmltestrunner covers it (tests/tst_nav.qml). It follows the
 // TUI (internal/tui/app) rule for rule, so both clients rank and complete
 // the same way.
 
@@ -112,4 +113,254 @@ function rankConversations(entries, query) {
     return a.i - b.i
   })
   return scored.map(function(s) { return s.e })
+}
+
+// ---- compose autocomplete -------------------------------------------------------
+//
+// Mention tokens, as in the TUI (internal/tui/app/suggest.go). The
+// composer shows people and channels the way people read them ("@Ana",
+// "#general") and sends them the way Slack wants them ("<@U1>", "<#C1>").
+// Accepting a suggestion records its display token and wire token in a map
+// the window keeps for the session; sending runs toWire, which swaps every
+// display token standing as a whole word for its wire token. The field
+// stays plain text, with no hidden markup to keep in step with the cursor.
+// Drafts keep the display text. Editing a message does the reverse with
+// toDisplay, which also returns the tokens it found.
+
+// How many suggestions the popup shows.
+var MAX_SUGGESTIONS = 8
+
+// How much a sign needs typed after it before suggesting: users.search
+// needs a letter, and two letters keep ":" in "10:30" or a smiley from
+// opening the emoji list.
+var MIN_QUERY = { "@": 1, "#": 0, ":": 2 }
+
+// Titles of the popup, by sign.
+var POPUP_TITLES = { "@": "People", "#": "Channels", ":": "Emoji" }
+
+// isNameChar: c can be part of a name, a channel or an emoji code. Any
+// non-ASCII character but a space counts as a letter (the JS engine has no
+// Unicode classes).
+function isNameChar(c) {
+  return /[A-Za-z0-9_\-.+']/.test(c) || (c > "\u007f" && !/\s/.test(c))
+}
+
+function opensWord(c) { return /\s/.test(c) || "([{\"'".indexOf(c) >= 0 }
+
+// findTrigger: the word being completed at cursor in text, on the
+// cursor's line: { sign ("@" people, "#" channels, ":" emoji), query
+// (what follows the sign), start (the sign's index in text) }, or null.
+// The sign must start a word: "me@an" is not a mention.
+function findTrigger(text, cursor) {
+  var lineStart = text.lastIndexOf("\n", cursor - 1) + 1
+  var i = cursor
+  while (i > lineStart && isNameChar(text[i - 1])) i--
+  if (i === lineStart) return null
+  var start = i - 1
+  var sign = text[start]
+  var query = text.slice(i, cursor)
+  if (!(sign in MIN_QUERY) || query.length < MIN_QUERY[sign]) return null
+  if (start > lineStart && !opensWord(text[start - 1])) return null
+  return { sign: sign, query: query, start: start }
+}
+
+function sameTrigger(a, b) {
+  return !!a && !!b && a.sign === b.sign && a.query === b.query && a.start === b.start
+}
+
+// completionStep follows the composer after an edit or a cursor move.
+// state is { trig, dismissed } (dismissed: the start of the trigger Esc
+// closed the popup on, -1 for none); found is findTrigger's answer. It
+// returns the next state plus what to do: close (hide the popup), changed
+// (a new trigger: suggest for it) and clearItems (another kind of list:
+// the old one would mislead).
+function completionStep(state, found) {
+  var dismissed = state.dismissed
+  if (dismissed >= 0 && (!found || found.start !== dismissed)) dismissed = -1
+  if (!found || dismissed >= 0)
+    return { trig: null, dismissed: dismissed, close: true, changed: false, clearItems: true }
+  var changed = !sameTrigger(found, state.trig)
+  return {
+    trig: found,
+    dismissed: -1,
+    close: false,
+    changed: changed,
+    clearItems: changed && (!state.trig || state.trig.sign !== found.sign)
+  }
+}
+
+// dismiss: Esc closed the popup; it stays closed on this trigger.
+function dismiss(state) {
+  return { trig: null, dismissed: state.trig ? state.trig.start : -1, close: true, changed: false, clearItems: true }
+}
+
+// cycle moves a selection by d over n items, wrapping.
+function cycle(sel, n, d) { return n > 0 ? ((sel + d) % n + n) % n : 0 }
+
+// score grades how name matches q, both lower case: lower is better, -1
+// for no match.
+function score(name, q) {
+  if (name === q) return 0
+  if (name.indexOf(q) === 0) return 1
+  for (var i = 0; i < name.length; i++)
+    if (" _-.".indexOf(name[i]) >= 0 && name.indexOf(q, i + 1) === i + 1) return 2
+  return name.indexOf(q) >= 0 ? 3 : -1
+}
+
+// rank: the indexes of the names matching q, best first: exact, prefix, a
+// word inside the name, anywhere; shorter names first within each, then
+// by name. Case does not matter.
+function rank(names, q) {
+  q = q.toLowerCase()
+  var hits = []
+  names.forEach(function(n, i) {
+    var s = score(n.toLowerCase(), q)
+    if (s >= 0) hits.push({ i: i, s: s })
+  })
+  hits.sort(function(a, b) {
+    if (a.s !== b.s) return a.s - b.s
+    var na = names[a.i], nb = names[b.i]
+    if (na.length !== nb.length) return na.length - nb.length
+    if (na !== nb) return na < nb ? -1 : 1
+    return a.i - b.i
+  })
+  return hits.map(function(h) { return h.i })
+}
+
+function capped(list) { return list.slice(0, MAX_SUGGESTIONS) }
+
+// The mentions that notify groups, with what they do.
+var SPECIAL_MENTIONS = [
+  ["here", "notify the active members"],
+  ["channel", "notify everyone in the channel"],
+  ["everyone", "notify the whole workspace"]
+]
+
+// userLabel: how a wire.User is called (as the TUI's State.UserName).
+function userLabel(u) { return u.displayName || u.realName || u.name || u.id }
+
+// peopleSuggestions turns users.search's answer into suggestions
+// ({ label, text, wire }): the best local matches first, then the rest in
+// the daemon's order (it may match on what the window does not see, like
+// an email), then @here, @channel and @everyone when q starts them.
+function peopleSuggestions(users, q) {
+  var lq = q.toLowerCase()
+  function best(u) {
+    var s = 4
+    ;[u.displayName, u.realName, u.name].forEach(function(n) {
+      var g = n ? score(n.toLowerCase(), lq) : -1
+      if (g >= 0) s = Math.min(s, g)
+    })
+    return s
+  }
+  var sorted = (users || []).map(function(u, i) { return { u: u, i: i, s: best(u) } })
+  sorted.sort(function(a, b) {
+    if (a.s !== b.s) return a.s - b.s
+    var la = userLabel(a.u).length, lb = userLabel(b.u).length
+    return la !== lb ? la - lb : a.i - b.i
+  })
+  var out = sorted.map(function(x) { return personSuggestion(x.u) })
+  SPECIAL_MENTIONS.forEach(function(sp) {
+    if (sp[0].indexOf(lq) === 0) out.push({ label: "@" + sp[0] + " · " + sp[1], text: "@" + sp[0], wire: "<!" + sp[0] + ">" })
+  })
+  return capped(out)
+}
+
+// personSuggestion shows the name the composer will get and, to tell
+// people apart, the first other name they have.
+function personSuggestion(u) {
+  var name = userLabel(u)
+  var label = name
+  var others = [u.realName, u.name]
+  for (var i = 0; i < others.length; i++) {
+    if (others[i] && others[i] !== name) { label += " · " + others[i]; break }
+  }
+  return { label: label, text: "@" + name, wire: "<@" + u.id + ">" }
+}
+
+// channelSuggestions offers the workspace's channels, public and private.
+function channelSuggestions(convs, q) {
+  var chans = (convs || []).filter(function(c) { return c.kind === "channel" || c.kind === "private" })
+  var names = chans.map(function(c) { return c.name || c.id })
+  return capped(rank(names, q)).map(function(i) {
+    return { label: "#" + names[i], text: "#" + names[i], wire: "<#" + chans[i].id + ">" }
+  })
+}
+
+// emojiSuggestions offers the standard emoji (with their glyph) and the
+// workspace's custom ones (custom: their names, from emoji.list) matching
+// q. The text is the shortcode, already what Slack wants.
+function emojiSuggestions(custom, q) {
+  var names = E.NAMES.concat(custom || [])
+  var standard = E.NAMES.length
+  return capped(rank(names, q)).map(function(i) {
+    var code = ":" + names[i] + ":"
+    return { label: i < standard ? E.GLYPHS[names[i]] + " " + code : code, text: code, wire: "" }
+  })
+}
+
+// accept replaces the trigger's word (its sign up to cursor) with the
+// suggestion's text and a space: { text, cursor }.
+function accept(text, cursor, trig, suggestion) {
+  var insert = suggestion.text + " "
+  return { text: text.slice(0, trig.start) + insert + text.slice(cursor), cursor: trig.start + insert.length }
+}
+
+// withToken: tokens plus the suggestion's display -> wire pair (a copy).
+function withToken(tokens, suggestion) {
+  var out = Object.assign({}, tokens || {})
+  if (suggestion.wire) out[suggestion.text] = suggestion.wire
+  return out
+}
+
+function isWordChar(c) { return c !== undefined && c !== "" && (/[A-Za-z0-9_]/.test(c) || (c > "\u007f" && !/\s/.test(c))) }
+
+// toWire swaps every display token in text that stands as a whole word for
+// its wire token, longest first, so "@Ana Zed" wins over "@Ana".
+function toWire(text, tokens) {
+  var keys = Object.keys(tokens || {}).sort(function(a, b) { return b.length - a.length })
+  if (keys.length === 0) return text
+  var out = ""
+  var i = 0
+  while (i < text.length) {
+    var k = i > 0 && isWordChar(text[i - 1]) ? null : tokenAt(text, i, keys)
+    if (k) { out += tokens[k]; i += k.length; continue }
+    out += text[i]
+    i++
+  }
+  return out
+}
+
+function tokenAt(text, i, keys) {
+  for (var j = 0; j < keys.length; j++) {
+    var k = keys[j]
+    if (text.substr(i, k.length) === k && !isWordChar(text[i + k.length])) return k
+  }
+  return null
+}
+
+// toDisplay is toWire's reverse, for loading a message into the composer:
+// the mentions of people and channels it can name become display tokens,
+// and Slack's escapes become the characters they stand for (after the
+// mentions, so "&lt;@U1&gt;" is not taken for one). A mention it cannot
+// name stays as Slack wrote it. userName(id) and convName(id) answer ""
+// when they do not know. Returns { text, tokens }.
+function toDisplay(text, userName, convName) {
+  var tokens = {}
+  var out = text.replace(/<([@#!])([^>|]*)(?:\|([^>]*))?>/g, function(match, kind, id, label) {
+    var sign = kind === "#" ? "#" : "@"
+    var name = kind === "@" ? (userName(id) || label || "")
+      : kind === "#" ? (convName(id) || label || "")
+      : specialName(id)
+    if (!name) return match
+    tokens[sign + name] = "<" + kind + id + ">"
+    return sign + name
+  })
+  out = out.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&")
+  return { text: out, tokens: tokens }
+}
+
+function specialName(id) {
+  for (var i = 0; i < SPECIAL_MENTIONS.length; i++) if (SPECIAL_MENTIONS[i][0] === id) return id
+  return ""
 }
