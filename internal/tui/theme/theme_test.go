@@ -152,6 +152,24 @@ func TestLoadReportsUnreadableFile(t *testing.T) {
 	}
 }
 
+// The Omarchy template and the colors.toml mapping must agree: each role
+// renders from the first colors.toml key the fallback mapping reads.
+func TestTemplateMatchesRoles(t *testing.T) {
+	data, err := os.ReadFile("../../../packaging/omarchy/omaslack.toml.tpl")
+	if err != nil {
+		t.Fatal(err)
+	}
+	values := parseFlatTOML(string(data))
+	if len(values) != len(roles) {
+		t.Errorf("template sets %d keys, want %d roles", len(values), len(roles))
+	}
+	for _, r := range roles {
+		if want := "{{ " + r.colors[0] + " }}"; values[r.name] != want {
+			t.Errorf("template %s = %q, want %q", r.name, values[r.name], want)
+		}
+	}
+}
+
 func TestParseColor(t *testing.T) {
 	for in, ok := range map[string]bool{
 		"#a1B2c3": true, "a1b2c3": true, "#a1b2c3ff": false, "#abc": false, "": false, "#gggggg": false,

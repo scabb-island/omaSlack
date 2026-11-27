@@ -1,0 +1,17 @@
+#!/bin/bash
+# omaslack theme-set hook: Omarchy runs it after every theme change, once
+# the theme's templates (omaslack.toml among them) are rendered.
+# It sends SIGUSR1 to the user's running `omaslack tui` processes, which
+# reload their theme. Other omaslack processes (the daemon) are left alone:
+# SIGUSR1 would terminate them. It never fails, even when no TUI runs.
+set -u
+
+for pid in $(pgrep -x -u "$(id -u)" omaslack 2>/dev/null); do
+  # argv[1] is the subcommand. Read it from /proc: the process may be gone.
+  mapfile -d '' -t argv <"/proc/$pid/cmdline" 2>/dev/null || continue
+  if [[ ${argv[1]:-} == tui ]]; then
+    kill -USR1 "$pid" 2>/dev/null || true
+  fi
+done
+
+exit 0
