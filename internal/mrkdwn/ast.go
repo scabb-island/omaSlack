@@ -9,7 +9,10 @@
 // Malformed markup is text, never an error.
 package mrkdwn
 
-import "strings"
+import (
+	"cmp"
+	"strings"
+)
 
 // Block is one line of text (Line) or one fenced code block (CodeBlock).
 type Block interface{ isBlock() }
@@ -103,6 +106,45 @@ func (c Channel) Accept(v Visitor) string   { return v.Channel(c) }
 func (s Special) Accept(v Visitor) string   { return v.Special(s) }
 func (l Link) Accept(v Visitor) string      { return v.Link(l) }
 func (s Shortcode) Accept(v Visitor) string { return v.Shortcode(s) }
+
+// Loud reports whether the command reaches people: a broadcast (here,
+// channel, everyone) or a user group.
+func (s Special) Loud() bool {
+	switch s.Name() {
+	case "here", "channel", "everyone", "subteam":
+		return true
+	}
+	return false
+}
+
+// Text is what the command reads as: "@here", the group's label (or
+// "@<id>"), a date's fallback, or else its label or "@<name>".
+func (s Special) Text() string {
+	switch s.Name() {
+	case "here", "channel", "everyone":
+		return "@" + s.Name()
+	case "subteam":
+		return cmp.Or(s.Label, "@"+s.Arg())
+	case "date":
+		return cmp.Or(s.Label, s.Cmd)
+	}
+	return cmp.Or(s.Label, "@"+s.Name())
+}
+
+// Text is what the link reads as: its label, or its URL without "mailto:".
+func (l Link) Text() string { return cmp.Or(l.Label, strings.TrimPrefix(l.URL, "mailto:")) }
+
+// userName is how a mention of u reads (without the "@"): its name in
+// names, the label it carries, or its ID.
+func userName(names Names, u User) string {
+	return cmp.Or(OneLine(names.UserName(u.ID)), u.Label, u.ID)
+}
+
+// channelName is how a reference to c reads (without the "#"): the label
+// it carries, its name in names, or its ID.
+func channelName(names Names, c Channel) string {
+	return cmp.Or(c.Label, OneLine(names.ConversationName(c.ID)), c.ID)
+}
 
 // Render visits each inline in order and joins what v returns.
 func Render(inlines []Inline, v Visitor) string {

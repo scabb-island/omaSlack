@@ -2,12 +2,15 @@ package mrkdwn
 
 import "slices"
 
-// Refs are the IDs a text refers to that a renderer needs names for:
-// users it mentions with <@…>, and channels it references with <#…>
-// without a label. Each list is in order, once each; code is not
-// searched.
+// Refs are what a text refers to: the users it mentions with <@…> and the
+// channels it references with <#…> without a label (the IDs a renderer
+// needs names for), the user groups it mentions with <!subteam^…>, and
+// whether it broadcasts with <!here>, <!channel> or <!everyone>. Each
+// list is in order, once each; code is not searched.
 type Refs struct {
 	Users, Channels []string
+	Groups          []string
+	Broadcast       bool
 }
 
 // References returns what s refers to.
@@ -30,9 +33,20 @@ func (r *Refs) add(inlines []Inline) {
 			if in.Label == "" {
 				r.Channels = appendNew(r.Channels, in.ID)
 			}
+		case Special:
+			r.addSpecial(in)
 		case Styled:
 			r.add(in.Inlines)
 		}
+	}
+}
+
+func (r *Refs) addSpecial(s Special) {
+	switch s.Name() {
+	case "subteam":
+		r.Groups = appendNew(r.Groups, s.Arg())
+	case "here", "channel", "everyone":
+		r.Broadcast = true
 	}
 }
 

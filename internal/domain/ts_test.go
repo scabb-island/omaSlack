@@ -3,6 +3,7 @@ package domain
 import (
 	"errors"
 	"testing"
+	"time"
 )
 
 func TestParseTSRoundTrips(t *testing.T) {
@@ -46,5 +47,24 @@ func TestZeroTS(t *testing.T) {
 	ts, _ := ParseTS("1700000000.123456")
 	if ts.IsZero() {
 		t.Error("a parsed TS reports zero")
+	}
+}
+
+func TestTSAtIsTheTimeAsATimestamp(t *testing.T) {
+	at := time.Unix(1700000000, 123456789)
+	if got := TSAt(at).String(); got != "1700000000.123456" {
+		t.Errorf("TSAt = %q, want 1700000000.123456", got)
+	}
+}
+
+func TestTSNextIsOneMicrosecondLater(t *testing.T) {
+	for in, want := range map[string]string{
+		"1700000000.000100": "1700000000.000101",
+		"1700000000.999999": "1700000001.000000",
+	} {
+		ts, _ := ParseTS(in)
+		if got := ts.Next().String(); got != want {
+			t.Errorf("%s.Next() = %s, want %s", in, got, want)
+		}
 	}
 }
