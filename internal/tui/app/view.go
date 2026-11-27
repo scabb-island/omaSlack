@@ -91,7 +91,7 @@ func (m *Model) mainView(w, h int) string {
 	default:
 		panes = m.threadView(w, top)
 	}
-	return panes + "\n" + m.composeView(w, composeH)
+	return m.withPopup(panes, w) + "\n" + m.composeView(w, composeH)
 }
 
 // rail lists the workspaces: their number (the 1–9 key), their initials
@@ -397,8 +397,12 @@ func (m *Model) helpView(h int) string {
 	for _, c := range commandHelp {
 		lines = append(lines, "  "+key.Render(fmt.Sprintf("%-14s", c[0]))+c[1])
 	}
-	lines = append(lines, "", m.muted("Press any key to close."))
 	w := min(m.width, 64)
+	if len(lines)+4 > h {
+		lines = helpColumns(lines)
+		w = min(m.width, widest(lines)+helpGap+2)
+	}
+	lines = append(lines, "", m.muted("Press any key to close."))
 	box := m.box("Help", lines, w, min(h, len(lines)+2), true)
 	return lipgloss.Place(m.width, h, lipgloss.Center, lipgloss.Center, box)
 }
