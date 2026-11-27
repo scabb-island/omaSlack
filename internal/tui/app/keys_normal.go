@@ -14,6 +14,9 @@ func (m *Model) key(k tea.KeyPressMsg) tea.Cmd {
 		m.help = false
 		return nil
 	}
+	if m.pick.open != nil {
+		return m.pickerKey(k)
+	}
 	if m.cx.deleting != nil {
 		return m.confirmDelete(k)
 	}
@@ -45,7 +48,7 @@ func (m *Model) normalActions() []action {
 		{k.PrevPane, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.focusStep(-1, true) }},
 		{k.Open, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.enter() }},
 		{k.Workspace, func(m *Model, k tea.KeyPressMsg) tea.Cmd { return m.switchWorkspace(int(k.Code - '1')) }},
-		{k.Finder, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { m.setInfo("The finder is coming soon."); return nil }},
+		{k.Finder, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.openFinder() }},
 		{k.Sidebar, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { m.toggleSidebar(); return nil }},
 		{k.Narrower, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { m.resizeSidebar(-sidebarStep); return nil }},
 		{k.Wider, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { m.resizeSidebar(sidebarStep); return nil }},
@@ -54,6 +57,8 @@ func (m *Model) normalActions() []action {
 		{k.Back, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.back() }},
 		{k.Help, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { m.help = true; return nil }},
 		{k.Quit, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.quit() }},
+		{k.Search, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.startSearch() }},
+		{k.React, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.openReactions() }},
 
 		{k.Edit, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.startEdit() }},
 		{k.Delete, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.askDelete() }},
@@ -233,6 +238,10 @@ func (m *Model) runCommand(line string) tea.Cmd {
 		return nil
 	case "open":
 		return m.openByName(strings.TrimSpace(arg))
+	case "search":
+		return m.search(strings.TrimSpace(arg))
+	case "react":
+		return m.react(strings.TrimSpace(arg))
 	}
 	m.setError("Not a command: " + name)
 	return nil

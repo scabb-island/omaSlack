@@ -168,23 +168,31 @@ func optionalCall[T any](m *Model, method string, params any, then func(*Model, 
 	return call(m.client, method, params, then)
 }
 
-// askNames asks users.info for the people the view shows by ID: the other
-// person of each DM and the authors of the open conversation and thread.
-// Each ID is asked once.
+// askNames asks users.info for the people the view shows by ID, in every
+// loaded workspace (the finder lists them all). Each ID is asked once.
 func (m *Model) askNames() tea.Cmd {
-	if m.without["users.info"] || m.team == "" {
+	if m.without["users.info"] {
 		return nil
 	}
-	team, now := m.team, m.now()
-	var ids []string
-	for _, id := range m.shownUserIDs() {
+	var cmds []tea.Cmd
+	for _, team := range m.st.Teams() {
+		cmds = append(cmds, m.askUsers(team, m.shownUserIDs(team)))
+	}
+	return tea.Batch(cmds...)
+}
+
+// askUsers asks users.info for the unnamed users among ids.
+func (m *Model) askUsers(team string, ids []string) tea.Cmd {
+	now := m.now()
+	var ask []string
+	for _, id := range ids {
 		if m.unnamed(team, id, now) {
 			m.asked[userKey{team, id}] = now
-			ids = append(ids, id)
+			ask = append(ask, id)
 		}
 	}
 	var cmds []tea.Cmd
-	for chunk := range slices.Chunk(ids, usersPerCall) {
+	for chunk := range slices.Chunk(ask, usersPerCall) {
 		cmds = append(cmds, call(m.client, "users.info", map[string]any{"team": team, "ids": chunk}, func(m *Model, users []wire.User) tea.Cmd {
 			m.st.PutUsers(team, users)
 			return nil
@@ -193,12 +201,16 @@ func (m *Model) askNames() tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-// shownUserIDs are the users the view may show: the other person of each
-// DM and the authors of the open conversation and thread.
-func (m *Model) shownUserIDs() []string {
+// shownUserIDs are the users of team the view may show: the other person
+// of each DM and, in the active workspace, the authors of the open
+// conversation and thread.
+func (m *Model) shownUserIDs(team string) []string {
 	var ids []string
-	for _, c := range m.st.Conversations(m.team) {
+	for _, c := range m.st.Conversations(team) {
 		ids = append(ids, c.User)
+	}
+	if team != m.team {
+		return ids
 	}
 	for _, msg := range append(m.messages(), m.replies()...) {
 		ids = append(ids, msg.Author)

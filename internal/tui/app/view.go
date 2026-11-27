@@ -52,6 +52,9 @@ func (m *Model) screen() string {
 	if m.help {
 		body = m.helpView(h)
 	}
+	if m.pick.open != nil {
+		body = m.pickerView(h)
+	}
 	return body + "\n" + m.statusBar()
 }
 
@@ -383,31 +386,6 @@ func (m *Model) connection() string {
 		fg = m.theme.Error
 	}
 	return lipgloss.NewStyle().Foreground(fg).Render("● " + state)
-}
-
-// helpView is the key map, generated from Keys, and the commands.
-func (m *Model) helpView(h int) string {
-	key := lipgloss.NewStyle().Foreground(m.theme.Accent).Bold(true)
-	var lines []string
-	for _, g := range m.keys.groups() {
-		lines = append(lines, lipgloss.NewStyle().Bold(true).Render(g.title))
-		for _, b := range g.keys {
-			lines = append(lines, "  "+key.Render(fmt.Sprintf("%-12s", b.Help().Key))+b.Help().Desc)
-		}
-		lines = append(lines, "")
-	}
-	lines = append(lines, lipgloss.NewStyle().Bold(true).Render("Commands (COMMAND)"))
-	for _, c := range commandHelp {
-		lines = append(lines, "  "+key.Render(fmt.Sprintf("%-14s", c[0]))+c[1])
-	}
-	w := min(m.width, 64)
-	if len(lines)+4 > h {
-		lines = helpColumns(lines)
-		w = min(m.width, widest(lines)+helpGap+2)
-	}
-	lines = append(lines, "", m.muted("Press any key to close."))
-	box := m.box("Help", lines, w, min(h, len(lines)+2), true)
-	return lipgloss.Place(m.width, h, lipgloss.Center, lipgloss.Center, box)
 }
 
 // applyTheme styles compose from the theme; the panes read m.theme as

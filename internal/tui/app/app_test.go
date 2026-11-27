@@ -311,10 +311,6 @@ func TestInsertNeedsAConversation(t *testing.T) {
 	if h.m.mode != normalMode || !strings.Contains(h.m.status, "Open a conversation") {
 		t.Fatalf("mode %v status %q", h.m.mode, h.m.status)
 	}
-	h.keys("ctrl+k")
-	if !strings.Contains(h.m.status, "coming soon") {
-		t.Fatalf("finder status %q", h.m.status)
-	}
 }
 
 func TestFocusFromAnotherClient(t *testing.T) {

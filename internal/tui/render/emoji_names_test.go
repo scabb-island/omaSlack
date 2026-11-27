@@ -2,24 +2,25 @@ package render
 
 import (
 	"slices"
+	"strings"
 	"testing"
 )
 
 func TestStandardEmojiNames(t *testing.T) {
 	names := StandardEmojiNames()
-	if !slices.IsSorted(names) {
-		t.Error("names are not sorted")
+	if !slices.IsSorted(names) || !slices.Contains(names, "+1") || !slices.Contains(names, "tada") {
+		t.Fatalf("names %v", names[:min(len(names), 10)])
 	}
-	for _, want := range []string{"tada", "+1", "smile"} {
-		if !slices.Contains(names, want) {
-			t.Errorf("%q missing", want)
+	for _, n := range names {
+		if strings.HasPrefix(n, "skin-tone-") {
+			t.Fatalf("%s is a modifier, not an emoji to pick", n)
 		}
-	}
-	if slices.Contains(names, "skin-tone-2") {
-		t.Error("skin tones are modifiers, not emoji to pick")
+		if _, ok := StandardEmoji(n); !ok {
+			t.Fatalf("%s is listed but StandardEmoji does not know it", n)
+		}
 	}
 	names[0] = "changed"
 	if StandardEmojiNames()[0] == "changed" {
-		t.Error("callers can change the shared list")
+		t.Fatal("callers can change the shared list")
 	}
 }

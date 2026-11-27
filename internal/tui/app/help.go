@@ -1,49 +1,85 @@
 package app
 
 import (
-	"strings"
+	"fmt"
 
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 )
 
-// helpGap is the space between help's two columns.
-const helpGap = 3
+// helpColumn is the help overlay's width in one column. When one column
+// does not fit the screen's height, the sections go in two, side by side,
+// as wide as the screen.
+const helpColumn = 62
 
-// helpColumns lays help's lines out in two columns when one is too tall:
-// it splits at the blank line (between two groups) nearest the middle, so
-// no group is cut in two.
-func helpColumns(lines []string) []string {
-	cut := len(lines)
-	for i, l := range lines {
-		if l == "" && abs(2*(i+1)-len(lines)) < abs(2*cut-len(lines)) {
-			cut = i + 1
+// helpView is the key map, generated from Keys, and the commands.
+func (m *Model) helpView(h int) string {
+	sections := m.helpSections()
+	footer := []string{"", m.muted("Press any key to close.")}
+	var lines []string
+	for _, s := range sections {
+		lines = append(lines, s...)
+	}
+	w := min(m.width, helpColumn+2)
+	if len(lines)+len(footer)+2 > h {
+		lines, w = twoColumns(sections), m.width
+	}
+	lines = append(lines, footer...)
+	box := m.box("Help", lines, w, min(h, len(lines)+2), true)
+	return lipgloss.Place(m.width, h, lipgloss.Center, lipgloss.Center, box)
+}
+
+// helpSections are the help's blocks: one per key group, then the
+// commands. Each but the last ends with a blank line.
+func (m *Model) helpSections() [][]string {
+	key := lipgloss.NewStyle().Foreground(m.theme.Accent).Bold(true)
+	title := lipgloss.NewStyle().Bold(true)
+	var out [][]string
+	for _, g := range m.keys.groups() {
+		s := []string{title.Render(g.title)}
+		for _, b := range g.keys {
+			s = append(s, "  "+key.Render(fmt.Sprintf("%-12s", b.Help().Key))+b.Help().Desc)
 		}
+		out = append(out, append(s, ""))
 	}
-	left, right := lines[:cut], lines[cut:]
-	if n := len(left); n > 0 && left[n-1] == "" {
-		left = left[:n-1]
+	s := []string{title.Render("Commands (COMMAND)")}
+	for _, c := range commandHelp {
+		s = append(s, "  "+key.Render(fmt.Sprintf("%-16s", c[0]))+c[1])
 	}
-	lw := widest(left) + helpGap
+	return append(out, s)
+}
+
+// twoColumns lays whole sections out in two columns, the left one taking
+// sections until it holds about half of the lines, and only as wide as
+// its widest line, so the right one gets the rest.
+func twoColumns(sections [][]string) []string {
+	total := 0
+	for _, s := range sections {
+		total += len(s)
+	}
+	var left, right []string
+	for _, s := range sections {
+		if len(left) < total/2 && len(right) == 0 {
+			left = append(left, s...)
+			continue
+		}
+		right = append(right, s...)
+	}
+	leftW := 0
+	for _, l := range left {
+		leftW = max(leftW, ansi.StringWidth(l)+1)
+	}
 	out := make([]string, max(len(left), len(right)))
 	for i := range out {
-		var l, r string
-		if i < len(left) {
-			l = left[i]
-		}
-		if i < len(right) {
-			r = right[i]
-		}
-		out[i] = strings.TrimRight(fit(l, lw)+r, " ")
+		out[i] = fit(at(left, i), leftW) + at(right, i)
 	}
 	return out
 }
 
-func widest(lines []string) int {
-	w := 0
-	for _, l := range lines {
-		w = max(w, ansi.StringWidth(l))
+// at is lines[i], or "" past the end.
+func at(lines []string, i int) string {
+	if i < len(lines) {
+		return lines[i]
 	}
-	return w
+	return ""
 }
-
-func abs(n int) int { return max(n, -n) }

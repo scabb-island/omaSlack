@@ -1,0 +1,40 @@
+
+
+
+
+
+
+
+                        ╭─ Find a conversation ────────────────────────────────────────────────╮
+                        │> █                                                                   │
+                        │                                                                      │
+                        │▌@Ana (1)                                                        Acme │
+                        │ @Ana (1)                                                        Beta │
+                        │ #general                                                        Acme │
+                        │ #general                                                        Beta │
+                        │ #random                                                         Acme │
+                        │ #random                                                         Beta │
+                        │ @Bo Li                                                          Acme │
+                        │ @Bo Li                                                          Beta │
+                        │ ~ops                                                            Acme │
+                        │ ~ops                                                            Beta │
+                        │                                                                      │
+                        │                                                                      │
+                        │                                                                      │
+                        │                                                                      │
+                        │                                                                      │
+                        │                                                                      │
+                        │                                                                      │
+                        │                                                                      │
+                        │                                                                      │
+                        │↑/C-p ↓/C-n move · Enter pick · Esc close                             │
+                        ╰──────────────────────────────────────────────────────────────────────╯
+
+
+
+
+
+
+
+
+ NORMAL  │ Acme │ ● connected                                                                                    ? help

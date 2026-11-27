@@ -15,6 +15,8 @@ type Keys struct {
 	Sidebar, Narrower, Wider key.Binding // NORMAL: show, hide and resize the sidebar
 	Send, Newline            key.Binding // INSERT
 
+	Search, React                       key.Binding // NORMAL: search messages; react to the selected message
+	ListDown, ListUp, Pick              key.Binding // lists: finder, search results, reactions
 	Edit, Delete, Reply                 key.Binding // NORMAL: on the selected message
 	Suggest, Accept, NextItem, PrevItem key.Binding // INSERT: the autocomplete popup
 }
@@ -35,7 +37,7 @@ func DefaultKeys() Keys {
 		PrevPane:  b([]string{"shift+tab"}, "S-Tab", "previous pane"),
 		Open:      b([]string{"enter"}, "Enter", "open conversation / thread of message"),
 		Workspace: b([]string{"1", "2", "3", "4", "5", "6", "7", "8", "9"}, "1–9", "switch workspace"),
-		Finder:    b([]string{"ctrl+k", "ctrl+t"}, "C-k/C-t", "find a conversation (coming soon)"),
+		Finder:    b([]string{"ctrl+k", "ctrl+t"}, "C-k/C-t", "find a conversation in any workspace"),
 		Sidebar:   b([]string{"ctrl+b"}, "C-b", "show or hide the sidebar"),
 		Narrower:  b([]string{"<"}, "<", "narrower sidebar"),
 		Wider:     b([]string{">"}, ">", "wider sidebar"),
@@ -47,6 +49,11 @@ func DefaultKeys() Keys {
 		Send:      b([]string{"enter"}, "Enter", "send"),
 		Newline:   b([]string{"alt+enter", "ctrl+j"}, "A-Enter/C-j", "new line"),
 
+		Search:   b([]string{"/"}, "/", "search messages in this workspace"),
+		React:    b([]string{"r"}, "r", "react to the selected message"),
+		ListDown: b([]string{"down", "ctrl+n", "ctrl+j"}, "↓/C-n", "next (j too in search results)"),
+		ListUp:   b([]string{"up", "ctrl+p", "ctrl+k"}, "↑/C-p", "previous (k too in search results)"),
+		Pick:     b([]string{"enter"}, "Enter", "pick"),
 		Edit:     b([]string{"e"}, "e", "edit your message"),
 		Delete:   b([]string{"D"}, "D", "delete your message (asks y/n)"),
 		Reply:    b([]string{"R"}, "R", "reply in the message's thread"),
@@ -71,6 +78,7 @@ func (k Keys) groups() []helpGroup {
 		{"Conversations", []key.Binding{k.Open, k.Workspace, k.Finder, k.Sidebar, k.Narrower, k.Wider}},
 		{"Modes", []key.Binding{k.Insert, k.Command, k.Back, k.Help, k.Quit}},
 		{"Compose (INSERT)", []key.Binding{k.Send, k.Newline, k.Back}},
+		{"Find, search, react", []key.Binding{k.Search, k.React, k.ListDown, k.ListUp, k.Pick}},
 		{"Messages (NORMAL)", []key.Binding{k.Edit, k.Delete, k.Reply}},
 		{"Autocomplete (INSERT)", []key.Binding{k.Suggest, k.Accept, k.NextItem, k.PrevItem}},
 	}
@@ -81,4 +89,6 @@ var commandHelp = [][2]string{
 	{":q", "quit"},
 	{":open <name>", "open a conversation by name (#general, @ana)"},
 	{":help", "this help"},
+	{":search <query>", "search messages in this workspace"},
+	{":react <emoji>", "react to the selected message (:react +1)"},
 }
