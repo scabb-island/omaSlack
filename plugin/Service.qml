@@ -4,6 +4,7 @@ import Quickshell.Io
 import "lib/rpc.js" as Rpc
 import "lib/store.js" as Store
 import "lib/backoff.js" as Backoff
+import "lib/asks.js" as Asks
 
 // The one connection between omarchy-shell and the omaslack daemon
 // (spec gui-client, "Single Service as the daemon client"). The shell mounts
@@ -220,7 +221,7 @@ Item {
   property var _rpc: Rpc.newClient()
   property int _delay: 0
   // Not properties of interest to bindings; mutated in place.
-  property var _askedUsers: ({}) // "<team>/<user>": true once asked
+  property var _askedUsers: Asks.empty() // users.info asks (lib/asks.js)
   property var _userQueue: ({}) // <team>: [user]
   property var _ownFocus: ({}) // "<team>/<conv>": echoes of our ui.focus to skip
 
@@ -337,7 +338,7 @@ Item {
   function _onClosed(reason) {
     var failed = Rpc.failAll(root._rpc, { code: -32000, message: "connection closed" })
     root._rpc = failed.client
-    root._askedUsers = ({})
+    root._askedUsers = Asks.empty()
     root._userQueue = ({})
     for (var i = 0; i < failed.callbacks.length; i++) {
       try { failed.callbacks[i]() } catch (e) { console.warn("omaslack: callback failed:", e) }
@@ -388,8 +389,8 @@ Item {
   function _wantUser(team, user) {
     if (!team || !Store.isUserID(user)) return
     var key = team + "/" + user
-    if (root._askedUsers[key]) return
-    root._askedUsers[key] = true
+    if (!Asks.shouldAsk(root._askedUsers, key, Date.now())) return
+    Asks.asked(root._askedUsers, key)
     var q = root._userQueue[team] || []
     q.push(user)
     root._userQueue[team] = q
@@ -401,7 +402,7 @@ Item {
 
   function _flushUsers() {
     if (!root.daemonAvailable) {
-      root._askedUsers = ({})
+      root._askedUsers = Asks.empty()
       root._userQueue = ({})
       return
     }
@@ -413,9 +414,17 @@ Item {
     }
   }
 
+  // A failed batch is asked again after a backoff (lib/asks.js):
+  // usersRetry re-runs the bindings that call userName() once it passes.
   function _askUsers(team, ids) {
     root._send("users.info", { team: team, ids: ids }, function(err, users) {
-      if (err || !users) return
+      if (err) {
+        var keys = ids.map(function(id) { return team + "/" + id })
+        usersRetry.interval = Asks.failed(root._askedUsers, keys, Date.now())
+        usersRetry.restart()
+        return
+      }
+      if (!users) return
       root._publish(Store.applyUsers(root._st, team, users))
       root.messagesRevision++
     })
@@ -474,6 +483,11 @@ Item {
     id: usersTimer
     interval: 50
     onTriggered: root._flushUsers()
+  }
+
+  Timer {
+    id: usersRetry
+    onTriggered: root.messagesRevision++
   }
 
   Timer {
