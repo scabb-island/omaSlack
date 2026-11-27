@@ -22,11 +22,19 @@ builds:
       - -X gitlab.com/scabb-island/omaslack/internal/version.Date={{ .Date }}
 
 archives:
-  - formats: [tar.gz]
+  - id: omaslack
+    formats: [tar.gz]
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    # Everything the omaslack-bin PKGBUILD installs (aurs.package below),
+    # at the same paths as in the repository.
     files:
       - LICENSE
       - THIRD_PARTY_NOTICES.md
+      - packaging/systemd/omaslack.service
+      - packaging/desktop/omaslack.desktop
+      - packaging/omarchy/omaslack.toml.tpl
+      - packaging/omarchy/theme-set.d/omaslack
+      - packaging/omarchy/hypr/omaslack.lua
 
 checksum:
   name_template: checksums.txt
@@ -42,6 +50,52 @@ changelog:
       - "^docs:"
       - "^test:"
       - "^ci:"
+
+# omaslack-bin on the AUR (spec aur-packaging). goreleaser writes the
+# PKGBUILD and .SRCINFO to dist/aur/ on every run (`make aur-check` builds
+# them in a clean Arch container) and pushes them only from the release job
+# of a vX.Y.Z tag, when the protected AUR_SSH_KEY variable exists.
+aurs:
+  - name: omaslack-bin
+    ids: [omaslack]
+    homepage: https://gitlab.com/scabb-island/omaslack
+    description: Slack client for Omarchy, with a terminal client and an Omarchy shell plugin on one daemon
+    license: MIT
+    # The maintainer's AUR identity is not kept in the repository: the
+    # release job reads it from the AUR_MAINTAINER CI variable
+    # ("Name <email>"), and refuses to publish without it.
+    maintainers:
+      - '{{ envOrDefault "AUR_MAINTAINER" "UNSET <set the AUR_MAINTAINER variable>" }}'
+    provides: [omaslack]
+    conflicts: [omaslack]
+    optdepends:
+      - "gnome-keyring: Secret Service keyring for the Slack credentials"
+      - "kwallet: Secret Service keyring for the Slack credentials"
+      - "ghostty: inline images in the terminal client (kitty graphics)"
+      - "kitty: inline images in the terminal client (kitty graphics)"
+      - "foot: inline images in the terminal client (sixel)"
+    # The release asset links goreleaser creates on GitLab (they redirect to
+    # the generic package registry, see gitlab_urls below).
+    url_template: "https://gitlab.com/scabb-island/omaslack/-/releases/{{ urlPathEscape .Tag }}/downloads/{{ .ArtifactName }}"
+    # Exactly the file layout of spec aur-packaging. Nothing goes to $HOME:
+    # `omaslack setup` does the per-user part.
+    package: |-
+      install -Dm755 ./omaslack "${pkgdir}/usr/bin/omaslack"
+      install -Dm644 ./packaging/systemd/omaslack.service "${pkgdir}/usr/lib/systemd/user/omaslack.service"
+      install -Dm644 ./packaging/desktop/omaslack.desktop "${pkgdir}/usr/share/applications/omaslack.desktop"
+      install -Dm644 ./packaging/omarchy/omaslack.toml.tpl "${pkgdir}/usr/share/omaslack/omaslack.toml.tpl"
+      install -Dm755 ./packaging/omarchy/theme-set.d/omaslack "${pkgdir}/usr/share/omaslack/theme-set.hook"
+      install -Dm644 ./packaging/omarchy/hypr/omaslack.lua "${pkgdir}/usr/share/omaslack/hypr/omaslack.lua"
+      install -Dm644 ./LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+      install -Dm644 ./THIRD_PARTY_NOTICES.md "${pkgdir}/usr/share/licenses/${pkgname}/THIRD_PARTY_NOTICES.md"
+    # Pushed only when the key is there (release job, protected tags).
+    skip_upload: '{{ if index .Env "AUR_SSH_KEY" }}false{{ else }}true{{ end }}'
+    git_url: ssh://aur@aur.archlinux.org/omaslack-bin.git
+    private_key: '{{ envOrDefault "AUR_SSH_KEY" "" }}'
+    # AUR's host keys are pinned in packaging/aur/known_hosts (fingerprints
+    # from https://aur.archlinux.org), never accepted on first use.
+    git_ssh_command: 'ssh -i {{ .KeyPath }} -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile={{ envOrDefault "CI_PROJECT_DIR" "." }}/packaging/aur/known_hosts -F /dev/null'
+    commit_msg_template: "Update to {{ .Version }}"
 
 gitlab_urls:
   use_package_registry: true
