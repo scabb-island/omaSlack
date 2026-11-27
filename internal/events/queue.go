@@ -31,7 +31,7 @@ func stateKey(ev domain.Event) key {
 		k.conv, k.sub = e.Conversation.String(), e.User.String()
 	case domain.PresenceChanged:
 		k.sub = e.User.String()
-	case domain.ConnectionChanged:
+	case domain.ConnectionChanged, domain.DNDChanged:
 	default:
 		return key{}
 	}
