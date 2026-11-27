@@ -18,7 +18,9 @@ type Message struct {
 	Edited   struct {
 		TS string `json:"ts"`
 	} `json:"edited"`
-	Files []File `json:"files"`
+	Files       []File `json:"files"`
+	ReplyCount  int    `json:"reply_count"`  // thread roots only
+	LatestReply string `json:"latest_reply"` // thread roots only
 }
 
 // File is a file object as messages carry it in their files[] and the
@@ -79,7 +81,14 @@ func (w Message) Parse() (domain.Message, error) {
 	if err != nil {
 		return domain.Message{}, fmt.Errorf("message %s edited.ts: %w", w.TS, err)
 	}
-	return domain.Message{TS: ts, ThreadTS: thread, Author: author, Text: w.Text, Edited: edited, Files: parseFiles(w.Files)}, nil
+	latest, err := ParseOptionalTS(w.LatestReply)
+	if err != nil {
+		return domain.Message{}, fmt.Errorf("message %s latest_reply: %w", w.TS, err)
+	}
+	return domain.Message{
+		TS: ts, ThreadTS: thread, Author: author, Text: w.Text, Edited: edited, Files: parseFiles(w.Files),
+		ReplyCount: max(w.ReplyCount, 0), LatestReply: latest,
+	}, nil
 }
 
 func (w Message) author() (domain.Author, error) {

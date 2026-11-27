@@ -38,10 +38,12 @@ func TestHistoryReturnsTheParsedMessagesNewestFirst(t *testing.T) {
 			Text:   "deploy finished",
 		},
 		{
-			TS:       mustTS(t, "1700000100.000100"),
-			ThreadTS: mustTS(t, "1700000100.000100"),
-			Author:   mustAuthor(t, "U0001"),
-			Text:     "hello",
+			TS:          mustTS(t, "1700000100.000100"),
+			ThreadTS:    mustTS(t, "1700000100.000100"),
+			Author:      mustAuthor(t, "U0001"),
+			Text:        "hello",
+			ReplyCount:  1,
+			LatestReply: mustTS(t, "1700000300.000300"),
 		},
 	}
 	if !reflect.DeepEqual(got, want) {

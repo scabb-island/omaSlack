@@ -11,6 +11,11 @@ type Message struct {
 	Text     string // Slack mrkdwn, as received
 	Edited   TS     // zero when never edited
 	Files    []File // attachments in Slack's order; nil for none
+
+	// A thread root's replies: how many (0 when none or unknown) and the
+	// newest one's ts (zero when unknown). Replies leave both zero.
+	ReplyCount  int
+	LatestReply TS
 }
 
 // IsReply reports whether m is a reply inside a thread (a thread root is
