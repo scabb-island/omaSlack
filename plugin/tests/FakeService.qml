@@ -8,6 +8,7 @@ Item {
 
   readonly property string pluginId: "ar.scabb.omaslack"
   readonly property string socketPath: "/tmp/omaslack-test.sock"
+  property var shell: null
 
   property string connectionState: "connected"
   readonly property bool daemonAvailable: connectionState === "connected"
