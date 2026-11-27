@@ -384,3 +384,16 @@ func TestLaunch(t *testing.T) {
 		t.Error("a missing launcher is not an error")
 	}
 }
+
+// Do Not Disturb, as the engine publishes it from Slack, silences
+// notifications until it ends.
+func TestDNDSilences(t *testing.T) {
+	n := newNotifying(t)
+	n.start()
+	n.ready()
+	team := mustTeam(t, "T0ACME")
+	n.live <- domain.DNDChanged{Team: team, Until: time.Now().Add(time.Hour)}
+	n.send("D0BOB", "while snoozed")
+	n.live <- domain.DNDChanged{Team: team}
+	n.settle()
+}
