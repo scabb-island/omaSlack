@@ -1,0 +1,40 @@
+                            ╭─ Help ───────────────────────────────────────────────────────╮
+                            │Move (NORMAL)                                                 │
+                            │  j/↓         move down (newer)                               │
+                            │  k/↑         move up (older; loads history at the top)       │
+                            │  g           go to the top                                   │
+                            │  G           go to the newest                                │
+                            │  h/←         pane to the left                                │
+                            │  l/→         pane to the right                               │
+                            │  Tab         next pane                                       │
+                            │  S-Tab       previous pane                                   │
+                            │                                                              │
+                            │Conversations                                                 │
+                            │  Enter       open conversation / thread of message           │
+                            │  1–9         switch workspace                                │
+                            │  C-k/C-t     find a conversation (coming soon)               │
+                            │  C-b         show or hide the sidebar                        │
+                            │  <           narrower sidebar                                │
+                            │  >           wider sidebar                                   │
+                            │                                                              │
+                            │Modes                                                         │
+                            │  i           write a message (INSERT)                        │
+                            │  :           command line (COMMAND)                          │
+                            │  Esc         back to NORMAL / close the thread               │
+                            │  ?           this help                                       │
+                            │  q           quit                                            │
+                            │                                                              │
+                            │Compose (INSERT)                                              │
+                            │  Enter       send                                            │
+                            │  A-Enter/C-j new line                                        │
+                            │  Esc         back to NORMAL / close the thread               │
+                            │                                                              │
+                            │Commands (COMMAND)                                            │
+                            │  :q            quit                                          │
+                            │  :open <name>  open a conversation by name (#general, @ana)  │
+                            │  :help         this help                                     │
+                            │                                                              │
+                            │Press any key to close.                                       │
+                            ╰──────────────────────────────────────────────────────────────╯
+
+ NORMAL  │ Acme │ ● connected                                                                                    ? help
