@@ -94,7 +94,8 @@ Item {
     return Store.unread(root._st)
   }
   // A display name for a user ID; asks users.info once when unknown and
-  // returns the ID meanwhile (messagesRevision bumps when it arrives).
+  // returns the ID meanwhile (messagesRevision bumps when it arrives). A
+  // bot author (B…) reads "Bot": the daemon has no name for it.
   function userName(team, user) {
     void root.messagesRevision
     var name = Store.userName(root._st, team, user)
@@ -377,8 +378,10 @@ Item {
 
   // ---- users.info batching ----------------------------------------------------
 
+  // Only people are asked: one bot ID (B…) in a batch makes the daemon
+  // refuse the whole users.info call, which left every name in it unasked.
   function _wantUser(team, user) {
-    if (!team || !user) return
+    if (!team || !Store.isUserID(user)) return
     var key = team + "/" + user
     if (root._askedUsers[key]) return
     root._askedUsers[key] = true
