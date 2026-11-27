@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"strings"
 
 	"gitlab.com/scabb-island/omaslack/internal/keyring"
 	"gitlab.com/scabb-island/omaslack/internal/rpc"
@@ -21,6 +22,7 @@ const (
 	installPackage = "omarchy-pkg-aur-add omaslack-bin"
 	addInternalApp = "omaslack auth add --provider internal-app"
 	startKeyring   = "start a Secret Service such as gnome-keyring, then " + addInternalApp + " (or desktop-session) again"
+	addAnySession  = "sign in to Slack in the desktop app or a browser, then omaslack auth add --provider desktop-session; or " + addInternalApp
 	// The package ships the theme files here (spec aur-packaging,
 	// "Installed file layout"). Until `omaslack setup` (task 6.1a) copies
 	// them, doctor suggests copying them by hand.
@@ -159,6 +161,22 @@ func checkWorkspace(team string, creds keyring.Credentials, err error, states ma
 			"switch to the official API: "+addInternalApp)
 	}
 	return ok(name, detail)
+}
+
+// checkSessionSources reports which desktop-session sources are available
+// on this machine: the Slack desktop app and each browser signed in to
+// Slack. It never fails; it only points a user with no session at how to
+// get one.
+func checkSessionSources(p Probes) Result {
+	const name = "session sources"
+	if p.SessionSources == nil {
+		return ok(name, "not checked")
+	}
+	sources := p.SessionSources()
+	if len(sources) == 0 {
+		return warn(name, "no Slack session found in the desktop app or a browser", addAnySession)
+	}
+	return ok(name, "desktop-session can read "+strings.Join(sources, ", "))
 }
 
 func checkTemplate(p Probes) Result {

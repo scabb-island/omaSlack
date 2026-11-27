@@ -12,8 +12,8 @@
 - [x] 2.3 `cli`: tests for the new source selection and the rejection help
 
 ## doctor
-- [ ] 3.1 `doctor`: report the available `desktop-session` sources (desktop app + detected browsers), through injected probes, as OK/WARN
-- [ ] 3.2 `doctor`: tests
+- [x] 3.1 `doctor`: report the available `desktop-session` sources (desktop app + detected browsers), through injected probes, as OK/WARN
+- [x] 3.2 `doctor`: tests
 
 ## Close-out
 - [ ] 4.1 Live test against Scabb Island from the user's Brave profile; confirm `auth test`/daemon connect and nothing is marked read

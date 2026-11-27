@@ -112,6 +112,15 @@ func (b Browser) Workspaces(ctx context.Context) ([]Workspace, error) {
 	return out, nil
 }
 
+// SignedIn reports whether the browser profile holds a Slack web session
+// (an xoxc token), without touching the keyring. It is for a quick
+// availability check such as omaslack doctor; reading the session still
+// needs the cookie key, so a true here is not a promise the session works.
+func (b Browser) SignedIn() bool {
+	sessions, err := readSessions(filepath.Join(b.Dir, "Local Storage", "leveldb"))
+	return err == nil && len(sessions) > 0
+}
+
 func (b Browser) passwords() PasswordSource {
 	if b.Passwords != nil {
 		return b.Passwords

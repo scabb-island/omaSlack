@@ -99,6 +99,14 @@ func (d Desktop) Workspaces(ctx context.Context) ([]Workspace, error) {
 	return listed, nil
 }
 
+// SignedIn reports whether the desktop app holds a Slack web session (an
+// xoxc token), without touching the keyring. Like Browser.SignedIn, it is
+// for a quick availability check, not a promise the session still works.
+func (d Desktop) SignedIn() bool {
+	tokens, err := readTokens(filepath.Join(d.Dir, "Local Storage", "leveldb"))
+	return err == nil && len(tokens) > 0
+}
+
 // hostOf is the host of a workspace URL, or "" when it has none; with no
 // host, a workspace still gets the .slack.com cookies.
 func hostOf(workspaceURL string) string {
