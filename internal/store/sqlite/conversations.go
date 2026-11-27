@@ -43,12 +43,12 @@ func (s *Store) UpdateConversation(ctx context.Context, c domain.Conversation) e
 // wins.
 func putConversation(ctx context.Context, ex execer, c domain.Conversation) error {
 	if _, err := ex.ExecContext(ctx, `
-		INSERT INTO conversations (conv_id, kind, name, latest, mentions)
-		VALUES (?, ?, ?, ?, ?)
+		INSERT INTO conversations (conv_id, kind, name, latest, mentions, user_id)
+		VALUES (?, ?, ?, ?, ?, ?)
 		ON CONFLICT (conv_id) DO UPDATE SET
 		    kind = excluded.kind, name = excluded.name,
-		    latest = excluded.latest, mentions = excluded.mentions`,
-		c.ID.String(), c.Kind.String(), c.Name, optTS(c.Latest), c.Mentions); err != nil {
+		    latest = excluded.latest, mentions = excluded.mentions, user_id = excluded.user_id`,
+		c.ID.String(), c.Kind.String(), c.Name, optTS(c.Latest), c.Mentions, c.User.String()); err != nil {
 		return err
 	}
 	if c.LastRead.IsZero() {
@@ -62,7 +62,7 @@ func putConversation(ctx context.Context, ex execer, c domain.Conversation) erro
 // is not deleted (the same set Messages pages through).
 func (s *Store) Conversations(ctx context.Context) ([]domain.Conversation, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT c.conv_id, c.kind, c.name, c.latest, c.mentions,
+		SELECT c.conv_id, c.kind, c.name, c.latest, c.mentions, c.user_id,
 		       COALESCE(r.last_read, ''),
 		       COALESCE((SELECT MAX(m.ts) FROM messages m
 		                 WHERE m.conv_id = c.conv_id AND m.deleted = 0
@@ -77,7 +77,7 @@ func (s *Store) Conversations(ctx context.Context) ([]domain.Conversation, error
 	var out []domain.Conversation
 	for rows.Next() {
 		var r conversationRow
-		if err := rows.Scan(&r.id, &r.kind, &r.name, &r.latest, &r.mentions, &r.lastRead, &r.newest); err != nil {
+		if err := rows.Scan(&r.id, &r.kind, &r.name, &r.latest, &r.mentions, &r.user, &r.lastRead, &r.newest); err != nil {
 			return nil, fmt.Errorf("store/sqlite: read conversation list: %w", err)
 		}
 		c, err := r.parse()
@@ -92,8 +92,8 @@ func (s *Store) Conversations(ctx context.Context) ([]domain.Conversation, error
 // conversationRow is a list entry as stored, joined with its read marker
 // and its newest stored message: outside data until parsed.
 type conversationRow struct {
-	id, kind, name, latest, lastRead, newest string
-	mentions                                 int
+	id, kind, name, latest, user, lastRead, newest string
+	mentions                                       int
 }
 
 func (r conversationRow) parse() (domain.Conversation, error) {
@@ -102,10 +102,11 @@ func (r conversationRow) parse() (domain.Conversation, error) {
 	latest, errLatest := parseOpt(r.latest, domain.ParseTS)
 	lastRead, errRead := parseOpt(r.lastRead, domain.ParseTS)
 	newest, errNewest := parseOpt(r.newest, domain.ParseTS)
-	if err := errors.Join(errID, errKind, errLatest, errRead, errNewest); err != nil {
+	user, errUser := parseOpt(r.user, domain.ParseUserID)
+	if err := errors.Join(errID, errKind, errLatest, errRead, errNewest, errUser); err != nil {
 		return domain.Conversation{}, fmt.Errorf("store/sqlite: corrupt conversation %q: %w", r.id, err)
 	}
-	return view(domain.Conversation{ID: id, Kind: kind, Name: r.name, Latest: latest, LastRead: lastRead, Mentions: r.mentions}, newest), nil
+	return view(domain.Conversation{ID: id, Kind: kind, Name: r.name, Latest: latest, LastRead: lastRead, Mentions: r.mentions, User: user}, newest), nil
 }
 
 // view is what the daemon knows of c once newest, the newest stored
