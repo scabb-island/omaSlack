@@ -35,6 +35,10 @@ Panel {
 
   // hideWhenEmpty: the slot leaves the bar too, as first-party widgets do
   // (SystemUpdate), so the bar keeps no gap for it.
+  // The bar (Bar.qml, panelIndicatorItem) centers the open-panel mark on
+  // this item and sizes it from it: the glyph's slot, not the whole widget.
+  readonly property Item openPanelIndicatorItem: icon.glyphButton
+
   visible: !icon.hidden
   implicitWidth: icon.implicitWidth
   implicitHeight: icon.implicitHeight

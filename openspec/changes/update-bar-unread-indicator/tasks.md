@@ -7,7 +7,7 @@
 ## 2. States and settings
 - [x] 2.1 DND keeps the icon visible with `hideWhenEmpty`
 - [x] 2.2 Manifest: retire `showChannelBadge`; `unreadScope` labeled "What lights the dot" with options "Everything" (default) and "DMs and mentions"; map a saved `showChannelBadge: false` to "DMs and mentions"
-- [ ] 2.3 `BarWidget.qml`: `openPanelIndicatorItem` points at the glyph button
+- [x] 2.3 `BarWidget.qml`: `openPanelIndicatorItem` points at the glyph button
 
 ## 3. Verification
 - [x] 3.1 `BarIconSmoke`: dot on/off per state, alert hides it, vertical bar fits, DND visible with hideWhenEmpty

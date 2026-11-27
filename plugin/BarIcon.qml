@@ -57,6 +57,9 @@ Item {
     hideWhenEmpty: hideWhenEmpty
   })
   readonly property bool hidden: view.hidden
+  // The glyph's button, where the bar centers its open-panel mark
+  // (BarWidget.openPanelIndicatorItem).
+  readonly property Item glyphButton: button
 
   // Where the dot goes (lib/badges.js layout): the glyph's top-right
   // corner, inside the slot on horizontal and vertical bars.

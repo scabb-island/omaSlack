@@ -63,6 +63,10 @@ Item {
     check(!child(icon, "mainBadge") && !child(icon, "channelBadge"), "a count pill is still drawn")
     if (failures.length) return failures
 
+    // The bar centers its open-panel mark on the glyph's button
+    // (BarWidget.openPanelIndicatorItem).
+    check(icon.glyphButton === button, "glyphButton is not the glyph's button")
+
     // The dot draws inside the button, so it takes its opacity (dimmed,
     // concealed) and its press scale.
     var p = dot.parent
