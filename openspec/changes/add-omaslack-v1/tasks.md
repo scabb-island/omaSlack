@@ -76,7 +76,7 @@
 - [x] 4.1 Spike: Quickshell `Socket` versus the `ctl --stream` bridge. A direct `Socket` won (see `docs/spikes/m4.1-quickshell-socket.md`)
 - [ ] 4.2 `Service.qml` as the single RPC client, with its models
 - [ ] 4.3 `BarWidget.qml`: icon, DM and mention badges, connection state and tooltip
-- [ ] 4.4 `Panel.qml`: unread list with quick reply
+- [x] 4.4 `Panel.qml`: unread list with quick reply
 - [ ] 4.5 `Window.qml` (`FloatingWindow`): sidebar, messages, threads, compose, reactions and attachments
 - [ ] 4.6 Full keyboard navigation and styles only from `Style`
 - [ ] 4.7 Manifest `schema[]` for settings
