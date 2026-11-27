@@ -1,0 +1,10 @@
+intro
+▎ quoted line that wraps
+▎ around
+▎ second quote
+│ func main() {
+│     fmt.Println("hi")
+│ }
+outro
+▎ quote the rest
+▎ of the message

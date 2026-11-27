@@ -1,0 +1,9 @@
+{
+  "_comment": "A 20-column pane. The wide runes and emoji are intentional: they must wrap by cells, not bytes or runes.",
+  "width": 20,
+  "selected": -1,
+  "messages": [
+    {"ts": "1795705200.000100", "author": "U0YUKI", "text": "日本語のテキストを折り返す 😀😀😀😀😀", "edited": "1"},
+    {"ts": "1795705210.000200", "author": "U0YUKI", "text": "&gt; 引用もちゃんと折り返す\n```\na code line that is far too long\n```", "files": [{"id": "F0PIC", "name": "とても長いファイル名.jpg", "mimetype": "image/jpeg", "size": 1048576}]}
+  ]
+}

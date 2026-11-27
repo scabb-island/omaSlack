@@ -1,0 +1,28 @@
+── Yesterday ───────────────────────────────────────────────
+José Muñoz  17:30
+  ¿Alguien revisó el deploy de mañana? Pregunto por
+  #desarrollo 🤔
+  ▎ los cambios de ñandú están en staging
+  sí, ya está (edited)
+雪子  17:40
+  了解しました。明日の朝に確認します 🙏
+  これは折り返しが必要な長い日本語の文です。
+  🙏 2  👍🏽 1
+── Today ───────────────────────────────────────────────────
+alice  09:15
+  @here standup in 5 👋🏻
+  @me can you check MR !12? also cc @bob and @devs
+ci-bot [bot]  09:18
+  Pipeline passed on main:
+  │ ok   internal/tui/render  0.21s
+  │ ok   internal/daemon      1.03s
+  :partyparrot: 1  :shipit: 1
+bob  09:30
+  Screenshot of the new layout, thoughts?
+  [image] layout.png · 470.8 KB · image/png
+  [file] layout-spec.pdf · 2.2 MB · application/pdf
+  ↳ thread
+me  10:02
+  Looks great except the sidebar width & the <tab> order. 💯
+U0ZED  11:45
+  who am I? (unknown user, :unknown_emoji:)
