@@ -8,7 +8,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"gitlab.com/scabb-island/omaslack/internal/tui/render"
+	"gitlab.com/scabb-island/omaslack/internal/mrkdwn"
 	"gitlab.com/scabb-island/omaslack/internal/wire"
 )
 
@@ -134,7 +134,7 @@ func (m *Model) toggleReaction(to reactTo, emoji string) tea.Cmd {
 // emojiItems are the emoji the workspace has, standard then custom,
 // ranked for query.
 func (m *Model) emojiItems(to reactTo, query string) []pickItem {
-	names := append(render.StandardEmojiNames(), slices.Sorted(maps.Keys(m.st.ws[to.team].emoji))...)
+	names := append(mrkdwn.StandardEmojiNames(), slices.Sorted(maps.Keys(m.st.ws[to.team].emoji))...)
 	known := slices.DeleteFunc(slices.Clone(m.pick.recent), func(n string) bool { return !slices.Contains(names, n) })
 	ranked := rankEmoji(names, known, query)
 	items := make([]pickItem, len(ranked))
@@ -150,7 +150,7 @@ func (m *Model) emojiItems(to reactTo, query string) []pickItem {
 // emojiGlyph is a standard emoji's character; custom ones (images) get
 // a blank of the same width.
 func emojiGlyph(name string) string {
-	if s, ok := render.StandardEmoji(name); ok {
+	if s, ok := mrkdwn.StandardEmoji(name); ok {
 		return s
 	}
 	return "  "

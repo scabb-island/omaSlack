@@ -25,7 +25,7 @@ func (d directory) ConversationName(id string) string {
 }
 
 // Emoji knows the workspace's custom emoji only; standard ones are
-// render's (task 3.4), so they are reported unknown here.
+// mrkdwn's (task 4.9), so they are reported unknown here.
 func (d directory) Emoji(name string) (string, bool) {
 	if _, ok := d.st.CustomEmoji(d.team, name); ok {
 		return ":" + name + ":", true

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/x/ansi"
+	"gitlab.com/scabb-island/omaslack/internal/mrkdwn"
 	"gitlab.com/scabb-island/omaslack/internal/wire"
 )
 
@@ -256,7 +257,7 @@ func (p painter) reactions(rs []wire.Reaction, width int) []string {
 	}
 	items := make([]string, len(rs))
 	for i, r := range rs {
-		e, ok := emojiText(r.Emoji, p.d)
+		e, ok := mrkdwn.Emoji(r.Emoji, p.d.Emoji)
 		if !ok {
 			e = ":" + oneLine(r.Emoji) + ":"
 		}

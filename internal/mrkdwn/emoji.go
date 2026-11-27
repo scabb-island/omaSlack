@@ -1,30 +1,30 @@
-package render
+package mrkdwn
 
 import "strings"
 
 // StandardEmoji resolves a standard Slack shortcode (no colons) to its
-// Unicode emoji. The table covers the shortcodes people use most; anything
-// else goes to Directory.Emoji. The app can use it for its own Directory and
-// for the reaction picker.
+// Unicode emoji. The table covers the shortcodes people use most; custom
+// emoji are the workspace's and come from the caller (see Emoji).
 func StandardEmoji(name string) (string, bool) {
 	s, ok := standardEmoji[name]
 	return s, ok
 }
 
-// emojiText is what render prints for a shortcode or a reaction name such
-// as "+1::skin-tone-2": standard first, then the Directory (custom), and
-// ok=false when neither knows a part.
-func emojiText(name string, d Directory) (string, bool) {
+// Emoji resolves a shortcode or a reaction name such as "+1::skin-tone-2"
+// to the text to print: each part standard first, then custom (nil means
+// the workspace's custom emoji are unknown). ok is false when a part is
+// known to neither. The result is one line with no control characters.
+func Emoji(name string, custom func(name string) (string, bool)) (string, bool) {
 	var b strings.Builder
 	for part := range strings.SplitSeq(name, "::") {
 		s, ok := StandardEmoji(part)
-		if !ok {
-			s, ok = d.Emoji(part)
+		if !ok && custom != nil {
+			s, ok = custom(part)
 		}
 		if !ok {
 			return "", false
 		}
-		b.WriteString(oneLine(s))
+		b.WriteString(OneLine(s))
 	}
 	return b.String(), true
 }
