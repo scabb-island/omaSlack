@@ -108,15 +108,30 @@ The Omarchy plugin manifest has no field for package dependencies and `omarchy p
 - **THEN** the bar icon shows the "not installed" state and no daemon start is attempted
 
 ### Requirement: The plugin offers to install the package
-While the package is missing or incompatible, the panel SHALL say what is missing and offer an "Install omaslack-bin" or "Update omaslack-bin" action. The action SHALL run `omarchy-pkg-aur-add omaslack-bin` in a visible terminal (`omarchy-launch-floating-terminal-with-presentation`), so the user sees and authorizes it. The plugin MUST NOT install packages silently.
+While the package is missing or too old, the panel SHALL say so and offer "Install omaslack-bin" (`omarchy-pkg-aur-add omaslack-bin`) or "Update omaslack-bin" (`yay -S --needed omaslack-bin`, then `systemctl --user try-restart omaslack`: `omarchy-pkg-aur-add` skips installed packages). Both SHALL run in a visible terminal (`omarchy-launch-floating-terminal-with-presentation`), where the user authorizes them. The plugin MUST NOT install packages silently.
 
 #### Scenario: Installing from the panel
 - **WHEN** the user picks "Install omaslack-bin" in the panel
 - **THEN** a floating terminal runs `omarchy-pkg-aur-add omaslack-bin`, the user confirms with their password, and once it finishes the plugin detects the package and continues with the normal flow
 
 #### Scenario: Incompatible version
-- **WHEN** the installed `omaslack` reports a protocol major version different from the one the plugin expects
-- **THEN** the panel shows "Update omaslack-bin" and the action runs the same visible install command
+- **WHEN** the installed `omaslack` reports a lower protocol major version than the one the plugin expects
+- **THEN** the panel shows "Update omaslack-bin" and the action runs the update in the same visible terminal
+
+#### Scenario: Plugin older than the daemon
+- **WHEN** the installed `omaslack` reports a higher protocol major version than the one the plugin expects
+- **THEN** the panel says to update the plugin (`omarchy plugin update ar.scabb.omaslack`) and offers no package action
+
+### Requirement: The plugin explains how to start the daemon
+When the package is present and compatible but the daemon does not answer, the panel SHALL offer `omaslack setup` (in a visible terminal) while the user service is not enabled, and starting the service with `systemctl --user start omaslack` once it is.
+
+#### Scenario: Package installed, service not enabled
+- **WHEN** `omaslack-bin` is installed, the user service is not enabled and the daemon does not answer
+- **THEN** the panel offers "Set up omaslack", which runs `omaslack setup` in a floating terminal
+
+#### Scenario: Package installed, daemon stopped
+- **WHEN** `omaslack-bin` is installed, the user service is enabled and the daemon does not answer
+- **THEN** the panel offers to start the daemon and the bar tooltip shows `systemctl --user start omaslack`
 
 ### Requirement: Documented dependency
 The plugin README and its marketplace listing SHALL state that the `omaslack-bin` AUR package is required, with the install command. The marketplace submission SHALL declare `installation.mode: manual` with a note pointing to the package.
