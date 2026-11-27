@@ -3,6 +3,7 @@ package wire
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"gitlab.com/scabb-island/omaslack/internal/domain"
 	"gitlab.com/scabb-island/omaslack/internal/store"
@@ -147,6 +148,8 @@ func TestFromEventCoversEveryEvent(t *testing.T) {
 		{domain.PresenceChanged{Team: team, User: user, Presence: domain.Active}, `{"team":"T0001","user":"U0001","presence":"active"}`},
 		{domain.PresenceChanged{Team: team, User: user, Presence: domain.Away}, `{"team":"T0001","user":"U0001","presence":"away"}`},
 		{domain.UserTyping{Team: team, Conversation: conv, User: user}, `{"team":"T0001","conv":"C0001","user":"U0001"}`},
+		{domain.DNDChanged{Team: team, Until: time.Unix(1700003600, 0)}, `{"team":"T0001","snoozed":true,"until":1700003600}`},
+		{domain.DNDChanged{Team: team}, `{"team":"T0001","snoozed":false,"until":0}`},
 		{domain.ConnectionChanged{Team: team, State: domain.RateLimited}, `{"team":"T0001","state":"rate_limited"}`},
 		{domain.ConversationUpdated{Team: team, Conversation: domain.Conversation{ID: conv, Kind: domain.DirectMessage}},
 			`{"team":"T0001","conversation":{"id":"C0001","kind":"im","mentions":0,"unread":false}}`},

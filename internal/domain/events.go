@@ -1,5 +1,7 @@
 package domain
 
+import "time"
+
 // Message is one Slack message as the daemon stores and serves it.
 //
 // Files makes Message (and the events that carry one) not comparable with
@@ -85,6 +87,13 @@ type PresenceChanged struct {
 	Presence Presence
 }
 
+// DNDChanged: the signed-in user's Do Not Disturb changed (snoozed until
+// Until, or ended when Until is zero), from any client or Slack itself.
+type DNDChanged struct {
+	Team  TeamID
+	Until time.Time
+}
+
 // UserTyping: someone is typing in a conversation.
 type UserTyping struct {
 	Team         TeamID
@@ -145,6 +154,7 @@ func (ReactionChanged) Topic() string     { return "reaction.changed" }
 func (ReadChanged) Topic() string         { return "read.changed" }
 func (PresenceChanged) Topic() string     { return "presence.changed" }
 func (UserTyping) Topic() string          { return "typing" }
+func (DNDChanged) Topic() string          { return "dnd.changed" }
 func (ConnectionChanged) Topic() string   { return "connection.state" }
 func (ConversationUpdated) Topic() string { return "conversation.updated" }
 func (DraftChanged) Topic() string        { return "draft.changed" }
@@ -156,6 +166,7 @@ func (e ReactionChanged) TeamID() TeamID     { return e.Team }
 func (e ReadChanged) TeamID() TeamID         { return e.Team }
 func (e PresenceChanged) TeamID() TeamID     { return e.Team }
 func (e UserTyping) TeamID() TeamID          { return e.Team }
+func (e DNDChanged) TeamID() TeamID          { return e.Team }
 func (e ConnectionChanged) TeamID() TeamID   { return e.Team }
 func (e ConversationUpdated) TeamID() TeamID { return e.Team }
 func (e DraftChanged) TeamID() TeamID        { return e.Team }
@@ -164,6 +175,7 @@ func (MessageCreated) sealed()      {}
 func (MessageUpdated) sealed()      {}
 func (MessageDeleted) sealed()      {}
 func (ReactionChanged) sealed()     {}
+func (DNDChanged) sealed()          {}
 func (ReadChanged) sealed()         {}
 func (PresenceChanged) sealed()     {}
 func (UserTyping) sealed()          {}

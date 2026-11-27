@@ -1,6 +1,10 @@
 package wire
 
-import "gitlab.com/scabb-island/omaslack/internal/domain"
+import (
+	"time"
+
+	"gitlab.com/scabb-island/omaslack/internal/domain"
+)
 
 // Event notifications: the method of each JSON-RPC notification is the
 // event's topic (domain.Event.Topic) and its params are one of these.
@@ -34,6 +38,15 @@ type ReadEvent struct {
 	Team     string `json:"team"`
 	Conv     string `json:"conv"`
 	LastRead string `json:"lastRead"`
+}
+
+// DNDEvent is the payload of dnd.changed and the result of dnd.info: the
+// signed-in user's Do Not Disturb in one workspace. Until is the end in
+// epoch seconds, 0 when DND is off.
+type DNDEvent struct {
+	Team    string `json:"team"`
+	Snoozed bool   `json:"snoozed"`
+	Until   int64  `json:"until"`
 }
 
 // PresenceEvent is the payload of presence.changed.
@@ -114,6 +127,8 @@ func fromStateEvent(ev domain.Event) any {
 		return ReadEvent{Team: team, Conv: e.Conversation.String(), LastRead: e.LastRead.String()}
 	case domain.PresenceChanged:
 		return PresenceEvent{Team: team, User: e.User.String(), Presence: presence(e.Presence)}
+	case domain.DNDChanged:
+		return FromDND(team, e.Until)
 	case domain.UserTyping:
 		return TypingEvent{Team: team, Conv: e.Conversation.String(), User: e.User.String()}
 	case domain.ConnectionChanged:
@@ -131,4 +146,12 @@ func presence(p domain.Presence) string {
 		return "active"
 	}
 	return "away"
+}
+
+// FromDND builds a DNDEvent: snoozed while until is set.
+func FromDND(team string, until time.Time) DNDEvent {
+	if until.IsZero() {
+		return DNDEvent{Team: team}
+	}
+	return DNDEvent{Team: team, Snoozed: true, Until: until.Unix()}
 }

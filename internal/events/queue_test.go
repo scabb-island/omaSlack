@@ -199,3 +199,12 @@ func TestTheBoundCountsOnlyEventsThatCannotBeCoalesced(t *testing.T) {
 		t.Fatalf("still connected with more than %d message events queued", bound)
 	}
 }
+
+func TestANewerDNDStateReplacesTheQueuedOne(t *testing.T) {
+	if stateKey(domain.DNDChanged{Team: team(t, "T0001")}) == (key{}) {
+		t.Fatal("dnd.changed is not coalesced: a slow client would get every snooze in turn")
+	}
+	if stateKey(domain.DNDChanged{Team: team(t, "T0001")}) == stateKey(domain.DNDChanged{Team: team(t, "T0002")}) {
+		t.Error("two workspaces' DND share one key")
+	}
+}

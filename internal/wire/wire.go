@@ -17,7 +17,11 @@ type Message struct {
 	TS       string `json:"ts"`
 	ThreadTS string `json:"threadTS,omitempty"`
 	Author   string `json:"author,omitempty"`
-	Text     string `json:"text"`
+	// AuthorName is the name Slack puts on the message itself: a bot's
+	// username or bot_profile.name. Empty for people (clients resolve
+	// their IDs with users.info) until task 5.8 fills it.
+	AuthorName string `json:"authorName,omitempty"`
+	Text       string `json:"text"`
 	// HTML is Text rendered for Qt's Text.RichText (mrkdwn parsed in the
 	// daemon, mentions and channels resolved to names, emoji shortcodes
 	// to characters), so QML never parses mrkdwn (spec gui-client, "Long

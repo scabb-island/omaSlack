@@ -135,6 +135,17 @@ Slack remains the remote source of truth. The Store is a cache that can be rebui
 - Downloaded files go to `$XDG_CACHE_HOME/omaslack/files`, with sanitized names.
 - Links always open through `xdg-open`, and message content is never executed.
 
+### Notifications, DND and presence (M5)
+
+Contracts the M5 branches build against (task 5.7):
+
+- **`dnd.changed`** (event, coalesced per workspace) and **`dnd.info {team}`** (method) carry `wire.DNDEvent {team, snoozed, until}`, `until` in epoch seconds (0 when off). The daemon learns DND from Slack's `dnd.info` when a workspace connects, from the socket's `dnd_updated` / `dnd_updated_user` events, and from its own `dnd.snooze` / `dnd.end` calls, and publishes `domain.DNDChanged` for each change. Clients stop guessing DND from their own calls.
+- **Own presence:** `presence.changed` already carries any user's presence; the daemon also publishes it for the signed-in user (after `presence.set`, and from Slack's `manual_presence_change`). **`presence.get {team}`** returns `{presence: "active"|"away"}` for the signed-in user.
+- **`ui.viewing {team, conv, threadTS?, focused}`** (method): each client says what it shows and whether its window has focus; `{}` (no team) clears it. The daemon keeps one entry per connection and drops it when the connection closes. The notifier skips a message when any connection reports that conversation (or thread) focused.
+- **Notifier** (`internal/notify`, in the daemon only): one Freedesktop notification (`org.freedesktop.Notifications.Notify` over the session bus) per new message that passes the rules: DMs, group DMs, mentions of the user or their groups, replies in threads the user follows, plus `keywords` and `channels` (notify on everything) minus `muted`; never the user's own messages, nothing that was already there when the daemon started, nothing while DND is on. The default action opens the message: `ui.focus` to the clients, and when the preferred client is `tui` or no plugin is connected (hello `client` is `omaslack-plugin`), the daemon starts `omarchy-launch-or-focus-tui omaslack tui` first.
+- **Config:** `$XDG_CONFIG_HOME/omaslack/config.toml`, `[notifications]` table: `enabled` (bool, default true), `keywords` ([]string), `channels` and `muted` ([]string of `#name` or IDs, optionally `team:` prefixed), `open` (`"window"` or `"tui"`, default `"window"`). Read at start and on SIGHUP; a bad file logs a warning and keeps the previous config.
+- **Bot names:** `wire.Message.authorName` carries the name Slack puts on a message (`username`, else `bot_profile.name`), so clients never show a raw `B…` ID.
+
 ## Decisions
 
 | Decision | Chosen | Rejected alternatives and why |
