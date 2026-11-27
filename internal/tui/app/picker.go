@@ -11,7 +11,8 @@ import (
 // pickState is the open list overlay (finder, search results, reaction
 // picker), if any, and what lists remember between openings.
 type pickState struct {
-	open *picker
+	open   *picker
+	recent []string // emoji picked this session, most recent first
 }
 
 // picker is a list overlay: an optional filter line over items the user

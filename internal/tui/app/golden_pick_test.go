@@ -24,3 +24,12 @@ func TestGoldenSearchResults(t *testing.T) {
 	h.keys("enter", "j")
 	h.golden("search_120x40")
 }
+
+func TestGoldenReactionPicker(t *testing.T) {
+	h := openGeneral(t, nil)
+	h.keys(":")
+	h.typeText("react smirk") // now a recent one: it comes first
+	h.keys("enter", "r")
+	h.typeText("smi")
+	h.golden("react_120x40")
+}

@@ -55,6 +55,7 @@ func (m *Model) normalActions() []action {
 		{k.Help, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { m.help = true; return nil }},
 		{k.Quit, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.quit() }},
 		{k.Search, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.startSearch() }},
+		{k.React, func(m *Model, _ tea.KeyPressMsg) tea.Cmd { return m.openReactions() }},
 	}
 }
 
@@ -232,6 +233,8 @@ func (m *Model) runCommand(line string) tea.Cmd {
 		return m.openByName(strings.TrimSpace(arg))
 	case "search":
 		return m.search(strings.TrimSpace(arg))
+	case "react":
+		return m.react(strings.TrimSpace(arg))
 	}
 	m.setError("Not a command: " + name)
 	return nil
